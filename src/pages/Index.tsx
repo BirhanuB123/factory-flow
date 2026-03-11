@@ -1,11 +1,22 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { KpiCards } from "@/components/KpiCards";
+import { ProductionJobsTable } from "@/components/ProductionJobsTable";
+import { QuickActions } from "@/components/QuickActions";
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold tracking-tight">Shop Floor Dashboard</h1>
+        <p className="text-sm text-muted-foreground">
+          Real-time overview of production, machines, and inventory
+        </p>
+      </div>
+
+      <KpiCards />
+
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_280px] gap-4">
+        <ProductionJobsTable />
+        <QuickActions />
       </div>
     </div>
   );

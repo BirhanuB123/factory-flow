@@ -7,6 +7,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import Index from "./pages/Index.tsx";
+import ProductionJobs from "./pages/ProductionJobs.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
               <main className="flex-1 p-4 lg:p-6 overflow-auto">
                 <Routes>
                   <Route path="/" element={<Index />} />
+                  <Route path="/jobs" element={<ProductionJobs />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

@@ -26,6 +26,7 @@ const App = () => (
               <main className="flex-1 p-4 lg:p-6 overflow-auto">
                 <Routes>
                   <Route path="/" element={<Index />} />
+                  <Route path="/jobs" element={<ProductionJobs />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

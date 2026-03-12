@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import Index from "./pages/Index.tsx";
 import ProductionJobs from "./pages/ProductionJobs.tsx";
+import Inventory from "./pages/Inventory.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();

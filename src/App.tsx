@@ -9,6 +9,7 @@ import { DashboardHeader } from "@/components/DashboardHeader";
 import Index from "./pages/Index.tsx";
 import ProductionJobs from "./pages/ProductionJobs.tsx";
 import Inventory from "./pages/Inventory.tsx";
+import Boms from "./pages/Boms.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
                   <Route path="/" element={<Index />} />
                   <Route path="/jobs" element={<ProductionJobs />} />
                   <Route path="/inventory" element={<Inventory />} />
+                  <Route path="/boms" element={<Boms />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

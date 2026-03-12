@@ -10,6 +10,7 @@ import Index from "./pages/Index.tsx";
 import ProductionJobs from "./pages/ProductionJobs.tsx";
 import Inventory from "./pages/Inventory.tsx";
 import Boms from "./pages/Boms.tsx";
+import Settings from "./pages/Settings.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
                   <Route path="/jobs" element={<ProductionJobs />} />
                   <Route path="/inventory" element={<Inventory />} />
                   <Route path="/boms" element={<Boms />} />
+                  <Route path="/settings" element={<Settings />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

@@ -15,17 +15,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Routes
+app.use('/api/products', require('./routes/productRoutes'));
+app.use('/api/clients', require('./routes/clientRoutes'));
+app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/api/boms', require('./routes/bomRoutes'));
+app.use('/api/production', require('./routes/productionRoutes'));
+
 // Basic Route
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Factory Flow ERP Backend is running' });
 });
-
-// Routes
-app.use('/api/clients', require('./routes/clientRoutes'));
-app.use('/api/products', require('./routes/productRoutes'));
-app.use('/api/orders', require('./routes/orderRoutes'));
-app.use('/api/boms', require('./routes/bomRoutes'));
-app.use('/api/production', require('./routes/productionRoutes'));
 
 // Error Middleware
 app.use(require('./middleware/errorMiddleware'));

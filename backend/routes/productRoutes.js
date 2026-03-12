@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+console.log('Loading productRoutes.js...');
+router.get('/test-internal', (req, res) => res.json({ internal: true }));
 const {
   getProducts,
   getProduct,

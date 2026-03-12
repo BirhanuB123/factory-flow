@@ -35,7 +35,7 @@ exports.updateJob = asyncHandler(async (req, res, next) => {
   const job = await ProductionJob.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true
-  });
+  }).populate('bom');
   if (!job) {
     return res.status(404).json({ success: false, message: 'Job not found' });
   }

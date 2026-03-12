@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,34 +14,139 @@ import {
   Factory, User, Bell, Shield, Clock, Globe, Palette, Save,
 } from "lucide-react";
 
+const SETTINGS_KEY = "erp-settings";
+
+const defaultSettings = {
+  shopName: "ShopFloor CNC",
+  shopAddress: "1234 Industrial Blvd, Suite 100",
+  shopCity: "Detroit, MI 48201",
+  shopPhone: "(313) 555-0199",
+  shopEmail: "ops@shopfloorcnc.com",
+  timezone: "America/Detroit",
+  currency: "USD",
+  displayName: "Alex Torres",
+  role: "Shop Manager",
+  emailNotifications: true,
+  smsNotifications: false,
+  lowStockAlerts: true,
+  jobStatusAlerts: true,
+  delayAlerts: true,
+  autoBackup: true,
+  darkMode: false,
+  compactView: false,
+  dateFormat: "YYYY-MM-DD",
+  defaultJobView: "table",
+};
+
 export default function Settings() {
-  // Shop config
-  const [shopName, setShopName] = useState("ShopFloor CNC");
-  const [shopAddress, setShopAddress] = useState("1234 Industrial Blvd, Suite 100");
-  const [shopCity, setShopCity] = useState("Detroit, MI 48201");
-  const [shopPhone, setShopPhone] = useState("(313) 555-0199");
-  const [shopEmail, setShopEmail] = useState("ops@shopfloorcnc.com");
-  const [timezone, setTimezone] = useState("America/Detroit");
-  const [currency, setCurrency] = useState("USD");
+  const [shopName, setShopName] = useState(defaultSettings.shopName);
+  const [shopAddress, setShopAddress] = useState(defaultSettings.shopAddress);
+  const [shopCity, setShopCity] = useState(defaultSettings.shopCity);
+  const [shopPhone, setShopPhone] = useState(defaultSettings.shopPhone);
+  const [shopEmail, setShopEmail] = useState(defaultSettings.shopEmail);
+  const [timezone, setTimezone] = useState(defaultSettings.timezone);
+  const [currency, setCurrency] = useState(defaultSettings.currency);
+  const [displayName, setDisplayName] = useState(defaultSettings.displayName);
+  const [role] = useState(defaultSettings.role);
+  const [emailNotifications, setEmailNotifications] = useState(defaultSettings.emailNotifications);
+  const [smsNotifications, setSmsNotifications] = useState(defaultSettings.smsNotifications);
+  const [lowStockAlerts, setLowStockAlerts] = useState(defaultSettings.lowStockAlerts);
+  const [jobStatusAlerts, setJobStatusAlerts] = useState(defaultSettings.jobStatusAlerts);
+  const [delayAlerts, setDelayAlerts] = useState(defaultSettings.delayAlerts);
+  const [autoBackup, setAutoBackup] = useState(defaultSettings.autoBackup);
+  const [darkMode, setDarkMode] = useState(defaultSettings.darkMode);
+  const [compactView, setCompactView] = useState(defaultSettings.compactView);
+  const [dateFormat, setDateFormat] = useState(defaultSettings.dateFormat);
+  const [defaultJobView, setDefaultJobView] = useState(defaultSettings.defaultJobView);
 
-  // User prefs
-  const [displayName, setDisplayName] = useState("Alex Torres");
-  const [role] = useState("Shop Manager");
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [smsNotifications, setSmsNotifications] = useState(false);
-  const [lowStockAlerts, setLowStockAlerts] = useState(true);
-  const [jobStatusAlerts, setJobStatusAlerts] = useState(true);
-  const [delayAlerts, setDelayAlerts] = useState(true);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as Record<string, unknown>;
+        if (saved.shopName != null) setShopName(String(saved.shopName));
+        if (saved.shopAddress != null) setShopAddress(String(saved.shopAddress));
+        if (saved.shopCity != null) setShopCity(String(saved.shopCity));
+        if (saved.shopPhone != null) setShopPhone(String(saved.shopPhone));
+        if (saved.shopEmail != null) setShopEmail(String(saved.shopEmail));
+        if (saved.timezone != null) setTimezone(String(saved.timezone));
+        if (saved.currency != null) setCurrency(String(saved.currency));
+        if (saved.displayName != null) setDisplayName(String(saved.displayName));
+        if (saved.emailNotifications != null) setEmailNotifications(Boolean(saved.emailNotifications));
+        if (saved.smsNotifications != null) setSmsNotifications(Boolean(saved.smsNotifications));
+        if (saved.lowStockAlerts != null) setLowStockAlerts(Boolean(saved.lowStockAlerts));
+        if (saved.jobStatusAlerts != null) setJobStatusAlerts(Boolean(saved.jobStatusAlerts));
+        if (saved.delayAlerts != null) setDelayAlerts(Boolean(saved.delayAlerts));
+        if (saved.autoBackup != null) setAutoBackup(Boolean(saved.autoBackup));
+        if (saved.darkMode != null) setDarkMode(Boolean(saved.darkMode));
+        if (saved.compactView != null) setCompactView(Boolean(saved.compactView));
+        if (saved.dateFormat != null) setDateFormat(String(saved.dateFormat));
+        if (saved.defaultJobView != null) setDefaultJobView(String(saved.defaultJobView));
+      }
+    } catch {
+      // ignore invalid stored data
+    }
+  }, []);
 
-  // System
-  const [autoBackup, setAutoBackup] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-  const [compactView, setCompactView] = useState(false);
-  const [dateFormat, setDateFormat] = useState("YYYY-MM-DD");
-  const [defaultJobView, setDefaultJobView] = useState("table");
+  const getSettingsSnapshot = () => ({
+    shopName,
+    shopAddress,
+    shopCity,
+    shopPhone,
+    shopEmail,
+    timezone,
+    currency,
+    displayName,
+    role,
+    emailNotifications,
+    smsNotifications,
+    lowStockAlerts,
+    jobStatusAlerts,
+    delayAlerts,
+    autoBackup,
+    darkMode,
+    compactView,
+    dateFormat,
+    defaultJobView,
+  });
 
   const handleSave = () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(getSettingsSnapshot()));
     toast.success("Settings saved successfully");
+  };
+
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(getSettingsSnapshot(), null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `erp-settings-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Settings exported");
+  };
+
+  const handleReset = () => {
+    localStorage.removeItem(SETTINGS_KEY);
+    setShopName(defaultSettings.shopName);
+    setShopAddress(defaultSettings.shopAddress);
+    setShopCity(defaultSettings.shopCity);
+    setShopPhone(defaultSettings.shopPhone);
+    setShopEmail(defaultSettings.shopEmail);
+    setTimezone(defaultSettings.timezone);
+    setCurrency(defaultSettings.currency);
+    setDisplayName(defaultSettings.displayName);
+    setEmailNotifications(defaultSettings.emailNotifications);
+    setSmsNotifications(defaultSettings.smsNotifications);
+    setLowStockAlerts(defaultSettings.lowStockAlerts);
+    setJobStatusAlerts(defaultSettings.jobStatusAlerts);
+    setDelayAlerts(defaultSettings.delayAlerts);
+    setAutoBackup(defaultSettings.autoBackup);
+    setDarkMode(defaultSettings.darkMode);
+    setCompactView(defaultSettings.compactView);
+    setDateFormat(defaultSettings.dateFormat);
+    setDefaultJobView(defaultSettings.defaultJobView);
+    toast.success("Settings reset to defaults");
   };
 
   return (
@@ -309,9 +414,9 @@ export default function Settings() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground">Export Data</p>
-                  <p className="text-xs text-muted-foreground">Download all data as CSV or JSON.</p>
+                  <p className="text-xs text-muted-foreground">Download settings as JSON.</p>
                 </div>
-                <Button variant="outline" size="sm">Export</Button>
+                <Button variant="outline" size="sm" onClick={handleExport}>Export</Button>
               </div>
             </CardContent>
           </Card>
@@ -344,7 +449,7 @@ export default function Settings() {
                   <p className="text-sm font-medium text-foreground">Reset All Settings</p>
                   <p className="text-xs text-muted-foreground">Restore all settings to factory defaults.</p>
                 </div>
-                <Button variant="destructive" size="sm">Reset</Button>
+                <Button variant="destructive" size="sm" onClick={handleReset}>Reset</Button>
               </div>
             </CardContent>
           </Card>

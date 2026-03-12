@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi } from "@/lib/api";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -15,7 +16,11 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Search, Plus, Package, AlertTriangle, TrendingDown, Eye, Edit,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import {
+  Search, Plus, Package, AlertTriangle, TrendingDown, Eye, Edit, Trash2,
 } from "lucide-react";
 
 type StockLevel = "In Stock" | "Low Stock" | "Out of Stock";
@@ -30,31 +35,114 @@ interface InventoryItem {
   _id: string;
   name: string;
   sku: string;
+  description?: string;
   category: string;
+  price: number;
   stock: number;
   unit: string;
   reorderPoint: number;
   unitCost: number;
   supplier: string;
   location: string;
-  lastReceived: string;
+  lastReceived?: string;
 }
+
+const defaultForm: Partial<InventoryItem> = {
+  name: "",
+  sku: "",
+  description: "",
+  category: "Raw Metal",
+  price: 0,
+  stock: 0,
+  unit: "pcs",
+  reorderPoint: 0,
+  unitCost: 0,
+  supplier: "",
+  location: "",
+};
 
 const categories = ["All", "Raw Metal", "Tooling", "Hardware", "Consumables"];
 
 const ITEMS_PER_PAGE = 8;
 
 export default function Inventory() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [stockFilter, setStockFilter] = useState("All");
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [page, setPage] = useState(1);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [formValues, setFormValues] = useState<Record<string, unknown>>({ ...defaultForm });
+  const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null);
 
   const { data: inventoryData = [], isLoading } = useQuery({
     queryKey: ['inventory'],
     queryFn: inventoryApi.getAll,
   });
+
+  const createMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => inventoryApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success("Item added successfully");
+      setFormOpen(false);
+      setFormValues({ ...defaultForm });
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      toast.error(err?.response?.data?.message || "Failed to add item");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      inventoryApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success("Item updated successfully");
+      setFormOpen(false);
+      setEditingItem(null);
+      setSelectedItem(null);
+      setFormValues({ ...defaultForm });
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      toast.error(err?.response?.data?.message || "Failed to update item");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => inventoryApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success("Item deleted");
+      setDeleteTarget(null);
+      setSelectedItem(null);
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      toast.error(err?.response?.data?.message || "Failed to delete item");
+    },
+  });
+
+  useEffect(() => {
+    if (editingItem) {
+      setFormValues({
+        name: editingItem.name,
+        sku: editingItem.sku,
+        description: editingItem.description ?? "",
+        category: editingItem.category ?? "Raw Metal",
+        price: editingItem.price ?? 0,
+        stock: editingItem.stock ?? 0,
+        unit: editingItem.unit ?? "pcs",
+        reorderPoint: editingItem.reorderPoint ?? 0,
+        unitCost: editingItem.unitCost ?? 0,
+        supplier: editingItem.supplier ?? "",
+        location: editingItem.location ?? "",
+      });
+    } else {
+      setFormValues({ ...defaultForm });
+    }
+  }, [editingItem]);
 
   const getStockLevel = (item: InventoryItem): StockLevel => {
     if (item.stock === 0) return "Out of Stock";
@@ -137,7 +225,7 @@ export default function Inventory() {
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <CardTitle className="text-lg">Inventory Items</CardTitle>
-            <Button size="sm" className="gap-1.5 w-fit">
+            <Button size="sm" className="gap-1.5 w-fit" onClick={() => { setEditingItem(null); setFormValues({ ...defaultForm }); setFormOpen(true); }}>
               <Plus className="h-4 w-4" /> Add Item
             </Button>
           </div>
@@ -319,12 +407,200 @@ export default function Inventory() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" size="sm" className="gap-1.5">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setEditingItem(selectedItem); setFormOpen(true); }}>
               <Edit className="h-3.5 w-3.5" /> Edit Item
+            </Button>
+            <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => setDeleteTarget(selectedItem)}>
+              <Trash2 className="h-3.5 w-3.5" /> Delete
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Add/Edit Form Dialog */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "Edit Item" : "Add Item"}</DialogTitle>
+            <DialogDescription>
+              {editingItem ? "Update inventory item details." : "Add a new product to inventory."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input
+                  value={(formValues.name as string) ?? ""}
+                  onChange={(e) => setFormValues((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Product name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>SKU</Label>
+                <Input
+                  value={(formValues.sku as string) ?? ""}
+                  onChange={(e) => setFormValues((p) => ({ ...p, sku: e.target.value }))}
+                  placeholder="SKU"
+                  disabled={!!editingItem}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Input
+                value={(formValues.description as string) ?? ""}
+                onChange={(e) => setFormValues((p) => ({ ...p, description: e.target.value }))}
+                placeholder="Optional description"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select
+                  value={(formValues.category as string) ?? "Raw Metal"}
+                  onValueChange={(v) => setFormValues((p) => ({ ...p, category: v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {categories.filter((c) => c !== "All").map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Unit</Label>
+                <Select
+                  value={(formValues.unit as string) ?? "pcs"}
+                  onValueChange={(v) => setFormValues((p) => ({ ...p, unit: v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pcs">pcs</SelectItem>
+                    <SelectItem value="kg">kg</SelectItem>
+                    <SelectItem value="m">m</SelectItem>
+                    <SelectItem value="L">L</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Price</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={(formValues.price as number) ?? 0}
+                  onChange={(e) => setFormValues((p) => ({ ...p, price: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Unit Cost</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={(formValues.unitCost as number) ?? 0}
+                  onChange={(e) => setFormValues((p) => ({ ...p, unitCost: parseFloat(e.target.value) || 0 }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Stock</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={(formValues.stock as number) ?? 0}
+                  onChange={(e) => setFormValues((p) => ({ ...p, stock: parseInt(e.target.value, 10) || 0 }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Reorder Point</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={(formValues.reorderPoint as number) ?? 0}
+                  onChange={(e) => setFormValues((p) => ({ ...p, reorderPoint: parseInt(e.target.value, 10) || 0 }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Supplier</Label>
+                <Input
+                  value={(formValues.supplier as string) ?? ""}
+                  onChange={(e) => setFormValues((p) => ({ ...p, supplier: e.target.value }))}
+                  placeholder="Supplier name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Location</Label>
+                <Input
+                  value={(formValues.location as string) ?? ""}
+                  onChange={(e) => setFormValues((p) => ({ ...p, location: e.target.value }))}
+                  placeholder="Storage location"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                const payload = {
+                  name: formValues.name,
+                  sku: formValues.sku,
+                  description: formValues.description || undefined,
+                  category: formValues.category,
+                  price: Number(formValues.price),
+                  unitCost: Number(formValues.unitCost),
+                  stock: Number(formValues.stock),
+                  reorderPoint: Number(formValues.reorderPoint),
+                  unit: formValues.unit,
+                  supplier: formValues.supplier || undefined,
+                  location: formValues.location || undefined,
+                };
+                if (editingItem) {
+                  updateMutation.mutate({ id: editingItem._id, data: payload });
+                } else {
+                  if (!payload.name || !payload.sku) {
+                    toast.error("Name and SKU are required");
+                    return;
+                  }
+                  createMutation.mutate(payload);
+                }
+              }}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {editingItem ? "Save Changes" : "Add Item"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete item?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {deleteTarget?.name} ({deleteTarget?.sku}). This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget._id)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

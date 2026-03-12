@@ -1,5 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
-import { productionApi } from "@/lib/api";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { productionApi, bomApi } from "@/lib/api";
+import { toast } from "sonner";
 
 type JobStatus = "Scheduled" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
 type Priority = "Low" | "Medium" | "High" | "Urgent";
@@ -33,10 +35,9 @@ interface Job {
   dueDate: string;
   assignedTo: string;
   notes: string;
-  progress?: number; // Added progress if it exists in data
+  progress?: number;
 }
 
-import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -50,6 +51,7 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -82,15 +84,69 @@ import {
 const ITEMS_PER_PAGE = 8;
 
 const ProductionJobs = () => {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [newJobOpen, setNewJobOpen] = useState(false);
+  const [updateStatusJob, setUpdateStatusJob] = useState<Job | null>(null);
+  const [newJobForm, setNewJobForm] = useState({
+    jobId: "",
+    bom: "",
+    quantity: 1,
+    status: "Scheduled" as JobStatus,
+    priority: "Medium" as Priority,
+    dueDate: new Date().toISOString().slice(0, 10),
+    assignedTo: "",
+    notes: "",
+  });
 
   const { data: allJobs = [], isLoading } = useQuery({
     queryKey: ['production-jobs'],
     queryFn: productionApi.getAll,
+  });
+
+  const { data: boms = [] } = useQuery({
+    queryKey: ['boms'],
+    queryFn: bomApi.getAll,
+  });
+
+  const createJobMutation = useMutation({
+    mutationFn: (data: Record<string, unknown>) => productionApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['production-jobs'] });
+      toast.success("Job created");
+      setNewJobOpen(false);
+      setNewJobForm({
+        jobId: "",
+        bom: "",
+        quantity: 1,
+        status: "Scheduled",
+        priority: "Medium",
+        dueDate: new Date().toISOString().slice(0, 10),
+        assignedTo: "",
+        notes: "",
+      });
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      toast.error(err?.response?.data?.message || "Failed to create job");
+    },
+  });
+
+  const updateJobMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
+      productionApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['production-jobs'] });
+      toast.success("Status updated");
+      setUpdateStatusJob(null);
+      setSelectedJob(null);
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      toast.error(err?.response?.data?.message || "Failed to update job");
+    },
   });
 
   const filtered = allJobs.filter((job: Job) => {
@@ -125,7 +181,7 @@ const ProductionJobs = () => {
             Manage and track all shop floor production orders
           </p>
         </div>
-        <Button className="gap-2 shrink-0">
+        <Button className="gap-2 shrink-0" onClick={() => setNewJobOpen(true)}>
           <Plus className="h-4 w-4" />
           New Job
         </Button>
@@ -180,11 +236,11 @@ const ProductionJobs = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="In Production">In Production</SelectItem>
-              <SelectItem value="Queued">Queued</SelectItem>
-              <SelectItem value="Delayed">Delayed</SelectItem>
-              <SelectItem value="QC Review">QC Review</SelectItem>
+              <SelectItem value="Scheduled">Scheduled</SelectItem>
+              <SelectItem value="In Progress">In Progress</SelectItem>
+              <SelectItem value="On Hold">On Hold</SelectItem>
               <SelectItem value="Completed">Completed</SelectItem>
+              <SelectItem value="Cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
           <Select
@@ -199,6 +255,7 @@ const ProductionJobs = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Priorities</SelectItem>
+              <SelectItem value="Urgent">Urgent</SelectItem>
               <SelectItem value="High">High</SelectItem>
               <SelectItem value="Medium">Medium</SelectItem>
               <SelectItem value="Low">Low</SelectItem>
@@ -398,10 +455,163 @@ const ProductionJobs = () => {
                 <Button variant="outline" onClick={() => setSelectedJob(null)}>
                   Close
                 </Button>
-                <Button>Update Status</Button>
+                <Button onClick={() => setUpdateStatusJob(selectedJob)}>Update Status</Button>
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* New Job Dialog */}
+      <Dialog open={newJobOpen} onOpenChange={setNewJobOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Production Job</DialogTitle>
+            <DialogDescription>Create a new production order from a BOM.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Job ID</Label>
+              <Input
+                value={newJobForm.jobId}
+                onChange={(e) => setNewJobForm((p) => ({ ...p, jobId: e.target.value }))}
+                placeholder="e.g. JOB-1050"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>BOM</Label>
+              <Select
+                value={newJobForm.bom}
+                onValueChange={(v) => setNewJobForm((p) => ({ ...p, bom: v }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Select BOM" /></SelectTrigger>
+                <SelectContent>
+                  {(boms as { _id: string; name: string; partNumber: string }[]).map((b) => (
+                    <SelectItem key={b._id} value={b._id}>{b.name} ({b.partNumber})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Quantity</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={newJobForm.quantity}
+                  onChange={(e) => setNewJobForm((p) => ({ ...p, quantity: parseInt(e.target.value, 10) || 1 }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Due Date</Label>
+                <Input
+                  type="date"
+                  value={newJobForm.dueDate}
+                  onChange={(e) => setNewJobForm((p) => ({ ...p, dueDate: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={newJobForm.status}
+                  onValueChange={(v) => setNewJobForm((p) => ({ ...p, status: v as JobStatus }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(["Scheduled", "In Progress", "On Hold", "Completed", "Cancelled"] as const).map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select
+                  value={newJobForm.priority}
+                  onValueChange={(v) => setNewJobForm((p) => ({ ...p, priority: v as Priority }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(["Low", "Medium", "High", "Urgent"] as const).map((p) => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Assigned To</Label>
+              <Input
+                value={newJobForm.assignedTo}
+                onChange={(e) => setNewJobForm((p) => ({ ...p, assignedTo: e.target.value }))}
+                placeholder="Operator name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Input
+                value={newJobForm.notes}
+                onChange={(e) => setNewJobForm((p) => ({ ...p, notes: e.target.value }))}
+                placeholder="Optional notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewJobOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!newJobForm.jobId || !newJobForm.bom || !newJobForm.dueDate) {
+                  toast.error("Job ID, BOM, and Due Date are required");
+                  return;
+                }
+                createJobMutation.mutate({
+                  jobId: newJobForm.jobId,
+                  bom: newJobForm.bom,
+                  quantity: newJobForm.quantity,
+                  status: newJobForm.status,
+                  priority: newJobForm.priority,
+                  dueDate: newJobForm.dueDate,
+                  assignedTo: newJobForm.assignedTo || undefined,
+                  notes: newJobForm.notes || undefined,
+                });
+              }}
+              disabled={createJobMutation.isPending}
+            >
+              Create Job
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Update Status Dialog */}
+      <Dialog open={!!updateStatusJob} onOpenChange={(open) => !open && setUpdateStatusJob(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Update Job Status</DialogTitle>
+            <DialogDescription>{updateStatusJob?.jobId}</DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Label className="text-sm">Status</Label>
+            <Select
+              value={updateStatusJob?.status ?? ""}
+              onValueChange={(value) => {
+                if (!updateStatusJob) return;
+                updateJobMutation.mutate({
+                  id: updateStatusJob._id,
+                  data: { status: value },
+                });
+              }}
+            >
+              <SelectTrigger className="mt-2"><SelectValue placeholder="Select status" /></SelectTrigger>
+              <SelectContent>
+                {(["Scheduled", "In Progress", "On Hold", "Completed", "Cancelled"] as const).map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

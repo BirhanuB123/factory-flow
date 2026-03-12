@@ -1,3 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { productionApi } from "@/lib/api";
 import {
   Table,
   TableBody,
@@ -10,59 +13,27 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-type JobStatus = "In Production" | "Queued" | "Delayed" | "QC Review";
+type JobStatus = "Scheduled" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
 
-const statusVariant: Record<JobStatus, "success" | "info" | "destructive" | "warning"> = {
-  "In Production": "success",
-  Queued: "info",
-  Delayed: "destructive",
-  "QC Review": "warning",
+const statusVariant: Record<JobStatus, "success" | "info" | "destructive" | "warning" | "secondary"> = {
+  "In Progress": "success",
+  Scheduled: "info",
+  "On Hold": "warning",
+  Cancelled: "destructive",
+  Completed: "secondary",
 };
 
-const jobs = [
-  {
-    id: "JOB-1042",
-    client: "Apex Aerostructures",
-    part: "Turbine Bracket T-7",
-    machine: "CNC Mill #3",
-    status: "In Production" as JobStatus,
-    progress: 72,
-  },
-  {
-    id: "JOB-1043",
-    client: "Pacific Auto Group",
-    part: "Drive Shaft Coupling",
-    machine: "Lathe #1",
-    status: "In Production" as JobStatus,
-    progress: 45,
-  },
-  {
-    id: "JOB-1044",
-    client: "NovaMed Devices",
-    part: "Implant Housing MK-II",
-    machine: "5-Axis #2",
-    status: "Delayed" as JobStatus,
-    progress: 18,
-  },
-  {
-    id: "JOB-1045",
-    client: "Summit Construction",
-    part: "Steel Plate Weldment",
-    machine: "Welding Bay",
-    status: "Queued" as JobStatus,
-    progress: 0,
-  },
-  {
-    id: "JOB-1046",
-    client: "Apex Aerostructures",
-    part: "Wing Rib Section 4A",
-    machine: "CNC Mill #1",
-    status: "QC Review" as JobStatus,
-    progress: 95,
-  },
-];
-
 export function ProductionJobsTable() {
+  const navigate = useNavigate();
+  const { data: jobs = [], isLoading } = useQuery({
+    queryKey: ["production-jobs"],
+    queryFn: productionApi.getAll,
+  });
+
+  const displayJobs = (jobs as { _id: string; jobId: string; bom?: { name: string }; status: JobStatus; progress?: number }[])
+    .filter((j) => j.status !== "Cancelled" && j.status !== "Completed")
+    .slice(0, 8);
+
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-3">
@@ -74,35 +45,49 @@ export function ProductionJobsTable() {
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground pl-6">Job ID</TableHead>
-                <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Client</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Part Name</TableHead>
-                <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Machine</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground pr-6">Progress</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {jobs.map((job) => (
-                <TableRow key={job.id} className="cursor-pointer">
-                  <TableCell className="pl-6 font-mono text-sm font-medium">{job.id}</TableCell>
-                  <TableCell className="text-sm">{job.client}</TableCell>
-                  <TableCell className="text-sm">{job.part}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{job.machine}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant[job.status]} className="text-[11px]">
-                      {job.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="pr-6">
-                    <div className="flex items-center gap-2.5 min-w-[120px]">
-                      <Progress value={job.progress} className="h-2 flex-1" />
-                      <span className="text-xs font-mono text-muted-foreground w-8 text-right">
-                        {job.progress}%
-                      </span>
-                    </div>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    Loading...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : displayJobs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    No active jobs.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                displayJobs.map((job) => (
+                  <TableRow
+                    key={job._id}
+                    className="cursor-pointer"
+                    onClick={() => navigate("/jobs")}
+                  >
+                    <TableCell className="pl-6 font-mono text-sm font-medium">{job.jobId}</TableCell>
+                    <TableCell className="text-sm">{job.bom?.name ?? "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant[job.status] ?? "secondary"} className="text-[11px]">
+                        {job.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="pr-6">
+                      <div className="flex items-center gap-2.5 min-w-[120px]">
+                        <Progress value={job.progress ?? 0} className="h-2 flex-1" />
+                        <span className="text-xs font-mono text-muted-foreground w-8 text-right">
+                          {job.progress ?? 0}%
+                        </span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

@@ -46,9 +46,8 @@ const BOMSchema = new mongoose.Schema({
 });
 
 // Update updatedAt on save
-BOMSchema.pre('save', function(next) {
+BOMSchema.pre('save', function () {
   this.updatedAt = Date.now();
-  next();
 });
 
 module.exports = mongoose.model('BOM', BOMSchema);

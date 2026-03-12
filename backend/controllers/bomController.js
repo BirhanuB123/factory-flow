@@ -31,7 +31,7 @@ exports.updateBom = asyncHandler(async (req, res, next) => {
   const bom = await BOM.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true
-  });
+  }).populate('components.product');
   if (!bom) {
     return res.status(404).json({ success: false, message: 'BOM not found' });
   }

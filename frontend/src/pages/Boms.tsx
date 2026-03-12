@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { bomApi } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { bomApi, inventoryApi } from "@/lib/api";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -8,11 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 import {
-  Search, Plus, FileStack, Eye, Copy, Layers, DollarSign, Hash,
+  Search, Plus, FileStack, Eye, Copy, Layers, DollarSign, Hash, Trash2,
 } from "lucide-react";
 
 type BomStatus = "Active" | "Draft" | "Archived";
@@ -45,19 +50,80 @@ interface Bom {
   notes: string;
 }
 
+interface BomComponentRow {
+  productId: string;
+  quantity: number;
+}
+
 function calcBomCost(components: BomComponent[]) {
   return components.reduce((sum, c) => sum + c.quantity * (c.product?.unitCost || 0), 0);
 }
 
 export default function Boms() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | BomStatus>("All");
   const [selectedBom, setSelectedBom] = useState<Bom | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [duplicateSource, setDuplicateSource] = useState<Bom | null>(null);
+  const [formName, setFormName] = useState("");
+  const [formPartNumber, setFormPartNumber] = useState("");
+  const [formRevision, setFormRevision] = useState("Rev A");
+  const [formStatus, setFormStatus] = useState<BomStatus>("Draft");
+  const [formNotes, setFormNotes] = useState("");
+  const [formComponents, setFormComponents] = useState<BomComponentRow[]>([{ productId: "", quantity: 1 }]);
 
   const { data: bomsData = [], isLoading } = useQuery({
     queryKey: ['boms'],
     queryFn: bomApi.getAll,
   });
+
+  const { data: products = [] } = useQuery({
+    queryKey: ['inventory'],
+    queryFn: inventoryApi.getAll,
+  });
+
+  const createBomMutation = useMutation({
+    mutationFn: (data: { name: string; partNumber: string; revision?: string; status?: string; notes?: string; components: { product: string; quantity: number }[] }) =>
+      bomApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['boms'] });
+      toast.success("BOM created");
+      setFormOpen(false);
+      setDuplicateSource(null);
+      resetForm();
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      toast.error(err?.response?.data?.message || "Failed to create BOM");
+    },
+  });
+
+  function resetForm() {
+    setFormName("");
+    setFormPartNumber("");
+    setFormRevision("Rev A");
+    setFormStatus("Draft");
+    setFormNotes("");
+    setFormComponents([{ productId: "", quantity: 1 }]);
+  }
+
+  function openForDuplicate(bom: Bom) {
+    setDuplicateSource(bom);
+    setFormName(`Copy of ${bom.name}`);
+    setFormPartNumber(`${bom.partNumber}-COPY`);
+    setFormRevision(bom.revision);
+    setFormStatus("Draft");
+    setFormNotes(bom.notes ?? "");
+    setFormComponents(
+      bom.components.length
+        ? bom.components.map((c) => ({
+            productId: typeof c.product === "object" && c.product && "_id" in c.product ? (c.product as { _id: string })._id : String(c.product),
+            quantity: c.quantity,
+          }))
+        : [{ productId: "", quantity: 1 }]
+    );
+    setFormOpen(true);
+  }
 
   const filtered = bomsData.filter((bom) => {
     const matchesSearch =
@@ -128,7 +194,7 @@ export default function Boms() {
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <CardTitle className="text-lg">Bills of Materials</CardTitle>
-            <Button size="sm" className="gap-1.5 w-fit">
+            <Button size="sm" className="gap-1.5 w-fit" onClick={() => { resetForm(); setFormOpen(true); }}>
               <Plus className="h-4 w-4" /> New BOM
             </Button>
           </div>
@@ -302,8 +368,127 @@ export default function Boms() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" size="sm" className="gap-1.5">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => selectedBom && openForDuplicate(selectedBom)}>
               <Copy className="h-3.5 w-3.5" /> Duplicate BOM
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New / Duplicate BOM Form */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{duplicateSource ? "Duplicate BOM" : "New BOM"}</DialogTitle>
+            <DialogDescription>
+              {duplicateSource ? "Create a copy with a new name and part number." : "Add a new bill of materials."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="BOM name" />
+              </div>
+              <div className="space-y-2">
+                <Label>Part Number</Label>
+                <Input value={formPartNumber} onChange={(e) => setFormPartNumber(e.target.value)} placeholder="Part #" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Revision</Label>
+                <Input value={formRevision} onChange={(e) => setFormRevision(e.target.value)} placeholder="Rev A" />
+              </div>
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={formStatus} onValueChange={(v) => setFormStatus(v as BomStatus)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(["Draft", "Active", "Archived"] as const).map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Input value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder="Optional notes" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Components</Label>
+                <Button type="button" variant="outline" size="sm" onClick={() => setFormComponents((p) => [...p, { productId: "", quantity: 1 }])}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add row
+                </Button>
+              </div>
+              <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+                {formComponents.map((row, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2">
+                    <Select
+                      value={row.productId}
+                      onValueChange={(v) =>
+                        setFormComponents((p) => p.map((r, j) => (j === i ? { ...r, productId: v } : r)))
+                      }
+                    >
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Product" /></SelectTrigger>
+                      <SelectContent>
+                        {(products as { _id: string; name: string; sku: string }[]).map((prod) => (
+                          <SelectItem key={prod._id} value={prod._id}>{prod.name} ({prod.sku})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      min={0}
+                      className="w-24"
+                      value={row.quantity}
+                      onChange={(e) =>
+                        setFormComponents((p) => p.map((r, j) => (j === i ? { ...r, quantity: parseInt(e.target.value, 10) || 0 } : r)))
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() => setFormComponents((p) => p.filter((_, j) => j !== i))}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!formName.trim() || !formPartNumber.trim()) {
+                  toast.error("Name and Part Number are required");
+                  return;
+                }
+                const components = formComponents
+                  .filter((r) => r.productId)
+                  .map((r) => ({ product: r.productId, quantity: r.quantity }));
+                if (components.length === 0) {
+                  toast.error("Add at least one component");
+                  return;
+                }
+                createBomMutation.mutate({
+                  name: formName.trim(),
+                  partNumber: formPartNumber.trim(),
+                  revision: formRevision || "Rev A",
+                  status: formStatus,
+                  notes: formNotes || undefined,
+                  components,
+                });
+              }}
+              disabled={createBomMutation.isPending}
+            >
+              {duplicateSource ? "Create Copy" : "Create BOM"}
             </Button>
           </DialogFooter>
         </DialogContent>

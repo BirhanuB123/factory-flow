@@ -20,7 +20,7 @@ const { getProducts, getProduct, createProduct, updateProduct, deleteProduct } =
 const { getBoms, getBom, createBom, updateBom, deleteBom } = require('./controllers/bomController');
 const { getJobs, getJob, createJob, updateJob, deleteJob } = require('./controllers/productionController');
 const { getClients, getClient, createClient, updateClient, deleteClient } = require('./controllers/clientController');
-const { getOrders, createOrder } = require('./controllers/orderController');
+const { getOrders, getOrder, createOrder, updateOrder, deleteOrder } = require('./controllers/orderController');
 
 // API Routes
 app.get('/api/products', getProducts);
@@ -49,6 +49,9 @@ app.delete('/api/clients/:id', deleteClient);
 
 app.get('/api/orders', getOrders);
 app.post('/api/orders', createOrder);
+app.get('/api/orders/:id', getOrder);
+app.put('/api/orders/:id', updateOrder);
+app.delete('/api/orders/:id', deleteOrder);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Factory Flow ERP Backend is running' });

@@ -42,9 +42,8 @@ const ProductionJobSchema = new mongoose.Schema({
   }
 });
 
-ProductionJobSchema.pre('save', function(next) {
+ProductionJobSchema.pre('save', function () {
   this.updatedAt = Date.now();
-  next();
 });
 
 module.exports = mongoose.model('ProductionJob', ProductionJobSchema);

@@ -41,6 +41,18 @@ export const bomApi = {
     const response = await api.get(`/boms/${id}`);
     return response.data.data;
   },
+  create: async (data: any) => {
+    const response = await api.post('/boms', data);
+    return response.data.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/boms/${id}`, data);
+    return response.data.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/boms/${id}`);
+    return response.data;
+  },
 };
 
 export const productionApi = {
@@ -51,6 +63,64 @@ export const productionApi = {
   getOne: async (id: string) => {
     const response = await api.get(`/production/${id}`);
     return response.data.data;
+  },
+  create: async (data: any) => {
+    const response = await api.post('/production', data);
+    return response.data.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/production/${id}`, data);
+    return response.data.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/production/${id}`);
+    return response.data;
+  },
+};
+
+export const ordersApi = {
+  getAll: async () => {
+    const response = await api.get('/orders');
+    return response.data.data;
+  },
+  getOne: async (id: string) => {
+    const response = await api.get(`/orders/${id}`);
+    return response.data.data;
+  },
+  create: async (data: any) => {
+    const response = await api.post('/orders', data);
+    return response.data.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/orders/${id}`, data);
+    return response.data.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/orders/${id}`);
+    return response.data;
+  },
+};
+
+export const clientsApi = {
+  getAll: async () => {
+    const response = await api.get('/clients');
+    return response.data.data;
+  },
+  getOne: async (id: string) => {
+    const response = await api.get(`/clients/${id}`);
+    return response.data.data;
+  },
+  create: async (data: any) => {
+    const response = await api.post('/clients', data);
+    return response.data.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/clients/${id}`, data);
+    return response.data.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/clients/${id}`);
+    return response.data;
   },
 };
 

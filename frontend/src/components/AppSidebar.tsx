@@ -3,6 +3,8 @@ import {
   Wrench,
   Package,
   FileStack,
+  ShoppingCart,
+  Users,
   Settings,
   Factory,
 } from "lucide-react";
@@ -27,6 +29,8 @@ const navItems = [
   { title: "Production Jobs", url: "/jobs", icon: Wrench },
   { title: "Inventory", url: "/inventory", icon: Package },
   { title: "BOMs", url: "/boms", icon: FileStack },
+  { title: "Orders", url: "/orders", icon: ShoppingCart },
+  { title: "Clients", url: "/clients", icon: Users },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 

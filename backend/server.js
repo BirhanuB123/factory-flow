@@ -16,6 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+app.get('/api/products-test', (req, res) => res.json({ test: true }));
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));

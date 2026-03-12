@@ -15,15 +15,41 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.get('/api/products-test', (req, res) => res.json({ test: true }));
-app.use('/api/products', require('./routes/productRoutes'));
-app.use('/api/clients', require('./routes/clientRoutes'));
-app.use('/api/orders', require('./routes/orderRoutes'));
-app.use('/api/boms', require('./routes/bomRoutes'));
-app.use('/api/production', require('./routes/productionRoutes'));
+// Import Controllers
+const { getProducts, getProduct, createProduct, updateProduct, deleteProduct } = require('./controllers/productController');
+const { getBoms, getBom, createBom, updateBom, deleteBom } = require('./controllers/bomController');
+const { getJobs, getJob, createJob, updateJob, deleteJob } = require('./controllers/productionController');
+const { getClients, getClient, createClient, updateClient, deleteClient } = require('./controllers/clientController');
+const { getOrders, createOrder } = require('./controllers/orderController');
 
-// Basic Route
+// API Routes
+app.get('/api/products', getProducts);
+app.post('/api/products', createProduct);
+app.get('/api/products/:id', getProduct);
+app.put('/api/products/:id', updateProduct);
+app.delete('/api/products/:id', deleteProduct);
+
+app.get('/api/boms', getBoms);
+app.post('/api/boms', createBom);
+app.get('/api/boms/:id', getBom);
+app.put('/api/boms/:id', updateBom);
+app.delete('/api/boms/:id', deleteBom);
+
+app.get('/api/production', getJobs);
+app.post('/api/production', createJob);
+app.get('/api/production/:id', getJob);
+app.put('/api/production/:id', updateJob);
+app.delete('/api/production/:id', deleteJob);
+
+app.get('/api/clients', getClients);
+app.post('/api/clients', createClient);
+app.get('/api/clients/:id', getClient);
+app.put('/api/clients/:id', updateClient);
+app.delete('/api/clients/:id', deleteClient);
+
+app.get('/api/orders', getOrders);
+app.post('/api/orders', createOrder);
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Factory Flow ERP Backend is running' });
 });
@@ -31,7 +57,7 @@ app.get('/api/health', (req, res) => {
 // Error Middleware
 app.use(require('./middleware/errorMiddleware'));
 
-const PORT = process.env.PORT || 5000;
+const PORT = 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);

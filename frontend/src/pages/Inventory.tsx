@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { inventoryApi } from "@/lib/api";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -25,34 +27,18 @@ const stockBadgeVariant: Record<StockLevel, "success" | "warning" | "destructive
 };
 
 interface InventoryItem {
-  id: string;
+  _id: string;
   name: string;
   sku: string;
   category: string;
-  quantity: number;
+  stock: number;
   unit: string;
   reorderPoint: number;
   unitCost: number;
   supplier: string;
   location: string;
   lastReceived: string;
-  status: StockLevel;
 }
-
-const inventoryData: InventoryItem[] = [
-  { id: "MAT-001", name: "Aluminum 6061-T6 Bar Stock", sku: "AL6061-BAR-1", category: "Raw Metal", quantity: 245, unit: "pcs", reorderPoint: 50, unitCost: 28.50, supplier: "MetalPro Supply", location: "Rack A-01", lastReceived: "2026-03-01", status: "In Stock" },
-  { id: "MAT-002", name: "Steel 4140 Round Bar", sku: "ST4140-RND-2", category: "Raw Metal", quantity: 12, unit: "pcs", reorderPoint: 30, unitCost: 42.00, supplier: "Allied Steel", location: "Rack A-03", lastReceived: "2026-02-18", status: "Low Stock" },
-  { id: "MAT-003", name: "Carbide End Mill 1/2\"", sku: "TOOL-CEM-050", category: "Tooling", quantity: 38, unit: "pcs", reorderPoint: 10, unitCost: 85.00, supplier: "ToolMaster Inc.", location: "Tool Crib B", lastReceived: "2026-02-25", status: "In Stock" },
-  { id: "MAT-004", name: "Coolant - Semi-Synthetic 5gal", sku: "COOL-SS-5G", category: "Consumables", quantity: 0, unit: "drums", reorderPoint: 5, unitCost: 120.00, supplier: "CoolTech Fluids", location: "Storage C-02", lastReceived: "2026-01-15", status: "Out of Stock" },
-  { id: "MAT-005", name: "Brass C360 Hex Bar", sku: "BR360-HEX-1", category: "Raw Metal", quantity: 180, unit: "pcs", reorderPoint: 40, unitCost: 18.75, supplier: "MetalPro Supply", location: "Rack A-02", lastReceived: "2026-03-05", status: "In Stock" },
-  { id: "MAT-006", name: "Stainless 303 Plate 1/4\"", sku: "SS303-PLT-025", category: "Raw Metal", quantity: 8, unit: "sheets", reorderPoint: 15, unitCost: 195.00, supplier: "Allied Steel", location: "Rack D-01", lastReceived: "2026-02-10", status: "Low Stock" },
-  { id: "MAT-007", name: "Thread Insert M8x1.25", sku: "HDWR-TI-M8", category: "Hardware", quantity: 520, unit: "pcs", reorderPoint: 100, unitCost: 0.85, supplier: "FastenAll Co.", location: "Bin E-14", lastReceived: "2026-03-08", status: "In Stock" },
-  { id: "MAT-008", name: "Drill Bit Set - Cobalt", sku: "TOOL-DBS-COB", category: "Tooling", quantity: 3, unit: "sets", reorderPoint: 5, unitCost: 210.00, supplier: "ToolMaster Inc.", location: "Tool Crib B", lastReceived: "2026-01-28", status: "Low Stock" },
-  { id: "MAT-009", name: "O-Ring Kit - Viton", sku: "HDWR-ORK-VIT", category: "Hardware", quantity: 0, unit: "kits", reorderPoint: 10, unitCost: 45.00, supplier: "SealPro Ltd.", location: "Bin E-22", lastReceived: "2026-01-05", status: "Out of Stock" },
-  { id: "MAT-010", name: "Titanium Grade 5 Rod", sku: "TI-GR5-ROD-1", category: "Raw Metal", quantity: 62, unit: "pcs", reorderPoint: 20, unitCost: 310.00, supplier: "TitanSource", location: "Rack A-05", lastReceived: "2026-03-10", status: "In Stock" },
-  { id: "MAT-011", name: "Deburring Wheel 6\"", sku: "TOOL-DBW-6", category: "Tooling", quantity: 15, unit: "pcs", reorderPoint: 8, unitCost: 32.00, supplier: "ToolMaster Inc.", location: "Tool Crib A", lastReceived: "2026-02-20", status: "In Stock" },
-  { id: "MAT-012", name: "Safety Glasses - Clear", sku: "PPE-SG-CLR", category: "Consumables", quantity: 48, unit: "pcs", reorderPoint: 20, unitCost: 8.50, supplier: "SafetyFirst", location: "Storage F-01", lastReceived: "2026-03-02", status: "In Stock" },
-];
 
 const categories = ["All", "Raw Metal", "Tooling", "Hardware", "Consumables"];
 
@@ -65,23 +51,36 @@ export default function Inventory() {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [page, setPage] = useState(1);
 
-  const filtered = inventoryData.filter((item) => {
+  const { data: inventoryData = [], isLoading } = useQuery({
+    queryKey: ['inventory'],
+    queryFn: inventoryApi.getAll,
+  });
+
+  const getStockLevel = (item: InventoryItem): StockLevel => {
+    if (item.stock === 0) return "Out of Stock";
+    if (item.stock <= item.reorderPoint) return "Low Stock";
+    return "In Stock";
+  };
+
+  const filtered = inventoryData.filter((item: InventoryItem) => {
     const matchesSearch =
       item.name.toLowerCase().includes(search.toLowerCase()) ||
       item.sku.toLowerCase().includes(search.toLowerCase()) ||
-      item.id.toLowerCase().includes(search.toLowerCase());
+      item._id.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = categoryFilter === "All" || item.category === categoryFilter;
-    const matchesStock = stockFilter === "All" || item.status === stockFilter;
+    
+    const status = getStockLevel(item);
+    const matchesStock = stockFilter === "All" || status === stockFilter;
     return matchesSearch && matchesCategory && matchesStock;
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  const inStockCount = inventoryData.filter((i) => i.status === "In Stock").length;
-  const lowStockCount = inventoryData.filter((i) => i.status === "Low Stock").length;
-  const outOfStockCount = inventoryData.filter((i) => i.status === "Out of Stock").length;
-  const totalValue = inventoryData.reduce((sum, i) => sum + i.quantity * i.unitCost, 0);
+  const inStockCount = inventoryData.filter((i: InventoryItem) => getStockLevel(i) === "In Stock").length;
+  const lowStockCount = inventoryData.filter((i: InventoryItem) => getStockLevel(i) === "Low Stock").length;
+  const outOfStockCount = inventoryData.filter((i: InventoryItem) => getStockLevel(i) === "Out of Stock").length;
+  const totalValue = inventoryData.reduce((sum: number, i: InventoryItem) => sum + i.stock * i.unitCost, 0);
 
   return (
     <div className="space-y-6">
@@ -190,53 +189,62 @@ export default function Inventory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginated.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    Loading inventory...
+                  </TableCell>
+                </TableRow>
+              ) : paginated.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No items found.
                   </TableCell>
                 </TableRow>
               ) : (
-                paginated.map((item) => (
-                  <TableRow
-                    key={item.id}
-                    className="cursor-pointer"
-                    onClick={() => setSelectedItem(item)}
-                  >
-                    <TableCell className="font-mono text-xs text-muted-foreground">{item.id}</TableCell>
-                    <TableCell>
-                      <div>
-                        <span className="font-medium text-foreground">{item.name}</span>
-                        <p className="text-xs text-muted-foreground">{item.sku}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge variant="secondary">{item.category}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {item.quantity} {item.unit}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-right font-mono">
-                      ${item.unitCost.toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={stockBadgeVariant[item.status]}>{item.status}</Badge>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">
-                      {item.location}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={(e) => { e.stopPropagation(); setSelectedItem(item); }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                paginated.map((item) => {
+                  const status = getStockLevel(item);
+                  return (
+                    <TableRow
+                      key={item._id}
+                      className="cursor-pointer"
+                      onClick={() => setSelectedItem(item)}
+                    >
+                      <TableCell className="font-mono text-xs text-muted-foreground">{item._id.substring(0, 8)}...</TableCell>
+                      <TableCell>
+                        <div>
+                          <span className="font-medium text-foreground">{item.name}</span>
+                          <p className="text-xs text-muted-foreground">{item.sku}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Badge variant="secondary">{item.category}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {item.stock} {item.unit}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-right font-mono">
+                        ${item.unitCost.toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={stockBadgeVariant[status]}>{status}</Badge>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">
+                        {item.location}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => { e.stopPropagation(); setSelectedItem(item); }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -268,7 +276,7 @@ export default function Inventory() {
               <Package className="h-5 w-5 text-primary" />
               {selectedItem?.name}
             </DialogTitle>
-            <DialogDescription>{selectedItem?.sku} · {selectedItem?.id}</DialogDescription>
+            <DialogDescription>{selectedItem?.sku} · {selectedItem?._id}</DialogDescription>
           </DialogHeader>
           {selectedItem && (
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm py-2">
@@ -278,11 +286,11 @@ export default function Inventory() {
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Status</p>
-                <Badge variant={stockBadgeVariant[selectedItem.status]}>{selectedItem.status}</Badge>
+                <Badge variant={stockBadgeVariant[getStockLevel(selectedItem)]}>{getStockLevel(selectedItem)}</Badge>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Quantity</p>
-                <p className="font-medium text-foreground">{selectedItem.quantity} {selectedItem.unit}</p>
+                <p className="font-medium text-foreground">{selectedItem.stock} {selectedItem.unit}</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Reorder Point</p>
@@ -294,7 +302,7 @@ export default function Inventory() {
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Total Value</p>
-                <p className="font-medium text-foreground">${(selectedItem.quantity * selectedItem.unitCost).toLocaleString()}</p>
+                <p className="font-medium text-foreground">${(selectedItem.stock * selectedItem.unitCost).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Supplier</p>
@@ -306,7 +314,7 @@ export default function Inventory() {
               </div>
               <div className="col-span-2">
                 <p className="text-muted-foreground text-xs">Last Received</p>
-                <p className="font-medium text-foreground">{selectedItem.lastReceived}</p>
+                <p className="font-medium text-foreground">{selectedItem.lastReceived ? new Date(selectedItem.lastReceived).toLocaleDateString() : 'N/A'}</p>
               </div>
             </div>
           )}

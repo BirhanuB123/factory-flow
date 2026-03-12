@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { bomApi } from "@/lib/api";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -22,85 +24,29 @@ const statusVariant: Record<BomStatus, "success" | "warning" | "secondary"> = {
 };
 
 interface BomComponent {
-  name: string;
-  sku: string;
+  product: {
+    name: string;
+    sku: string;
+    unitCost: number;
+    unit: string;
+  };
   quantity: number;
-  unit: string;
-  unitCost: number;
 }
 
 interface Bom {
-  id: string;
+  _id: string;
   name: string;
   partNumber: string;
   revision: string;
   status: BomStatus;
   components: BomComponent[];
-  createdDate: string;
-  updatedDate: string;
+  createdAt: string;
+  updatedAt: string;
   notes: string;
 }
 
-const bomsData: Bom[] = [
-  {
-    id: "BOM-001", name: "Hydraulic Manifold Block", partNumber: "HMB-4200", revision: "Rev C", status: "Active",
-    createdDate: "2025-11-10", updatedDate: "2026-02-28", notes: "Production-ready. Approved by engineering.",
-    components: [
-      { name: "Aluminum 6061-T6 Bar Stock", sku: "AL6061-BAR-1", quantity: 2, unit: "pcs", unitCost: 28.50 },
-      { name: "O-Ring Kit - Viton", sku: "HDWR-ORK-VIT", quantity: 1, unit: "kit", unitCost: 45.00 },
-      { name: "Thread Insert M8x1.25", sku: "HDWR-TI-M8", quantity: 8, unit: "pcs", unitCost: 0.85 },
-      { name: "Carbide End Mill 1/2\"", sku: "TOOL-CEM-050", quantity: 1, unit: "pcs", unitCost: 85.00 },
-    ],
-  },
-  {
-    id: "BOM-002", name: "CNC Spindle Adapter", partNumber: "CSA-1100", revision: "Rev A", status: "Active",
-    createdDate: "2026-01-05", updatedDate: "2026-03-01", notes: "Standard adapter for Haas VF-2.",
-    components: [
-      { name: "Steel 4140 Round Bar", sku: "ST4140-RND-2", quantity: 1, unit: "pcs", unitCost: 42.00 },
-      { name: "Brass C360 Hex Bar", sku: "BR360-HEX-1", quantity: 2, unit: "pcs", unitCost: 18.75 },
-      { name: "Deburring Wheel 6\"", sku: "TOOL-DBW-6", quantity: 1, unit: "pcs", unitCost: 32.00 },
-    ],
-  },
-  {
-    id: "BOM-003", name: "Aerospace Bracket Assembly", partNumber: "ABA-7750", revision: "Rev B", status: "Active",
-    createdDate: "2025-09-20", updatedDate: "2026-03-05", notes: "AS9100 certified process required.",
-    components: [
-      { name: "Titanium Grade 5 Rod", sku: "TI-GR5-ROD-1", quantity: 3, unit: "pcs", unitCost: 310.00 },
-      { name: "Carbide End Mill 1/2\"", sku: "TOOL-CEM-050", quantity: 2, unit: "pcs", unitCost: 85.00 },
-      { name: "Thread Insert M8x1.25", sku: "HDWR-TI-M8", quantity: 12, unit: "pcs", unitCost: 0.85 },
-    ],
-  },
-  {
-    id: "BOM-004", name: "Coolant Pump Housing", partNumber: "CPH-3300", revision: "Rev A", status: "Draft",
-    createdDate: "2026-03-01", updatedDate: "2026-03-09", notes: "Pending material approval from supplier.",
-    components: [
-      { name: "Aluminum 6061-T6 Bar Stock", sku: "AL6061-BAR-1", quantity: 1, unit: "pcs", unitCost: 28.50 },
-      { name: "O-Ring Kit - Viton", sku: "HDWR-ORK-VIT", quantity: 2, unit: "kits", unitCost: 45.00 },
-      { name: "Stainless 303 Plate 1/4\"", sku: "SS303-PLT-025", quantity: 1, unit: "sheet", unitCost: 195.00 },
-    ],
-  },
-  {
-    id: "BOM-005", name: "Fixture Plate - Phase 1", partNumber: "FXP-0010", revision: "Rev D", status: "Archived",
-    createdDate: "2024-06-15", updatedDate: "2025-08-12", notes: "Replaced by FXP-0020. Kept for reference.",
-    components: [
-      { name: "Steel 4140 Round Bar", sku: "ST4140-RND-2", quantity: 4, unit: "pcs", unitCost: 42.00 },
-      { name: "Drill Bit Set - Cobalt", sku: "TOOL-DBS-COB", quantity: 1, unit: "set", unitCost: 210.00 },
-    ],
-  },
-  {
-    id: "BOM-006", name: "Pneumatic Valve Body", partNumber: "PVB-5500", revision: "Rev B", status: "Active",
-    createdDate: "2025-12-01", updatedDate: "2026-03-10", notes: "High-volume production item.",
-    components: [
-      { name: "Brass C360 Hex Bar", sku: "BR360-HEX-1", quantity: 3, unit: "pcs", unitCost: 18.75 },
-      { name: "O-Ring Kit - Viton", sku: "HDWR-ORK-VIT", quantity: 1, unit: "kit", unitCost: 45.00 },
-      { name: "Thread Insert M8x1.25", sku: "HDWR-TI-M8", quantity: 6, unit: "pcs", unitCost: 0.85 },
-      { name: "Carbide End Mill 1/2\"", sku: "TOOL-CEM-050", quantity: 1, unit: "pcs", unitCost: 85.00 },
-    ],
-  },
-];
-
 function calcBomCost(components: BomComponent[]) {
-  return components.reduce((sum, c) => sum + c.quantity * c.unitCost, 0);
+  return components.reduce((sum, c) => sum + c.quantity * (c.product?.unitCost || 0), 0);
 }
 
 export default function Boms() {
@@ -108,11 +54,16 @@ export default function Boms() {
   const [statusFilter, setStatusFilter] = useState<"All" | BomStatus>("All");
   const [selectedBom, setSelectedBom] = useState<Bom | null>(null);
 
+  const { data: bomsData = [], isLoading } = useQuery({
+    queryKey: ['boms'],
+    queryFn: bomApi.getAll,
+  });
+
   const filtered = bomsData.filter((bom) => {
     const matchesSearch =
       bom.name.toLowerCase().includes(search.toLowerCase()) ||
       bom.partNumber.toLowerCase().includes(search.toLowerCase()) ||
-      bom.id.toLowerCase().includes(search.toLowerCase());
+      bom._id.toLowerCase().includes(search.toLowerCase()); // Changed bom.id to bom._id
     const matchesStatus = statusFilter === "All" || bom.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -120,7 +71,7 @@ export default function Boms() {
   const activeCount = bomsData.filter((b) => b.status === "Active").length;
   const draftCount = bomsData.filter((b) => b.status === "Draft").length;
   const totalComponents = bomsData.reduce((sum, b) => sum + b.components.length, 0);
-  const avgCost = bomsData.reduce((sum, b) => sum + calcBomCost(b.components), 0) / bomsData.length;
+  const avgCost = bomsData.length > 0 ? bomsData.reduce((sum, b) => sum + calcBomCost(b.components), 0) / bomsData.length : 0;
 
   return (
     <div className="space-y-6">
@@ -220,7 +171,13 @@ export default function Boms() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    Loading BOMs...
+                  </TableCell>
+                </TableRow>
+              ) : filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     No BOMs found.
@@ -229,11 +186,11 @@ export default function Boms() {
               ) : (
                 filtered.map((bom) => (
                   <TableRow
-                    key={bom.id}
+                    key={bom._id}
                     className="cursor-pointer"
                     onClick={() => setSelectedBom(bom)}
                   >
-                    <TableCell className="font-mono text-xs text-muted-foreground">{bom.id}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{bom._id.substring(0, 8)}...</TableCell>
                     <TableCell>
                       <span className="font-medium text-foreground">{bom.name}</span>
                     </TableCell>
@@ -277,7 +234,7 @@ export default function Boms() {
               {selectedBom?.name}
             </DialogTitle>
             <DialogDescription>
-              {selectedBom?.partNumber} · {selectedBom?.revision} · {selectedBom?.id}
+              {selectedBom?.partNumber} · {selectedBom?.revision} · {selectedBom?._id}
             </DialogDescription>
           </DialogHeader>
           {selectedBom && (
@@ -289,11 +246,11 @@ export default function Boms() {
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Created</p>
-                  <p className="font-medium text-foreground">{selectedBom.createdDate}</p>
+                  <p className="font-medium text-foreground">{new Date(selectedBom.createdAt).toLocaleDateString()}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground text-xs">Last Updated</p>
-                  <p className="font-medium text-foreground">{selectedBom.updatedDate}</p>
+                  <p className="font-medium text-foreground">{new Date(selectedBom.updatedAt).toLocaleDateString()}</p>
                 </div>
               </div>
 
@@ -314,12 +271,12 @@ export default function Boms() {
                     <TableBody>
                       {selectedBom.components.map((c, i) => (
                         <TableRow key={i}>
-                          <TableCell className="font-medium text-foreground">{c.name}</TableCell>
-                          <TableCell className="hidden sm:table-cell font-mono text-xs text-muted-foreground">{c.sku}</TableCell>
-                          <TableCell className="text-right font-mono">{c.quantity} {c.unit}</TableCell>
-                          <TableCell className="text-right font-mono">${c.unitCost.toFixed(2)}</TableCell>
+                          <TableCell className="font-medium text-foreground">{c.product?.name}</TableCell>
+                          <TableCell className="hidden sm:table-cell font-mono text-xs text-muted-foreground">{c.product?.sku}</TableCell>
+                          <TableCell className="text-right font-mono">{c.quantity} {c.product?.unit}</TableCell>
+                          <TableCell className="text-right font-mono">${(c.product?.unitCost || 0).toFixed(2)}</TableCell>
                           <TableCell className="text-right font-mono font-semibold">
-                            ${(c.quantity * c.unitCost).toFixed(2)}
+                            ${(c.quantity * (c.product?.unitCost || 0)).toFixed(2)}
                           </TableCell>
                         </TableRow>
                       ))}

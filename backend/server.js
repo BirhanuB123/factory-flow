@@ -24,6 +24,8 @@ app.get('/api/health', (req, res) => {
 app.use('/api/clients', require('./routes/clientRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/api/boms', require('./routes/bomRoutes'));
+app.use('/api/production', require('./routes/productionRoutes'));
 
 // Error Middleware
 app.use(require('./middleware/errorMiddleware'));

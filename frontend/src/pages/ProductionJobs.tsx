@@ -1,3 +1,41 @@
+import { useQuery } from "@tanstack/react-query";
+import { productionApi } from "@/lib/api";
+
+type JobStatus = "Scheduled" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
+type Priority = "Low" | "Medium" | "High" | "Urgent";
+
+const statusVariant: Record<JobStatus, "success" | "info" | "destructive" | "warning" | "secondary"> = {
+  "In Progress": "success",
+  "Scheduled": "info",
+  "On Hold": "warning",
+  "Cancelled": "destructive",
+  "Completed": "secondary",
+};
+
+const priorityVariant: Record<Priority, "destructive" | "warning" | "info" | "secondary"> = {
+  High: "destructive",
+  Urgent: "destructive",
+  Medium: "warning",
+  Low: "info",
+};
+
+interface Job {
+  _id: string;
+  jobId: string;
+  bom: {
+    _id: string;
+    name: string;
+    partNumber: string;
+  };
+  quantity: number;
+  status: JobStatus;
+  priority: Priority;
+  dueDate: string;
+  assignedTo: string;
+  notes: string;
+  progress?: number; // Added progress if it exists in data
+}
+
 import { useState } from "react";
 import {
   Table,
@@ -41,170 +79,6 @@ import {
   Eye,
 } from "lucide-react";
 
-type JobStatus = "In Production" | "Queued" | "Delayed" | "QC Review" | "Completed";
-type Priority = "High" | "Medium" | "Low";
-
-const statusVariant: Record<JobStatus, "success" | "info" | "destructive" | "warning" | "secondary"> = {
-  "In Production": "success",
-  Queued: "info",
-  Delayed: "destructive",
-  "QC Review": "warning",
-  Completed: "secondary",
-};
-
-const priorityVariant: Record<Priority, "destructive" | "warning" | "info"> = {
-  High: "destructive",
-  Medium: "warning",
-  Low: "info",
-};
-
-interface Job {
-  id: string;
-  client: string;
-  part: string;
-  machine: string;
-  status: JobStatus;
-  progress: number;
-  priority: Priority;
-  quantity: number;
-  dueDate: string;
-  operator: string;
-  startDate: string;
-}
-
-const allJobs: Job[] = [
-  {
-    id: "JOB-1042",
-    client: "Apex Aerostructures",
-    part: "Turbine Bracket T-7",
-    machine: "CNC Mill #3",
-    status: "In Production",
-    progress: 72,
-    priority: "High",
-    quantity: 24,
-    dueDate: "2026-03-14",
-    operator: "Mike Torres",
-    startDate: "2026-03-08",
-  },
-  {
-    id: "JOB-1043",
-    client: "Pacific Auto Group",
-    part: "Drive Shaft Coupling",
-    machine: "Lathe #1",
-    status: "In Production",
-    progress: 45,
-    priority: "Medium",
-    quantity: 50,
-    dueDate: "2026-03-18",
-    operator: "Sarah Chen",
-    startDate: "2026-03-09",
-  },
-  {
-    id: "JOB-1044",
-    client: "NovaMed Devices",
-    part: "Implant Housing MK-II",
-    machine: "5-Axis #2",
-    status: "Delayed",
-    progress: 18,
-    priority: "High",
-    quantity: 12,
-    dueDate: "2026-03-12",
-    operator: "James Park",
-    startDate: "2026-03-06",
-  },
-  {
-    id: "JOB-1045",
-    client: "Summit Construction",
-    part: "Steel Plate Weldment",
-    machine: "Welding Bay",
-    status: "Queued",
-    progress: 0,
-    priority: "Low",
-    quantity: 8,
-    dueDate: "2026-03-22",
-    operator: "Unassigned",
-    startDate: "—",
-  },
-  {
-    id: "JOB-1046",
-    client: "Apex Aerostructures",
-    part: "Wing Rib Section 4A",
-    machine: "CNC Mill #1",
-    status: "QC Review",
-    progress: 95,
-    priority: "High",
-    quantity: 6,
-    dueDate: "2026-03-13",
-    operator: "Mike Torres",
-    startDate: "2026-03-07",
-  },
-  {
-    id: "JOB-1047",
-    client: "Delta Marine",
-    part: "Propeller Hub Assembly",
-    machine: "CNC Mill #2",
-    status: "In Production",
-    progress: 60,
-    priority: "Medium",
-    quantity: 4,
-    dueDate: "2026-03-16",
-    operator: "Lisa Nguyen",
-    startDate: "2026-03-10",
-  },
-  {
-    id: "JOB-1048",
-    client: "Pacific Auto Group",
-    part: "Transmission Case",
-    machine: "5-Axis #1",
-    status: "Queued",
-    progress: 0,
-    priority: "Medium",
-    quantity: 20,
-    dueDate: "2026-03-25",
-    operator: "Unassigned",
-    startDate: "—",
-  },
-  {
-    id: "JOB-1049",
-    client: "NovaMed Devices",
-    part: "Surgical Guide Rail",
-    machine: "Lathe #2",
-    status: "Completed",
-    progress: 100,
-    priority: "High",
-    quantity: 30,
-    dueDate: "2026-03-10",
-    operator: "Sarah Chen",
-    startDate: "2026-03-03",
-  },
-  {
-    id: "JOB-1050",
-    client: "Summit Construction",
-    part: "Anchor Bolt Plate",
-    machine: "Press Brake",
-    status: "In Production",
-    progress: 33,
-    priority: "Low",
-    quantity: 100,
-    dueDate: "2026-03-20",
-    operator: "James Park",
-    startDate: "2026-03-11",
-  },
-  {
-    id: "JOB-1051",
-    client: "Apex Aerostructures",
-    part: "Fuselage Frame F-12",
-    machine: "5-Axis #2",
-    status: "Delayed",
-    progress: 10,
-    priority: "High",
-    quantity: 2,
-    dueDate: "2026-03-11",
-    operator: "Mike Torres",
-    startDate: "2026-03-05",
-  },
-];
-
 const ITEMS_PER_PAGE = 8;
 
 const ProductionJobs = () => {
@@ -214,13 +88,17 @@ const ProductionJobs = () => {
   const [page, setPage] = useState(1);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
-  const filtered = allJobs.filter((job) => {
+  const { data: allJobs = [], isLoading } = useQuery({
+    queryKey: ['production-jobs'],
+    queryFn: productionApi.getAll,
+  });
+
+  const filtered = allJobs.filter((job: Job) => {
     const matchesSearch =
       search === "" ||
-      job.id.toLowerCase().includes(search.toLowerCase()) ||
-      job.client.toLowerCase().includes(search.toLowerCase()) ||
-      job.part.toLowerCase().includes(search.toLowerCase()) ||
-      job.operator.toLowerCase().includes(search.toLowerCase());
+      job.jobId.toLowerCase().includes(search.toLowerCase()) ||
+      job.bom?.name.toLowerCase().includes(search.toLowerCase()) ||
+      job.assignedTo?.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || job.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || job.priority === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
@@ -230,7 +108,7 @@ const ProductionJobs = () => {
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const statusCounts = allJobs.reduce(
-    (acc, job) => {
+    (acc: Record<string, number>, job: Job) => {
       acc[job.status] = (acc[job.status] || 0) + 1;
       return acc;
     },
@@ -369,7 +247,13 @@ const ProductionJobs = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.length === 0 ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
+                      Loading production jobs...
+                    </TableCell>
+                  </TableRow>
+                ) : paginated.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                       No jobs match your filters.
@@ -377,20 +261,20 @@ const ProductionJobs = () => {
                   </TableRow>
                 ) : (
                   paginated.map((job) => (
-                    <TableRow key={job.id} className="cursor-pointer" onClick={() => setSelectedJob(job)}>
+                    <TableRow key={job._id} className="cursor-pointer" onClick={() => setSelectedJob(job)}>
                       <TableCell className="pl-6 font-mono text-sm font-medium">
-                        {job.id}
+                        {job.jobId}
                       </TableCell>
-                      <TableCell className="text-sm">{job.client}</TableCell>
-                      <TableCell className="text-sm">{job.part}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{job.machine}</TableCell>
+                      <TableCell className="text-sm">Internal Production</TableCell>
+                      <TableCell className="text-sm">{job.bom?.name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">Standard Op</TableCell>
                       <TableCell>
                         <Badge variant={priorityVariant[job.priority]} className="text-[11px]">
                           {job.priority}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm font-mono">{job.quantity}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{job.dueDate}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{new Date(job.dueDate).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <Badge variant={statusVariant[job.status]} className="text-[11px]">
                           {job.status}
@@ -398,9 +282,9 @@ const ProductionJobs = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2 min-w-[100px]">
-                          <Progress value={job.progress} className="h-2 flex-1" />
+                          <Progress value={job.progress || 0} className="h-2 flex-1" />
                           <span className="text-xs font-mono text-muted-foreground w-8 text-right">
-                            {job.progress}%
+                            {job.progress || 0}%
                           </span>
                         </div>
                       </TableCell>
@@ -466,32 +350,20 @@ const ProductionJobs = () => {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  <span className="font-mono">{selectedJob.id}</span>
+                  <span className="font-mono">{selectedJob.jobId}</span>
                   <Badge variant={statusVariant[selectedJob.status]} className="text-[11px]">
                     {selectedJob.status}
                   </Badge>
                 </DialogTitle>
-                <DialogDescription>{selectedJob.part}</DialogDescription>
+                <DialogDescription>{selectedJob.bom?.name} · {selectedJob.bom?.partNumber}</DialogDescription>
               </DialogHeader>
 
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <User className="h-3 w-3" /> Client
+                    <User className="h-3 w-3" /> Assigned To
                   </p>
-                  <p className="text-sm font-medium">{selectedJob.client}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Wrench className="h-3 w-3" /> Machine
-                  </p>
-                  <p className="text-sm font-medium">{selectedJob.machine}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <User className="h-3 w-3" /> Operator
-                  </p>
-                  <p className="text-sm font-medium">{selectedJob.operator}</p>
+                  <p className="text-sm font-medium">{selectedJob.assignedTo || "Unassigned"}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -501,24 +373,25 @@ const ProductionJobs = () => {
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Clock className="h-3 w-3" /> Start Date
-                  </p>
-                  <p className="text-sm font-medium">{selectedJob.startDate}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <Calendar className="h-3 w-3" /> Due Date
                   </p>
-                  <p className="text-sm font-medium">{selectedJob.dueDate}</p>
+                  <p className="text-sm font-medium">{new Date(selectedJob.dueDate).toLocaleDateString()}</p>
                 </div>
               </div>
+
+              {selectedJob.notes && (
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Notes</p>
+                  <p className="text-sm">{selectedJob.notes}</p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Progress</span>
-                  <span className="font-mono font-medium">{selectedJob.progress}%</span>
+                  <span className="font-mono font-medium">{selectedJob.progress || 0}%</span>
                 </div>
-                <Progress value={selectedJob.progress} className="h-2.5" />
+                <Progress value={selectedJob.progress || 0} className="h-2.5" />
               </div>
 
               <DialogFooter className="gap-2 sm:gap-0">

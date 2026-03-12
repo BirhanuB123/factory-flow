@@ -17,7 +17,15 @@ const ProductSchema = new mongoose.Schema({
     type: Number,
     required: [true, 'Please add a price']
   },
+  unitCost: {
+    type: Number,
+    default: 0
+  },
   stock: {
+    type: Number,
+    default: 0
+  },
+  reorderPoint: {
     type: Number,
     default: 0
   },
@@ -25,6 +33,9 @@ const ProductSchema = new mongoose.Schema({
     type: String,
     default: 'pcs'
   },
+  supplier: String,
+  location: String,
+  lastReceived: Date,
   createdAt: {
     type: Date,
     default: Date.now

@@ -17,11 +17,11 @@ import {
 const SETTINGS_KEY = "erp-settings";
 
 const defaultSettings = {
-  shopName: "ShopFloor CNC",
+  shopName: "Integra CNC",
   shopAddress: "1234 Industrial Blvd, Suite 100",
   shopCity: "Detroit, MI 48201",
   shopPhone: "(313) 555-0199",
-  shopEmail: "ops@shopfloorcnc.com",
+  shopEmail: "ops@integracnc.com",
   timezone: "America/Detroit",
   currency: "USD",
   displayName: "Alex Torres",

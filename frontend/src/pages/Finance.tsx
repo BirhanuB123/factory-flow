@@ -401,14 +401,76 @@ export default function Finance() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="income" className="h-48 flex items-center justify-center text-muted-foreground transition-all">
-          <Card className="w-full flex items-center justify-center py-12">
-            <p>Detailed Invoice view coming soon.</p>
+        <TabsContent value="income">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3 text-sm font-medium">Recorded Invoices</CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-6">Invoice ID</TableHead>
+                    <TableHead>Client / Description</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead className="pr-6">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.filter(t => t.type === "Income").length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">No invoices found.</TableCell>
+                    </TableRow>
+                  ) : (
+                    transactions.filter(t => t.type === "Income").map(t => (
+                      <TableRow key={t.id}>
+                        <TableCell className="pl-6 font-mono text-xs">{t.id}</TableCell>
+                        <TableCell className="text-sm">{t.description}</TableCell>
+                        <TableCell className="text-sm font-semibold text-green-600">{symbol}{t.amount.toLocaleString()}</TableCell>
+                        <TableCell className="text-sm">{t.date}</TableCell>
+                        <TableCell className="pr-6">
+                          <Badge variant={statusVariant[t.status]}>{t.status}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="expense" className="h-48 flex items-center justify-center text-muted-foreground transition-all">
-          <Card className="w-full flex items-center justify-center py-12">
-            <p>Detailed Expense tracking coming soon.</p>
+        <TabsContent value="expense">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3 text-sm font-medium">Recorded Expenses</CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-6">ID</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead className="pr-6">Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.filter(t => t.type === "Expense").length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">No expenses found.</TableCell>
+                    </TableRow>
+                  ) : (
+                    transactions.filter(t => t.type === "Expense").map(t => (
+                      <TableRow key={t.id}>
+                        <TableCell className="pl-6 font-mono text-xs">{t.id}</TableCell>
+                        <TableCell className="text-sm font-medium">{t.category}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{t.description}</TableCell>
+                        <TableCell className="text-sm font-semibold text-red-600">-{symbol}{t.amount.toLocaleString()}</TableCell>
+                        <TableCell className="pr-6 text-sm">{t.date}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>

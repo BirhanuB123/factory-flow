@@ -61,11 +61,49 @@ export default function Hr() {
     department: "",
     status: "Active" as EmploymentStatus,
   });
+  
+  const [attendance, setAttendance] = useState<any[]>([]);
+  const [payroll, setPayroll] = useState<any[]>([]);
+  const [attLoading, setAttLoading] = useState(false);
+  const [payLoading, setPayLoading] = useState(false);
+
   const { toast } = useToast();
 
   useEffect(() => {
     fetchEmployees();
+    fetchAttendance();
+    fetchPayroll();
   }, []);
+
+  const fetchAttendance = async () => {
+    setAttLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/attendance`);
+      if (response.ok) {
+        const data = await response.json();
+        setAttendance(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch attendance:", error);
+    } finally {
+      setAttLoading(false);
+    }
+  };
+
+  const fetchPayroll = async () => {
+    setPayLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/payroll`);
+      if (response.ok) {
+        const data = await response.json();
+        setPayroll(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch payroll:", error);
+    } finally {
+      setPayLoading(false);
+    }
+  };
 
   const fetchEmployees = async () => {
     setLoading(true);
@@ -374,24 +412,84 @@ export default function Hr() {
         </TabsContent>
         <TabsContent value="attendance">
           <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle>Attendance Tracking</CardTitle>
-              <p className="text-sm text-muted-foreground">Monitor staff daily attendance and leave status</p>
-            </CardHeader>
-            <CardContent className="h-48 flex items-center justify-center text-muted-foreground">
-              Attendance records will be displayed here soon.
+            <CardHeader className="pb-3 text-sm font-medium">Daily Attendance Log</CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-6">Employee</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Check In/Out</TableHead>
+                    <TableHead className="pr-6">Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {attLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Loading...</TableCell>
+                    </TableRow>
+                  ) : attendance.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">No attendance records found.</TableCell>
+                    </TableRow>
+                  ) : (
+                    attendance.map((a) => (
+                      <TableRow key={a._id}>
+                        <TableCell className="pl-6 font-medium text-sm">{a.employee?.name || "Unknown"}</TableCell>
+                        <TableCell className="text-sm">{new Date(a.date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Badge variant={a.status === "Present" ? "success" : "warning"} className="text-[10px]">{a.status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground font-mono">{a.checkIn || "--:--"} - {a.checkOut || "--:--"}</TableCell>
+                        <TableCell className="pr-6 text-sm italic text-muted-foreground">{a.notes || "-"}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="payroll">
           <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle>Payroll Management</CardTitle>
-              <p className="text-sm text-muted-foreground">Manage salary structures and payment history</p>
-            </CardHeader>
-            <CardContent className="h-48 flex items-center justify-center text-muted-foreground">
-              Payroll management and history will be displayed here soon.
+            <CardHeader className="pb-3 text-sm font-medium">Payroll History</CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-6">Employee</TableHead>
+                    <TableHead>Month</TableHead>
+                    <TableHead>Net Salary</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="pr-6">Payment Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Loading...</TableCell>
+                    </TableRow>
+                  ) : payroll.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">No payroll records found.</TableCell>
+                    </TableRow>
+                  ) : (
+                    payroll.map((p) => (
+                      <TableRow key={p._id}>
+                        <TableCell className="pl-6 font-medium text-sm">{p.employee?.name || "Unknown"}</TableCell>
+                        <TableCell className="text-sm">{p.month}</TableCell>
+                        <TableCell className="text-sm font-semibold">${p.netSalary?.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge variant={p.paymentStatus === "Paid" ? "success" : "warning"} className="text-[10px]">{p.paymentStatus}</Badge>
+                        </TableCell>
+                        <TableCell className="pr-6 text-sm">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : "-"}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>

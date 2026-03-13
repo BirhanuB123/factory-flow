@@ -23,8 +23,10 @@ const { getClients, getClient, createClient, updateClient, deleteClient } = requ
 const { getOrders, getOrder, createOrder, updateOrder, deleteOrder } = require('./controllers/orderController');
 const { getEmployees, createEmployee, getAttendance, logAttendance, getPayroll, createPayroll } = require('./controllers/hrController');
 const { getTransactions, createInvoice, createExpense, getFinanceStats } = require('./controllers/financeController');
+const { globalSearch } = require('./controllers/searchController');
 
 // API Routes
+app.get('/api/search', globalSearch);
 app.get('/api/products', getProducts);
 app.post('/api/products', createProduct);
 app.get('/api/products/:id', getProduct);

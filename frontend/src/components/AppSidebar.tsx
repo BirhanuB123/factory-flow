@@ -51,7 +51,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="flex flex-col">
               <span className="text-sm font-bold text-sidebar-accent-foreground tracking-tight">
-                ShopFloor
+                INTEGRA
               </span>
               <span className="text-[10px] text-sidebar-muted uppercase tracking-widest">
                 ERP System

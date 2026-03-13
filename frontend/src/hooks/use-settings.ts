@@ -11,11 +11,11 @@ const currencySymbols: Record<string, string> = {
 };
 
 export const defaultSettings = {
-  shopName: "ShopFloor CNC",
+  shopName: "Integra CNC",
   shopAddress: "1234 Industrial Blvd, Suite 100",
   shopCity: "Detroit, MI 48201",
   shopPhone: "(313) 555-0199",
-  shopEmail: "ops@shopfloorcnc.com",
+  shopEmail: "ops@integracnc.com",
   timezone: "Africa/Addis_Ababa",
   currency: "ETB",
   displayName: "Paul Mitchell",

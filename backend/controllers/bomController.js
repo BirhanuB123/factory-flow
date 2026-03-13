@@ -24,9 +24,6 @@ exports.createBom = asyncHandler(async (req, res, next) => {
   res.status(201).json({ success: true, data: bom });
 });
 
-// @desc    Update BOM
-// @route   PUT /api/boms/:id
-// @access  Public
 exports.updateBom = asyncHandler(async (req, res, next) => {
   const bom = await BOM.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
@@ -38,9 +35,6 @@ exports.updateBom = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, data: bom });
 });
 
-// @desc    Delete BOM
-// @route   DELETE /api/boms/:id
-// @access  Public
 exports.deleteBom = asyncHandler(async (req, res, next) => {
   const bom = await BOM.findByIdAndDelete(req.params.id);
   if (!bom) {

@@ -5,8 +5,10 @@ import {
   FileStack,
   ShoppingCart,
   Users,
+  UserCog,
   Settings,
   Factory,
+  CircleDollarSign,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -31,6 +33,8 @@ const navItems = [
   { title: "BOMs", url: "/boms", icon: FileStack },
   { title: "Orders", url: "/orders", icon: ShoppingCart },
   { title: "Clients", url: "/clients", icon: Users },
+  { title: "HR", url: "/hr", icon: UserCog },
+  { title: "Finance", url: "/finance", icon: CircleDollarSign },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 

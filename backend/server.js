@@ -21,6 +21,8 @@ const { getBoms, getBom, createBom, updateBom, deleteBom } = require('./controll
 const { getJobs, getJob, createJob, updateJob, deleteJob } = require('./controllers/productionController');
 const { getClients, getClient, createClient, updateClient, deleteClient } = require('./controllers/clientController');
 const { getOrders, getOrder, createOrder, updateOrder, deleteOrder } = require('./controllers/orderController');
+const { getEmployees, createEmployee, getAttendance, logAttendance, getPayroll, createPayroll } = require('./controllers/hrController');
+const { getTransactions, createInvoice, createExpense, getFinanceStats } = require('./controllers/financeController');
 
 // API Routes
 app.get('/api/products', getProducts);
@@ -52,6 +54,20 @@ app.post('/api/orders', createOrder);
 app.get('/api/orders/:id', getOrder);
 app.put('/api/orders/:id', updateOrder);
 app.delete('/api/orders/:id', deleteOrder);
+
+// HR Routes
+app.get('/api/hr/employees', getEmployees);
+app.post('/api/hr/employees', createEmployee);
+app.get('/api/hr/attendance', getAttendance);
+app.post('/api/hr/attendance', logAttendance);
+app.get('/api/hr/payroll', getPayroll);
+app.post('/api/hr/payroll', createPayroll);
+
+// Finance Routes
+app.get('/api/finance/transactions', getTransactions);
+app.post('/api/finance/invoices', createInvoice);
+app.post('/api/finance/expenses', createExpense);
+app.get('/api/finance/stats', getFinanceStats);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Factory Flow ERP Backend is running' });

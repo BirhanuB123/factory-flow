@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { productionApi, inventoryApi } from "@/lib/api";
+import { useCurrency } from "@/hooks/use-currency";
 import { Wrench, Gauge, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function KpiCards() {
+  const { symbol } = useCurrency();
   const { data: jobs = [] } = useQuery({
     queryKey: ["production-jobs"],
     queryFn: productionApi.getAll,

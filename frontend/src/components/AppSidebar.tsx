@@ -28,11 +28,8 @@ import {
 
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Production Jobs", url: "/jobs", icon: Wrench },
+  { title: "Production", url: "/production", icon: Factory },
   { title: "Inventory", url: "/inventory", icon: Package },
-  { title: "BOMs", url: "/boms", icon: FileStack },
-  { title: "Orders", url: "/orders", icon: ShoppingCart },
-  { title: "Clients", url: "/clients", icon: Users },
   { title: "HR", url: "/hr", icon: UserCog },
   { title: "Finance", url: "/finance", icon: CircleDollarSign },
   { title: "Settings", url: "/settings", icon: Settings },

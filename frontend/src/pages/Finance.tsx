@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, CircleDollarSign, TrendingUp, TrendingDown, Receipt, Loader2 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from "@/hooks/use-currency";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,7 @@ const statusVariant: Record<FinanceStatus, "success" | "warning" | "destructive"
 const API_BASE_URL = "http://localhost:5000/api/finance";
 
 export default function Finance() {
+  const { symbol } = useCurrency();
   const [q, setQ] = useState("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
@@ -277,7 +279,7 @@ export default function Finance() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <div className="text-2xl font-semibold">${financeStats.revenue.toLocaleString()}</div>
+            <div className="text-2xl font-semibold">{symbol}{financeStats.revenue.toLocaleString()}</div>
             <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
               <TrendingUp className="h-5 w-5 text-green-500" />
             </div>
@@ -288,7 +290,7 @@ export default function Finance() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Expenses</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <div className="text-2xl font-semibold">${financeStats.expenses.toLocaleString()}</div>
+            <div className="text-2xl font-semibold">{symbol}{financeStats.expenses.toLocaleString()}</div>
             <div className="h-10 w-10 rounded-lg bg-red-500/10 flex items-center justify-center">
               <TrendingDown className="h-5 w-5 text-red-500" />
             </div>
@@ -299,7 +301,7 @@ export default function Finance() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Net Profit</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <div className="text-2xl font-semibold">${financeStats.profit.toLocaleString()}</div>
+            <div className="text-2xl font-semibold">{symbol}{financeStats.profit.toLocaleString()}</div>
             <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
               <CircleDollarSign className="h-5 w-5 text-primary" />
             </div>
@@ -310,7 +312,7 @@ export default function Finance() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Pending Payments</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <div className="text-2xl font-semibold">${financeStats.pending.toLocaleString()}</div>
+            <div className="text-2xl font-semibold">{symbol}{financeStats.pending.toLocaleString()}</div>
             <div className="h-10 w-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
               <Receipt className="h-5 w-5 text-yellow-500" />
             </div>
@@ -382,7 +384,7 @@ export default function Finance() {
                           <TableCell className="text-sm font-medium">{t.category}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">{t.description}</TableCell>
                           <TableCell className={`text-sm font-semibold ${t.type === "Income" ? "text-green-600" : "text-red-600"}`}>
-                            {t.type === "Income" ? "+" : "-"}${t.amount.toLocaleString()}
+                            {t.type === "Income" ? "+" : "-"}{symbol}{t.amount.toLocaleString()}
                           </TableCell>
                           <TableCell className="text-sm">{t.date}</TableCell>
                           <TableCell className="pr-6">

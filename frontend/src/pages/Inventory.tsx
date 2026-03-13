@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi } from "@/lib/api";
+import { useCurrency } from "@/hooks/use-currency";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -65,10 +66,11 @@ const categories = ["All", "Raw Metal", "Tooling", "Hardware", "Consumables"];
 
 const ITEMS_PER_PAGE = 8;
 
-export default function Inventory() {
+export default function Inventory({ initialCategory = "All" }: { initialCategory?: string }) {
   const queryClient = useQueryClient();
+  const { symbol } = useCurrency();
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [categoryFilter, setCategoryFilter] = useState(initialCategory);
   const [stockFilter, setStockFilter] = useState("All");
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [page, setPage] = useState(1);
@@ -214,7 +216,7 @@ export default function Inventory() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Total Value</p>
-              <p className="text-xl font-bold text-foreground">${totalValue.toLocaleString()}</p>
+              <p className="text-xl font-bold text-foreground">{symbol}{totalValue.toLocaleString()}</p>
             </div>
           </CardContent>
         </Card>
@@ -312,7 +314,7 @@ export default function Inventory() {
                         {item.stock} {item.unit}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-right font-mono">
-                        ${item.unitCost.toFixed(2)}
+                        {symbol}{item.unitCost.toFixed(2)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={stockBadgeVariant[status]}>{status}</Badge>
@@ -386,11 +388,11 @@ export default function Inventory() {
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Unit Cost</p>
-                <p className="font-medium text-foreground">${selectedItem.unitCost.toFixed(2)}</p>
+                <p className="font-medium text-foreground">{symbol}{selectedItem.unitCost.toFixed(2)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Total Value</p>
-                <p className="font-medium text-foreground">${(selectedItem.stock * selectedItem.unitCost).toLocaleString()}</p>
+                <p className="font-medium text-foreground">{symbol}{(selectedItem.stock * selectedItem.unitCost).toLocaleString()}</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Supplier</p>
@@ -497,7 +499,7 @@ export default function Inventory() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Unit Cost</Label>
+                <Label>Unit Cost ({symbol})</Label>
                 <Input
                   type="number"
                   min={0}

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Search, Plus, ShoppingCart, Eye, Trash2 } from "lucide-react";
+import { useCurrency } from "@/hooks/use-currency";
 
 type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
 
@@ -48,6 +49,7 @@ interface Order {
 
 export default function Orders() {
   const queryClient = useQueryClient();
+  const { symbol } = useCurrency();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -174,7 +176,7 @@ export default function Orders() {
                 filtered.map((order) => (
                   <TableRow key={order._id} className="cursor-pointer" onClick={() => setSelectedOrder(order)}>
                     <TableCell className="font-medium">{order.client?.name ?? "—"}</TableCell>
-                    <TableCell className="text-right font-mono">${order.totalAmount.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-mono">{symbol}{order.totalAmount.toLocaleString()}</TableCell>
                     <TableCell><Badge variant={statusVariant[order.status]}>{order.status}</Badge></TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">{new Date(order.orderDate).toLocaleDateString()}</TableCell>
                     <TableCell>
@@ -197,7 +199,7 @@ export default function Orders() {
               <ShoppingCart className="h-5 w-5" />
               Order {selectedOrder?._id.slice(-6)}
             </DialogTitle>
-            <DialogDescription>{selectedOrder?.client?.name} · ${selectedOrder?.totalAmount.toLocaleString()}</DialogDescription>
+            <DialogDescription>{selectedOrder?.client?.name} · {symbol}{selectedOrder?.totalAmount.toLocaleString()}</DialogDescription>
           </DialogHeader>
           {selectedOrder && (
             <div className="space-y-4 py-2">
@@ -230,8 +232,8 @@ export default function Orders() {
                       <TableRow key={i}>
                         <TableCell>{item.product?.name ?? "—"}</TableCell>
                         <TableCell className="text-right">{item.quantity}</TableCell>
-                        <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">${(item.quantity * item.price).toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{symbol}{item.price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{symbol}{(item.quantity * item.price).toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -279,7 +281,7 @@ export default function Orders() {
                       <SelectTrigger className="flex-1"><SelectValue placeholder="Product" /></SelectTrigger>
                       <SelectContent>
                         {(products as { _id: string; name: string; price: number }[]).map((prod) => (
-                          <SelectItem key={prod._id} value={prod._id}>{prod.name} (${prod.price})</SelectItem>
+                          <SelectItem key={prod._id} value={prod._id}>{prod.name} ({symbol}{prod.price})</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -316,7 +318,7 @@ export default function Orders() {
                 </div>
               </div>
             </div>
-            <p className="text-sm font-medium">Total: ${totalAmount.toFixed(2)}</p>
+            <p className="text-sm font-medium">Total: {symbol}{totalAmount.toFixed(2)}</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>

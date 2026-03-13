@@ -112,6 +112,7 @@ export default function Settings() {
 
   const handleSave = () => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(getSettingsSnapshot()));
+    window.dispatchEvent(new Event("erp-settings-updated"));
     toast.success("Settings saved successfully");
   };
 
@@ -225,6 +226,7 @@ export default function Settings() {
                       <SelectItem value="America/Denver">Mountain (MT)</SelectItem>
                       <SelectItem value="America/Los_Angeles">Pacific (PT)</SelectItem>
                       <SelectItem value="America/Detroit">Detroit (ET)</SelectItem>
+                      <SelectItem value="Africa/Addis_Ababa">East Africa (EAT)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -240,6 +242,7 @@ export default function Settings() {
                       <SelectItem value="EUR">EUR (€)</SelectItem>
                       <SelectItem value="GBP">GBP (£)</SelectItem>
                       <SelectItem value="CAD">CAD (C$)</SelectItem>
+                      <SelectItem value="ETB">ETB (Br)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

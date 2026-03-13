@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { bomApi, inventoryApi } from "@/lib/api";
+import { useCurrency } from "@/hooks/use-currency";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -61,6 +62,7 @@ function calcBomCost(components: BomComponent[]) {
 
 export default function Boms() {
   const queryClient = useQueryClient();
+  const { symbol } = useCurrency();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | BomStatus>("All");
   const [selectedBom, setSelectedBom] = useState<Bom | null>(null);
@@ -183,7 +185,7 @@ export default function Boms() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Avg BOM Cost</p>
-              <p className="text-xl font-bold text-foreground">${avgCost.toFixed(2)}</p>
+              <p className="text-xl font-bold text-foreground">{symbol}{avgCost.toFixed(2)}</p>
             </div>
           </CardContent>
         </Card>
@@ -268,7 +270,7 @@ export default function Boms() {
                     </TableCell>
                     <TableCell className="text-center font-mono">{bom.components.length}</TableCell>
                     <TableCell className="hidden lg:table-cell text-right font-mono">
-                      ${calcBomCost(bom.components).toFixed(2)}
+                      {symbol}{calcBomCost(bom.components).toFixed(2)}
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusVariant[bom.status]}>{bom.status}</Badge>
@@ -340,9 +342,9 @@ export default function Boms() {
                           <TableCell className="font-medium text-foreground">{c.product?.name}</TableCell>
                           <TableCell className="hidden sm:table-cell font-mono text-xs text-muted-foreground">{c.product?.sku}</TableCell>
                           <TableCell className="text-right font-mono">{c.quantity} {c.product?.unit}</TableCell>
-                          <TableCell className="text-right font-mono">${(c.product?.unitCost || 0).toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-mono">{symbol}{(c.product?.unitCost || 0).toFixed(2)}</TableCell>
                           <TableCell className="text-right font-mono font-semibold">
-                            ${(c.quantity * (c.product?.unitCost || 0)).toFixed(2)}
+                            {symbol}{(c.quantity * (c.product?.unitCost || 0)).toFixed(2)}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -351,7 +353,7 @@ export default function Boms() {
                           Total Estimated Cost
                         </TableCell>
                         <TableCell className="text-right font-mono font-bold text-foreground">
-                          ${calcBomCost(selectedBom.components).toFixed(2)}
+                          {symbol}{calcBomCost(selectedBom.components).toFixed(2)}
                         </TableCell>
                       </TableRow>
                     </TableBody>

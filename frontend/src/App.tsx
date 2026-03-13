@@ -16,6 +16,7 @@ import Orders from "./pages/Orders.tsx";
 import Clients from "./pages/Clients.tsx";
 import Hr from "./pages/Hr.tsx";
 import Finance from "./pages/Finance.tsx";
+import Production from "./pages/Production.tsx";
 import Settings from "./pages/Settings.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -149,11 +150,8 @@ const App = () => {
                 <main className="flex-1 p-4 lg:p-6 overflow-auto">
                   <Routes>
                     <Route path="/" element={<Index />} />
-                    <Route path="/jobs" element={<ProductionJobs />} />
+                    <Route path="/production" element={<Production />} />
                     <Route path="/inventory" element={<Inventory />} />
-                    <Route path="/boms" element={<Boms />} />
-                    <Route path="/orders" element={<Orders />} />
-                    <Route path="/clients" element={<Clients />} />
                     <Route path="/hr" element={<Hr />} />
                     <Route path="/finance" element={<Finance />} />
                     <Route path="/settings" element={<Settings />} />

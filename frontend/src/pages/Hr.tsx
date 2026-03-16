@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Users, Loader2, Edit2 } from "lucide-react";
+import { Plus, Search, Users, Loader2, Edit2, Sparkles, TrendingUp, Calendar, DollarSign, Clock } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { HrMetrics } from "@/components/HrMetrics";
 
 type EmploymentStatus = "Active" | "On Leave" | "Offboarded";
 
@@ -66,6 +67,8 @@ export default function Hr() {
     role: "",
     department: "",
     status: "Active" as EmploymentStatus,
+    email: "",
+    password: "",
   });
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -154,10 +157,10 @@ export default function Hr() {
   };
 
   const handleAddEmployee = async () => {
-    if (!newEmployee.employeeId || !newEmployee.name || !newEmployee.role || !newEmployee.department) {
+    if (!newEmployee.employeeId || !newEmployee.name || !newEmployee.role || !newEmployee.department || !newEmployee.password) {
       toast({
         title: "Missing fields",
-        description: "Please fill in all required fields.",
+        description: "Please fill in all required fields, including a security password.",
         variant: "destructive",
       });
       return;
@@ -186,6 +189,8 @@ export default function Hr() {
           role: "",
           department: "",
           status: "Active",
+          email: "",
+          password: "",
         });
       } else {
         const data = await response.json();
@@ -264,359 +269,388 @@ export default function Hr() {
     });
   }, [q, employees]);
 
+  const totalPayroll = useMemo(() => {
+    return employees.reduce((acc, e) => acc + (e.salary || 0), 0);
+  }, [employees]);
+
+  const activeCount = employees.filter(e => e.status === "Active").length;
+  const leaveCount = employees.filter(e => e.status === "On Leave").length;
+  const attendanceRateVal = attendance.length > 0 
+    ? Math.round((attendance.filter(a => a.status === "Present").length / attendance.length) * 100)
+    : 94; // fallback mockup value
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">HR</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage employees, departments, and staff records
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-primary font-black uppercase italic tracking-[0.2em] text-[10px]">
+            <Sparkles className="h-3 w-3" />
+            Human Resources Ledger
+          </div>
+          <h1 className="text-4xl font-black tracking-tighter italic bg-gradient-to-r from-foreground to-foreground/50 bg-clip-text text-transparent">
+            TALENT OPS
+          </h1>
+          <p className="text-xs font-black uppercase text-muted-foreground/60 tracking-widest pl-1">
+            Staff Records & Intelligence Partition
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shrink-0">
-              <Plus className="h-4 w-4" />
-              Add Employee
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add New Employee</DialogTitle>
-              <DialogDescription>
-                Enter the details for the new employee here. Click save when you're done.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="id" className="text-right">
-                  Employee ID
-                </Label>
-                <Input
-                  id="id"
-                  value={newEmployee.employeeId}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, employeeId: e.target.value })}
-                  className="col-span-3"
-                  placeholder="EMP-XXX"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  value={newEmployee.name}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="role" className="text-right">
-                  Role
-                </Label>
-                <Input
-                  id="role"
-                  value={newEmployee.role}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="department" className="text-right">
-                  Dept.
-                </Label>
-                <Input
-                  id="department"
-                  value={newEmployee.department}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, department: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">
-                  Status
-                </Label>
-                <Select
-                  value={newEmployee.status}
-                  onValueChange={(value: EmploymentStatus) =>
-                    setNewEmployee({ ...newEmployee, status: value })
-                  }
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="On Leave">On Leave</SelectItem>
-                    <SelectItem value="Offboarded">Offboarded</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="submit" onClick={handleAddEmployee}>
-                Save Employee
+        <div className="flex items-center gap-3">
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="h-12 rounded-2xl bg-primary px-8 font-black uppercase italic text-xs tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all gap-2">
+                <Plus className="h-4 w-4" />
+                Induct Personnel
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Employee Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Edit Employee</DialogTitle>
-              <DialogDescription>
-                Update the details for the employee here. Click save when you're done.
-              </DialogDescription>
-            </DialogHeader>
-            {editingEmployee && (
-              <>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-id" className="text-right">
-                    Employee ID
-                  </Label>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-xl bg-card/95 backdrop-blur-2xl border-white/10 shadow-3xl">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-primary to-purple-500" />
+              <DialogHeader className="space-y-4">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">New Personnel Record</DialogTitle>
+                  <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Authorize new staff initialization</DialogDescription>
+                </div>
+              </DialogHeader>
+              <div className="grid gap-6 py-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Employee ID</Label>
+                    <Input
+                      value={newEmployee.employeeId}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, employeeId: e.target.value })}
+                      className="h-11 rounded-xl bg-white/5 border-white/10 font-mono font-bold"
+                      placeholder="EMP-"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Status</Label>
+                    <Select
+                      value={newEmployee.status}
+                      onValueChange={(value: EmploymentStatus) => setNewEmployee({ ...newEmployee, status: value })}
+                    >
+                      <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold italic">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card/95 backdrop-blur-xl border-white/10">
+                        <SelectItem value="Active" className="text-xs font-bold uppercase italic tracking-wider text-emerald-500">Active</SelectItem>
+                        <SelectItem value="On Leave" className="text-xs font-bold uppercase italic tracking-wider text-amber-500">On Leave</SelectItem>
+                        <SelectItem value="Offboarded" className="text-xs font-bold uppercase italic tracking-wider text-rose-500">Offboarded</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Full Identity Name</Label>
                   <Input
-                    id="edit-id"
-                    value={editingEmployee.id}
-                    disabled
-                    className="col-span-3 bg-muted/50"
+                    value={newEmployee.name}
+                    onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                    className="h-11 rounded-xl bg-white/5 border-white/10 font-bold italic text-lg"
+                    placeholder="Full Legal Name"
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-name" className="text-right">
-                    Name
-                  </Label>
-                  <Input
-                    id="edit-name"
-                    value={editingEmployee.name}
-                    onChange={(e) => setEditingEmployee({ ...editingEmployee, name: e.target.value })}
-                    className="col-span-3"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Operational Role</Label>
+                    <Input
+                      value={newEmployee.role}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value })}
+                      className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Department Partition</Label>
+                    <Input
+                      value={newEmployee.department}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, department: e.target.value })}
+                      className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
+                    />
+                  </div>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-role" className="text-right">
-                    Role
-                  </Label>
-                  <Input
-                    id="edit-role"
-                    value={editingEmployee.role}
-                    onChange={(e) => setEditingEmployee({ ...editingEmployee, role: e.target.value })}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-department" className="text-right">
-                    Dept.
-                  </Label>
-                  <Input
-                    id="edit-department"
-                    value={editingEmployee.department}
-                    onChange={(e) => setEditingEmployee({ ...editingEmployee, department: e.target.value })}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-status" className="text-right">
-                    Status
-                  </Label>
-                  <Select
-                    value={editingEmployee.status}
-                    onValueChange={(value: EmploymentStatus) =>
-                      setEditingEmployee({ ...editingEmployee, status: value })
-                    }
-                  >
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="On Leave">On Leave</SelectItem>
-                      <SelectItem value="Offboarded">Offboarded</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="pt-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="h-[1px] flex-1 bg-white/10" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Security & Identity</span>
+                    <div className="h-[1px] flex-1 bg-white/10" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Email Access</Label>
+                      <Input
+                        type="email"
+                        value={newEmployee.email}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+                        className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
+                        placeholder="staff@factory.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Security Key</Label>
+                      <Input
+                        type="password"
+                        value={newEmployee.password}
+                        onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
+                        className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button id="save-employee-btn" onClick={handleUpdateEmployee}>
-                  Save Changes
+              <DialogFooter className="mt-4 gap-3">
+                <Button variant="ghost" className="h-12 rounded-xl px-8 font-black uppercase italic text-xs tracking-widest" onClick={() => setIsDialogOpen(false)}>Abort</Button>
+                <Button 
+                  className="h-12 rounded-xl px-12 font-black uppercase italic text-xs tracking-widest shadow-xl shadow-primary/20 animate-pulse-slow active:scale-95 transition-all"
+                  onClick={handleAddEmployee}
+                >
+                  Authorize Record
                 </Button>
               </DialogFooter>
-            </>
-            )}
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="sm:max-w-xl bg-card/95 backdrop-blur-2xl border-white/10 shadow-3xl">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-primary to-blue-500" />
+              <DialogHeader className="space-y-4">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
+                  <Edit2 className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">Modify Personnel Specs</DialogTitle>
+                  <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Update record for {editingEmployee?.id}</DialogDescription>
+                </div>
+              </DialogHeader>
+              {editingEmployee && (
+                <div className="grid gap-6 py-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1 opacity-50">Personnel ID (Locked)</Label>
+                      <Input value={editingEmployee.id} disabled className="h-11 rounded-xl bg-white/5 border-white/5 font-mono font-bold opacity-50" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Status</Label>
+                      <Select
+                        value={editingEmployee.status}
+                        onValueChange={(value: EmploymentStatus) => setEditingEmployee({ ...editingEmployee, status: value })}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold italic">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card/95 backdrop-blur-xl border-white/10">
+                          <SelectItem value="Active" className="text-xs font-bold uppercase italic tracking-wider text-emerald-500">Active</SelectItem>
+                          <SelectItem value="On Leave" className="text-xs font-bold uppercase italic tracking-wider text-amber-500">On Leave</SelectItem>
+                          <SelectItem value="Offboarded" className="text-xs font-bold uppercase italic tracking-wider text-rose-500">Offboarded</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Identity Name</Label>
+                    <Input
+                      value={editingEmployee.name}
+                      onChange={(e) => setEditingEmployee({ ...editingEmployee, name: e.target.value })}
+                      className="h-11 rounded-xl bg-white/5 border-white/10 font-bold italic text-lg"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Role</Label>
+                      <Input
+                        value={editingEmployee.role}
+                        onChange={(e) => setEditingEmployee({ ...editingEmployee, role: e.target.value })}
+                        className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Dept</Label>
+                      <Input
+                        value={editingEmployee.department}
+                        onChange={(e) => setEditingEmployee({ ...editingEmployee, department: e.target.value })}
+                        className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              <DialogFooter className="mt-4 gap-3">
+                <Button variant="ghost" className="h-12 rounded-xl px-8 font-black uppercase italic text-xs tracking-widest" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                <Button 
+                  className="h-12 rounded-xl px-12 font-black uppercase italic text-xs tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all"
+                  onClick={handleUpdateEmployee}
+                >
+                  Commit Specs
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Staff</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl font-semibold">{employees.length}</div>
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Users className="h-5 w-5 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {employees.filter((e) => e.status === "Active").length}
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">On Leave</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {employees.filter((e) => e.status === "On Leave").length}
-          </CardContent>
-        </Card>
-      </div>
+      <HrMetrics 
+        totalEmployees={employees.length}
+        activeEmployees={activeCount}
+        onLeaveEmployees={leaveCount}
+        attendanceRate={attendanceRateVal}
+        totalPayroll={totalPayroll}
+      />
 
-      <Tabs defaultValue="employees" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="employees">Employees</TabsTrigger>
-          <TabsTrigger value="attendance">
-            Attendance
+      <Tabs defaultValue="employees" className="space-y-6">
+        <TabsList className="h-14 bg-white/5 backdrop-blur-xl border border-white/10 p-1.5 rounded-2xl">
+          <TabsTrigger value="employees" className="h-full rounded-xl px-8 font-black uppercase italic text-[10px] tracking-widest data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/20 transition-all gap-2">
+            <Users className="h-3.5 w-3.5" />
+            Personnel Ledger
           </TabsTrigger>
-          <TabsTrigger value="payroll">
-            Payroll
+          <TabsTrigger value="attendance" className="h-full rounded-xl px-8 font-black uppercase italic text-[10px] tracking-widest data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/20 transition-all gap-2">
+            <Calendar className="h-3.5 w-3.5" />
+            Attendance Flux
+          </TabsTrigger>
+          <TabsTrigger value="payroll" className="h-full rounded-xl px-8 font-black uppercase italic text-[10px] tracking-widest data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-primary/20 transition-all gap-2">
+            <DollarSign className="h-3.5 w-3.5" />
+            Payroll History
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="employees">
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <CardTitle>Employee Directory</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Search and review staff records
-                  </p>
+          <Card className="bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl group shadow-2xl">
+            <CardHeader className="pb-4 border-b border-white/5 space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="text-xl font-black tracking-tighter italic">ACTIVE DIRECTORY</h3>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest">Authorized personnel database</p>
                 </div>
-                <div className="relative w-full sm:w-[320px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <div className="relative w-full md:w-96 group/search">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 group-focus-within/search:text-primary transition-colors" />
                   <Input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    placeholder="Search staff…"
-                    className="pl-9"
+                    placeholder="SCAN LEDGER FOR NAME, ROLE, DEPT..."
+                    className="h-12 pl-11 rounded-2xl bg-white/5 border-white/10 focus-visible:ring-primary/20 font-bold italic text-xs tracking-wider placeholder:opacity-30"
                   />
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground pl-6">
-                        Employee ID
-                      </TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                        Name
-                      </TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                        Department
-                      </TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                        Role
-                      </TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground pr-6">
-                        Status
-                      </TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground pr-6 text-right">
-                        Actions
-                      </TableHead>
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-white/5">
+                    <TableHead className="pl-6 h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Emp ID</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Full Name</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Dept</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Operational Role</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Status</TableHead>
+                    <TableHead className="pr-6 h-12 text-right text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Protocol</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow className="hover:bg-transparent border-white/5">
+                      <TableCell colSpan={6} className="h-32 text-center">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary/40" />
+                        <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Syncing Ledger...</p>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12">
-                          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-                          <p className="mt-2 text-sm text-muted-foreground">Loading employees...</p>
+                  ) : filteredEmployees.length === 0 ? (
+                    <TableRow className="hover:bg-transparent border-white/5">
+                      <TableCell colSpan={6} className="h-32 text-center text-[10px] font-black uppercase tracking-widest opacity-40 italic">
+                        No records match current query parameters.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredEmployees.map((e) => (
+                      <TableRow key={e.id} className="group/row transition-all hover:bg-white/[0.02] border-white/5">
+                        <TableCell className="pl-6 py-4">
+                          <span className="font-mono text-[10px] font-black px-2 py-1 rounded bg-white/5 text-muted-foreground tracking-tighter uppercase group-hover/row:bg-primary group-hover/row:text-white transition-colors">
+                            {e.id}
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="font-black italic text-sm group-hover/row:text-primary transition-colors">{e.name}</div>
+                          <div className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">Employee Profile</div>
+                        </TableCell>
+                        <TableCell className="py-4 font-bold text-xs uppercase tracking-wider">{e.department}</TableCell>
+                        <TableCell className="py-4 text-xs font-semibold text-muted-foreground">{e.role}</TableCell>
+                        <TableCell className="py-4">
+                          <Badge variant={statusVariant[e.status]} className="text-[9px] font-black uppercase italic tracking-widest px-2.5 py-0.5 rounded-lg">
+                            {e.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="pr-6 py-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group-hover/row:scale-110"
+                            onClick={() => {
+                              setEditingEmployee(e);
+                              setIsEditDialogOpen(true);
+                            }}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
-                    ) : filteredEmployees.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                          No employees match your search.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredEmployees.map((e) => (
-                        <TableRow key={e.id}>
-                          <TableCell className="pl-6 font-mono text-sm font-medium">{e.id}</TableCell>
-                          <TableCell className="text-sm font-medium">{e.name}</TableCell>
-                          <TableCell className="text-sm">{e.department}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">{e.role}</TableCell>
-                          <TableCell className="pr-6">
-                            <Badge variant={statusVariant[e.status]} className="text-[11px]">
-                              {e.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="pr-6 text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setEditingEmployee(e);
-                                setIsEditDialogOpen(true);
-                              }}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
+
         <TabsContent value="attendance">
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3 text-sm font-medium">Daily Attendance Log</CardHeader>
+          <Card className="bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl shadow-2xl">
+            <CardHeader className="pb-4 border-b border-white/5">
+              <div className="space-y-1">
+                <h3 className="text-xl font-black tracking-tighter italic uppercase text-amber-500">Attendance Log</h3>
+                <p className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest">Real-time presence monitoring</p>
+              </div>
+            </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-6">Employee</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Check In/Out</TableHead>
-                    <TableHead className="pr-6">Notes</TableHead>
+                  <TableRow className="hover:bg-transparent border-white/5">
+                    <TableHead className="pl-6 h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Personnel</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Date</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Status</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Interval</TableHead>
+                    <TableHead className="pr-6 h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {attLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Loading...</TableCell>
+                    <TableRow className="hover:bg-transparent border-white/5">
+                      <TableCell colSpan={5} className="h-32 text-center">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-amber-500/40" />
+                        <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Scanning Biometrics...</p>
+                      </TableCell>
                     </TableRow>
                   ) : attendance.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">No attendance records found.</TableCell>
+                    <TableRow className="hover:bg-transparent border-white/5">
+                      <TableCell colSpan={5} className="h-32 text-center text-[10px] font-black uppercase tracking-widest opacity-40 italic">
+                        No presence records detected for current period.
+                      </TableCell>
                     </TableRow>
                   ) : (
                     attendance.map((a) => (
-                      <TableRow key={a._id}>
-                        <TableCell className="pl-6 font-medium text-sm">{a.employee?.name || "Unknown"}</TableCell>
-                        <TableCell className="text-sm">{new Date(a.date).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <Badge variant={a.status === "Present" ? "success" : "warning"} className="text-[10px]">{a.status}</Badge>
+                      <TableRow key={a._id} className="transition-all hover:bg-white/[0.02] border-white/5">
+                        <TableCell className="pl-6 py-4">
+                          <div className="font-black italic text-sm">{a.employee?.name || "Unknown"}</div>
+                          <div className="text-[10px] font-mono opacity-40 uppercase">{a.employee?.employeeId}</div>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground font-mono">{a.checkIn || "--:--"} - {a.checkOut || "--:--"}</TableCell>
-                        <TableCell className="pr-6 text-sm italic text-muted-foreground">{a.notes || "-"}</TableCell>
+                        <TableCell className="py-4 text-xs font-bold tracking-wider">{new Date(a.date).toLocaleDateString()}</TableCell>
+                        <TableCell className="py-4">
+                          <Badge variant={a.status === "Present" ? "success" : "warning"} className="text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-lg">
+                            {a.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex items-center gap-2 text-xs font-black italic group-hover:text-primary transition-colors">
+                            <Clock className="h-3 w-3 opacity-40" />
+                            {a.checkIn || "--:--"} <span className="opacity-20">-</span> {a.checkOut || "--:--"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="pr-6 py-4 text-[10px] italic font-medium text-muted-foreground/60">{a.notes || "-"}</TableCell>
                       </TableRow>
                     ))
                   )}
@@ -627,38 +661,57 @@ export default function Hr() {
         </TabsContent>
 
         <TabsContent value="payroll">
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3 text-sm font-medium">Payroll History</CardHeader>
+          <Card className="bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl shadow-2xl">
+            <CardHeader className="pb-4 border-b border-white/5">
+              <div className="space-y-1">
+                <h3 className="text-xl font-black tracking-tighter italic uppercase text-purple-500">Payroll History</h3>
+                <p className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest">Financial disbursement ledger</p>
+              </div>
+            </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-6">Employee</TableHead>
-                    <TableHead>Month</TableHead>
-                    <TableHead>Net Salary</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="pr-6">Payment Date</TableHead>
+                  <TableRow className="hover:bg-transparent border-white/5">
+                    <TableHead className="pl-6 h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Personnel</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Cycle</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Disbursement</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Status</TableHead>
+                    <TableHead className="pr-6 h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Auth Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {payLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Loading...</TableCell>
+                    <TableRow className="hover:bg-transparent border-white/5">
+                      <TableCell colSpan={5} className="h-32 text-center">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-500/40" />
+                        <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Calculating Ledgers...</p>
+                      </TableCell>
                     </TableRow>
                   ) : payroll.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">No payroll records found.</TableCell>
+                    <TableRow className="hover:bg-transparent border-white/5">
+                      <TableCell colSpan={5} className="h-32 text-center text-[10px] font-black uppercase tracking-widest opacity-40 italic">
+                        No financial records found.
+                      </TableCell>
                     </TableRow>
                   ) : (
                     payroll.map((p) => (
-                      <TableRow key={p._id}>
-                        <TableCell className="pl-6 font-medium text-sm">{p.employee?.name || "Unknown"}</TableCell>
-                        <TableCell className="text-sm">{p.month}</TableCell>
-                        <TableCell className="text-sm font-semibold">${p.netSalary?.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge variant={p.paymentStatus === "Paid" ? "success" : "warning"} className="text-[10px]">{p.paymentStatus}</Badge>
+                      <TableRow key={p._id} className="transition-all hover:bg-white/[0.02] border-white/5">
+                        <TableCell className="pl-6 py-4">
+                          <div className="font-black italic text-sm group-hover:text-purple-500 transition-colors">{p.employee?.name || "Unknown"}</div>
+                          <div className="text-[10px] font-mono opacity-40 uppercase tracking-tighter">{p.employee?.employeeId}</div>
                         </TableCell>
-                        <TableCell className="pr-6 text-sm">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : "-"}</TableCell>
+                        <TableCell className="py-4 text-xs font-black uppercase tracking-widest opacity-60 italic">{p.month}</TableCell>
+                        <TableCell className="py-4">
+                          <div className="text-sm font-black italic tracking-tighter text-emerald-500">
+                            ${p.netSalary?.toLocaleString()}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <Badge variant={p.paymentStatus === "Paid" ? "success" : "warning"} className="text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-lg">
+                            {p.paymentStatus}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="pr-6 py-4 text-xs font-bold text-muted-foreground/60">{p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : "-"}</TableCell>
                       </TableRow>
                     ))
                   )}

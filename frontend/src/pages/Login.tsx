@@ -75,7 +75,7 @@ export default function Login() {
             <Building2 className="h-10 w-10 text-white" />
           </div>
           <h2 className="text-5xl font-extrabold tracking-tight mb-6 drop-shadow-xl text-white">
-            Factory Flow
+            Integra - ERP
           </h2>
           <p className="text-xl text-white/90 drop-shadow-lg font-medium leading-relaxed">
             Streamline your manufacturing processes with our state-of-the-art ERP system.

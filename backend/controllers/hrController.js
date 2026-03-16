@@ -15,7 +15,7 @@ const getEmployees = asyncHandler(async (req, res) => {
 // @route   POST /api/hr/employees
 // @access  Public
 const createEmployee = asyncHandler(async (req, res) => {
-  const { employeeId, name, role, department, status, email, phone, salary } = req.body;
+  const { employeeId, name, role, department, status, email, phone, salary, password } = req.body;
 
   const employeeExists = await Employee.findOne({ employeeId });
 
@@ -32,7 +32,8 @@ const createEmployee = asyncHandler(async (req, res) => {
     status,
     email,
     phone,
-    salary
+    salary,
+    password: password || 'factory123' // Default password if not provided, though it should be required
   });
 
   if (employee) {
@@ -42,10 +43,6 @@ const createEmployee = asyncHandler(async (req, res) => {
     throw new Error('Invalid employee data');
   }
 });
-
-// @desc    Update employee profile
-// @route   PUT /api/hr/employees/:id
-// @access  Private/Admin or HR Head
 const updateEmployee = asyncHandler(async (req, res) => {
   const { name, role, department, status, email, phone, salary } = req.body;
 

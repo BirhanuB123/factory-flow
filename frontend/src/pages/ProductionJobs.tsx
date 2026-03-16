@@ -83,6 +83,8 @@ import {
 
 const ITEMS_PER_PAGE = 8;
 
+import { ProductionMetrics } from "@/components/ProductionMetrics";
+
 const ProductionJobs = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
@@ -172,133 +174,157 @@ const ProductionJobs = () => {
   );
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Production Jobs</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage and track all shop floor production orders
-          </p>
-        </div>
-        <Button className="gap-2 shrink-0" onClick={() => setNewJobOpen(true)}>
-          <Plus className="h-4 w-4" />
-          New Job
-        </Button>
-      </div>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Metrics Section */}
+      <ProductionMetrics />
 
-      {/* Status Summary Pills */}
-      <div className="flex flex-wrap gap-2">
-        {(Object.entries(statusCounts) as [JobStatus, number][]).map(([status, count]) => (
-          <button
-            key={status}
-            onClick={() => {
-              setStatusFilter(statusFilter === status ? "all" : status);
-              setPage(1);
-            }}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-              statusFilter === status
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-card text-muted-foreground border-border hover:bg-accent"
-            }`}
-          >
-            {status}
-            <span className="font-mono">{count}</span>
-          </button>
-        ))}
-      </div>
+      {/* Control Bar */}
+      <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md">
+        <CardContent className="p-4 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-lg font-bold tracking-tight">Active Processes</h2>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Shop Floor Control</p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button 
+                className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl h-10" 
+                onClick={() => setNewJobOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+                <span className="font-bold">New Production Job</span>
+              </Button>
+            </div>
+          </div>
 
-      {/* Filters Row */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search jobs, clients, parts…"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="pl-9"
-          />
-        </div>
-        <div className="flex gap-2">
-          <Select
-            value={statusFilter}
-            onValueChange={(v) => {
-              setStatusFilter(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-[160px]">
-              <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="Scheduled">Scheduled</SelectItem>
-              <SelectItem value="In Progress">In Progress</SelectItem>
-              <SelectItem value="On Hold">On Hold</SelectItem>
-              <SelectItem value="Completed">Completed</SelectItem>
-              <SelectItem value="Cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={priorityFilter}
-            onValueChange={(v) => {
-              setPriorityFilter(v);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priorities</SelectItem>
-              <SelectItem value="Urgent">Urgent</SelectItem>
-              <SelectItem value="High">High</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="Low">Low</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => {
+                setStatusFilter("all");
+                setPage(1);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-bold transition-all ${
+                statusFilter === "all"
+                  ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                  : "bg-background text-muted-foreground border-border hover:bg-accent"
+              }`}
+            >
+              All Jobs
+            </button>
+            {(Object.entries(statusCounts) as [JobStatus, number][]).map(([status, count]) => (
+              <button
+                key={status}
+                onClick={() => {
+                  setStatusFilter(statusFilter === status ? "all" : status);
+                  setPage(1);
+                }}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-bold transition-all ${
+                  statusFilter === status
+                    ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                    : "bg-background text-muted-foreground border-border hover:bg-accent"
+                }`}
+              >
+                {status}
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${statusFilter === status ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground"}`}>
+                  {count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-border/50">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search jobs, clients, parts…"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9 bg-background/50 border-border/80 focus-visible:ring-primary/20 h-10 rounded-xl"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => {
+                  setStatusFilter(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[160px] bg-background/50 border-border/80 h-10 rounded-xl">
+                  <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="Scheduled">Scheduled</SelectItem>
+                  <SelectItem value="In Progress">In Progress</SelectItem>
+                  <SelectItem value="On Hold">On Hold</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={priorityFilter}
+                onValueChange={(v) => {
+                  setPriorityFilter(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[140px] bg-background/50 border-border/80 h-10 rounded-xl">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="Urgent">Urgent</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="Low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Jobs Table */}
-      <Card className="shadow-sm">
+      <Card className="border-none shadow-md bg-card/60 backdrop-blur-md overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground pl-6">
+              <TableHeader className="bg-muted/30">
+                <TableRow className="hover:bg-transparent border-border/50">
+                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground pl-6 h-12">
                     Job ID
                   </TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
                     Client
                   </TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
                     Part Name
                   </TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
                     Machine
                   </TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
                     Priority
                   </TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
                     Qty
                   </TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
                     Due Date
                   </TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
                     Status
                   </TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
                     Progress
                   </TableHead>
-                  <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground pr-6">
+                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground pr-6 h-12">
                     Actions
                   </TableHead>
                 </TableRow>
@@ -306,41 +332,45 @@ const ProductionJobs = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
-                      Loading production jobs...
+                    <TableCell colSpan={10} className="text-center py-20 text-muted-foreground font-medium">
+                      Loading production floor data...
                     </TableCell>
                   </TableRow>
                 ) : paginated.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
-                      No jobs match your filters.
+                    <TableCell colSpan={10} className="text-center py-20 text-muted-foreground font-medium">
+                      Critical: No active jobs found matching filters.
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginated.map((job) => (
-                    <TableRow key={job._id} className="cursor-pointer" onClick={() => setSelectedJob(job)}>
-                      <TableCell className="pl-6 font-mono text-sm font-medium">
+                    <TableRow 
+                      key={job._id} 
+                      className="cursor-pointer transition-colors hover:bg-muted/40 border-border/40 group" 
+                      onClick={() => setSelectedJob(job)}
+                    >
+                      <TableCell className="pl-6 font-mono text-xs font-bold text-primary">
                         {job.jobId}
                       </TableCell>
-                      <TableCell className="text-sm">Internal Production</TableCell>
-                      <TableCell className="text-sm">{job.bom?.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">Standard Op</TableCell>
+                      <TableCell className="text-[13px] font-semibold opacity-90">Internal Production</TableCell>
+                      <TableCell className="text-[13px] font-bold">{job.bom?.name}</TableCell>
+                      <TableCell className="text-[13px] font-medium text-muted-foreground">Standard Op</TableCell>
                       <TableCell>
-                        <Badge variant={priorityVariant[job.priority]} className="text-[11px]">
+                        <Badge variant={priorityVariant[job.priority]} className="text-[10px] font-black uppercase tracking-tight py-0 px-2 rounded-md">
                           {job.priority}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm font-mono">{job.quantity}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{new Date(job.dueDate).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-[13px] font-mono font-bold">{job.quantity}</TableCell>
+                      <TableCell className="text-[13px] font-medium text-muted-foreground">{new Date(job.dueDate).toLocaleDateString()}</TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant[job.status]} className="text-[11px]">
+                        <Badge variant={statusVariant[job.status]} className="text-[10px] font-black uppercase tracking-tight py-0 px-2 rounded-md">
                           {job.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2 min-w-[100px]">
-                          <Progress value={job.progress || 0} className="h-2 flex-1" />
-                          <span className="text-xs font-mono text-muted-foreground w-8 text-right">
+                        <div className="flex items-center gap-3 min-w-[120px]">
+                          <Progress value={job.progress || 0} className="h-1.5 flex-1 bg-muted" />
+                          <span className="text-[11px] font-mono font-bold text-muted-foreground w-8 text-right">
                             {job.progress || 0}%
                           </span>
                         </div>
@@ -349,13 +379,13 @@ const ProductionJobs = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8"
+                          className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedJob(job);
                           }}
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-4 w-4 text-primary" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -367,28 +397,28 @@ const ProductionJobs = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-3 border-t">
-              <p className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-muted/10">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
                 Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, filtered.length)} of{" "}
-                {filtered.length} jobs
+                {filtered.length} active jobs
               </p>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-9 w-9 border-border/50 bg-background/50 rounded-xl"
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-sm font-medium px-2">
-                  {page} / {totalPages}
-                </span>
+                <div className="flex items-center gap-1 px-3 py-1 bg-background/50 border border-border/50 rounded-xl font-mono text-xs font-bold">
+                  {page} <span className="text-muted-foreground">/</span> {totalPages}
+                </div>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-9 w-9 border-border/50 bg-background/50 rounded-xl"
                   disabled={page === totalPages}
                   onClick={() => setPage(page + 1)}
                 >

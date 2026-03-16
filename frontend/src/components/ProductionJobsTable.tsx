@@ -35,9 +35,14 @@ export function ProductionJobsTable() {
     .slice(0, 8);
 
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">Active Production Jobs</CardTitle>
+    <Card className="shadow-sm border-none bg-card/50 backdrop-blur-sm">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          Live Factory Operations
+        </CardTitle>
+        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-tight h-5">
+          {displayJobs.length} Running
+        </Badge>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">

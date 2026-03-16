@@ -21,8 +21,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  Search, Plus, Package, AlertTriangle, TrendingDown, Eye, Edit, Trash2,
+  Search, Plus, Package, AlertTriangle, TrendingDown, Eye, Edit, Trash2, DollarSign,
 } from "lucide-react";
+import { InventoryMetrics } from "@/components/InventoryMetrics";
 
 type StockLevel = "In Stock" | "Low Stock" | "Out of Stock";
 
@@ -167,190 +168,191 @@ export default function Inventory({ initialCategory = "All" }: { initialCategory
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  const inStockCount = inventoryData.filter((i: InventoryItem) => getStockLevel(i) === "In Stock").length;
-  const lowStockCount = inventoryData.filter((i: InventoryItem) => getStockLevel(i) === "Low Stock").length;
-  const outOfStockCount = inventoryData.filter((i: InventoryItem) => getStockLevel(i) === "Out of Stock").length;
-  const totalValue = inventoryData.reduce((sum: number, i: InventoryItem) => sum + i.stock * i.unitCost, 0);
-
   return (
-    <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Package className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Items</p>
-              <p className="text-xl font-bold text-foreground">{inventoryData.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center">
-              <AlertTriangle className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Low Stock</p>
-              <p className="text-xl font-bold text-foreground">{lowStockCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center">
-              <TrendingDown className="h-5 w-5 text-destructive" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Out of Stock</p>
-              <p className="text-xl font-bold text-foreground">{outOfStockCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
-              <Package className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Value</p>
-              <p className="text-xl font-bold text-foreground">{symbol}{totalValue.toLocaleString()}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Summary Section */}
+      <InventoryMetrics />
 
-      {/* Filters & Table */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <CardTitle className="text-lg">Inventory Items</CardTitle>
-            <Button size="sm" className="gap-1.5 w-fit" onClick={() => { setEditingItem(null); setFormValues({ ...defaultForm }); setFormOpen(true); }}>
-              <Plus className="h-4 w-4" /> Add Item
+      {/* Main Container */}
+      <Card className="border-none shadow-xl bg-card/60 backdrop-blur-xl overflow-hidden">
+        <CardHeader className="pb-6 border-b border-white/5 bg-white/5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-1 bg-primary rounded-full" />
+                <CardTitle className="text-xl font-black tracking-tighter uppercase italic">Inventory Ledger</CardTitle>
+              </div>
+              <p className="text-xs font-medium text-muted-foreground tracking-wide">Real-time material tracking and stock management</p>
+            </div>
+            <Button 
+              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5" 
+              onClick={() => { setEditingItem(null); setFormValues({ ...defaultForm }); setFormOpen(true); }}
+            >
+              <Plus className="h-4 w-4" /> 
+              <span className="font-bold">Inbound Material</span>
             </Button>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 pt-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+
+          <div className="flex flex-col lg:flex-row gap-4 pt-6">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
-                placeholder="Search by name, SKU, or ID..."
-                className="pl-9"
+                placeholder="Search resources, SKUs, or locations..."
+                className="pl-10 bg-background/50 border-border/50 focus-visible:ring-primary/20 h-11 rounded-xl transition-all"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
-            <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setPage(1); }}>
-              <SelectTrigger className="w-full sm:w-[160px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={stockFilter} onValueChange={(v) => { setStockFilter(v); setPage(1); }}>
-              <SelectTrigger className="w-full sm:w-[150px]">
-                <SelectValue placeholder="Stock Level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Levels</SelectItem>
-                <SelectItem value="In Stock">In Stock</SelectItem>
-                <SelectItem value="Low Stock">Low Stock</SelectItem>
-                <SelectItem value="Out of Stock">Out of Stock</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setPage(1); }}>
+                <SelectTrigger className="w-full sm:w-[180px] bg-background/50 border-border/50 h-11 rounded-xl">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={stockFilter} onValueChange={(v) => { setStockFilter(v); setPage(1); }}>
+                <SelectTrigger className="w-full sm:w-[150px] bg-background/50 border-border/50 h-11 rounded-xl">
+                  <SelectValue placeholder="Availability" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Stocks</SelectItem>
+                  <SelectItem value="In Stock">Healthy</SelectItem>
+                  <SelectItem value="Low Stock">Warning</SelectItem>
+                  <SelectItem value="Out of Stock">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">Category</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="hidden lg:table-cell text-right">Unit Cost</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="hidden lg:table-cell">Location</TableHead>
-                <TableHead className="w-[60px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    Loading inventory...
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-white/5">
+                <TableRow className="hover:bg-transparent border-white/5">
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/50 pl-6 h-12">Serial/ID</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/50 h-12">Resource Name</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/50 h-12 hidden md:table-cell">Classification</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/50 h-12 text-right">Qty/Balance</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/50 h-12 hidden lg:table-cell text-right">Unit Val</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/50 h-12">Supply Status</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/50 h-12 hidden lg:table-cell">Bay/Loc</TableHead>
+                  <TableHead className="w-[80px] pr-6"></TableHead>
                 </TableRow>
-              ) : paginated.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No items found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginated.map((item) => {
-                  const status = getStockLevel(item);
-                  return (
-                    <TableRow
-                      key={item._id}
-                      className="cursor-pointer"
-                      onClick={() => setSelectedItem(item)}
-                    >
-                      <TableCell className="font-mono text-xs text-muted-foreground">{item._id.substring(0, 8)}...</TableCell>
-                      <TableCell>
-                        <div>
-                          <span className="font-medium text-foreground">{item.name}</span>
-                          <p className="text-xs text-muted-foreground">{item.sku}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <Badge variant="secondary">{item.category}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {item.stock} {item.unit}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-right font-mono">
-                        {symbol}{item.unitCost.toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={stockBadgeVariant[status]}>{status}</Badge>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-muted-foreground text-xs">
-                        {item.location}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => { e.stopPropagation(); setSelectedItem(item); }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-24 text-muted-foreground font-medium italic">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        Scanning inventory grid...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : paginated.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-24 text-muted-foreground font-medium">
+                      Zero matching records in current partition.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginated.map((item) => {
+                    const status = getStockLevel(item);
+                    return (
+                      <TableRow
+                        key={item._id}
+                        className="cursor-pointer transition-all hover:bg-white/5 border-white/5 group/row"
+                        onClick={() => setSelectedItem(item)}
+                      >
+                        <TableCell className="pl-6 font-mono text-[10px] font-bold text-muted-foreground/40 group-hover/row:text-primary transition-colors">
+                          {item._id.substring(item._id.length - 8).toUpperCase()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-black text-[13px] tracking-tight text-foreground group-hover/row:translate-x-1 transition-transform duration-300">{item.name}</span>
+                            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tighter opacity-70 italic">{item.sku}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <Badge variant="outline" className="text-[9px] font-black uppercase rounded-md px-1.5 py-0 border-white/10 bg-white/5">
+                            {item.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="font-mono text-[13px] font-black">
+                              {item.stock} <span className="text-[9px] text-muted-foreground/50 font-medium">{item.unit}</span>
+                            </div>
+                            <div className="w-16 h-1 bg-muted/30 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full ${status === 'Out of Stock' ? 'bg-rose-500' : status === 'Low Stock' ? 'bg-amber-500' : 'bg-emerald-500'} transition-all`}
+                                style={{ width: `${Math.min(100, (item.stock / (item.reorderPoint * 2 || 100)) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-right font-mono text-[13px] font-black text-emerald-500/80">
+                          {symbol}{item.unitCost.toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={stockBadgeVariant[status]} className="text-[9px] font-black uppercase tracking-tight py-0 px-2 rounded-md">
+                            {status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-muted-foreground/60 text-[10px] font-black uppercase tracking-tighter italic">
+                          {item.location}
+                        </TableCell>
+                        <TableCell className="pr-6 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg opacity-20 group-hover/row:opacity-100 transition-all hover:bg-primary/20 hover:text-primary"
+                            onClick={(e) => { e.stopPropagation(); setSelectedItem(item); }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t">
-              <p className="text-xs text-muted-foreground">
-                Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-white/5 bg-white/2">
+              <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest hidden sm:block">
+                Partition Segment: {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, filtered.length)} of {filtered.length} resources
               </p>
-              <div className="flex gap-1">
-                <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
-                  Previous
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-8 w-8 border-white/10 bg-white/5 rounded-lg hover:bg-white/10"
+                  disabled={page === 1} 
+                  onClick={() => setPage(page - 1)}
+                >
+                  <Plus className="h-4 w-4 rotate-[135deg]" />
                 </Button>
-                <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
-                  Next
+                <div className="flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-white/10 rounded-lg font-mono text-[11px] font-black">
+                  <span className="text-primary">{page}</span>
+                  <span className="text-muted-foreground/30">/</span>
+                  <span className="text-muted-foreground">{totalPages}</span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-8 w-8 border-white/10 bg-white/5 rounded-lg hover:bg-white/10"
+                  disabled={page === totalPages} 
+                  onClick={() => setPage(page + 1)}
+                >
+                  <Plus className="h-4 w-4 rotate-45" />
                 </Button>
               </div>
             </div>
@@ -360,245 +362,317 @@ export default function Inventory({ initialCategory = "All" }: { initialCategory
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-primary" />
-              {selectedItem?.name}
-            </DialogTitle>
-            <DialogDescription>{selectedItem?.sku} · {selectedItem?._id}</DialogDescription>
-          </DialogHeader>
-          {selectedItem && (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm py-2">
-              <div>
-                <p className="text-muted-foreground text-xs">Category</p>
-                <p className="font-medium text-foreground">{selectedItem.category}</p>
+        <DialogContent className="sm:max-w-xl bg-card/95 backdrop-blur-2xl border-white/10 shadow-2xl overflow-hidden p-0">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-primary to-emerald-500" />
+          
+          <div className="p-8">
+            <DialogHeader className="mb-8">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Resource Profile</p>
+                  <DialogTitle className="text-3xl font-black tracking-tighter italic uppercase text-foreground">
+                    {selectedItem?.name}
+                  </DialogTitle>
+                </div>
+                <div className={`h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20`}>
+                  <Package className="h-7 w-7 text-primary" />
+                </div>
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Status</p>
-                <Badge variant={stockBadgeVariant[getStockLevel(selectedItem)]}>{getStockLevel(selectedItem)}</Badge>
+              <DialogDescription className="text-xs font-bold text-muted-foreground pt-2">
+                SKU: <span className="text-foreground">{selectedItem?.sku}</span> • SYSTEM ID: <span className="text-foreground font-mono">{selectedItem?._id}</span>
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedItem && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Classification</p>
+                  <p className="text-sm font-bold text-foreground italic">{selectedItem.category}</p>
+                </div>
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Availability</p>
+                  <Badge variant={stockBadgeVariant[getStockLevel(selectedItem)]} className="text-[10px] uppercase font-black">
+                    {getStockLevel(selectedItem)}
+                  </Badge>
+                </div>
+                <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Inventory Loc</p>
+                  <p className="text-sm font-bold text-foreground italic">{selectedItem.location || 'N/A'}</p>
+                </div>
+                
+                <div className="bg-gradient-to-br from-background to-white/5 rounded-2xl p-4 border border-white/5 col-span-1">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Current Balance</p>
+                  <p className="text-xl font-black tracking-tighter italic text-foreground">
+                    {selectedItem.stock} <span className="text-[10px] font-medium not-italic text-muted-foreground uppercase">{selectedItem.unit}</span>
+                  </p>
+                </div>
+                <div className="bg-gradient-to-br from-background to-white/5 rounded-2xl p-4 border border-white/5 col-span-1">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Unit Valuation</p>
+                  <p className="text-xl font-black tracking-tighter italic text-emerald-500">
+                    {symbol}{selectedItem.unitCost.toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-gradient-to-br from-background to-white/5 rounded-2xl p-4 border border-white/5 col-span-1">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Exposure</p>
+                  <p className="text-xl font-black tracking-tighter italic text-foreground">
+                    {symbol}{(selectedItem.stock * selectedItem.unitCost).toLocaleString()}
+                  </p>
+                </div>
+                
+                <div className="col-span-2 md:col-span-3 bg-white/2 rounded-2xl p-4 border border-white/5">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 bg-primary/5 rounded-xl flex items-center justify-center">
+                      <TrendingDown className="h-5 w-5 text-primary/50" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Reorder Threshold</p>
+                      <p className="text-sm font-bold">{selectedItem.reorderPoint} {selectedItem.unit} <span className="text-[10px] text-muted-foreground font-normal ml-2">Alert triggers below this level</span></p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-span-2 md:col-span-3 grid grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Primary Supplier</p>
+                    <p className="text-xs font-bold text-foreground">{selectedItem.supplier || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Logistics Trace</p>
+                    <p className="text-xs font-bold text-foreground">
+                      {selectedItem.lastReceived ? `Last received ${new Date(selectedItem.lastReceived).toLocaleDateString()}` : 'No logistics history'}
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Quantity</p>
-                <p className="font-medium text-foreground">{selectedItem.stock} {selectedItem.unit}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Reorder Point</p>
-                <p className="font-medium text-foreground">{selectedItem.reorderPoint} {selectedItem.unit}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Unit Cost</p>
-                <p className="font-medium text-foreground">{symbol}{selectedItem.unitCost.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Total Value</p>
-                <p className="font-medium text-foreground">{symbol}{(selectedItem.stock * selectedItem.unitCost).toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Supplier</p>
-                <p className="font-medium text-foreground">{selectedItem.supplier}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-xs">Location</p>
-                <p className="font-medium text-foreground">{selectedItem.location}</p>
-              </div>
-              <div className="col-span-2">
-                <p className="text-muted-foreground text-xs">Last Received</p>
-                <p className="font-medium text-foreground">{selectedItem.lastReceived ? new Date(selectedItem.lastReceived).toLocaleDateString() : 'N/A'}</p>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setEditingItem(selectedItem); setFormOpen(true); }}>
-              <Edit className="h-3.5 w-3.5" /> Edit Item
-            </Button>
-            <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => setDeleteTarget(selectedItem)}>
-              <Trash2 className="h-3.5 w-3.5" /> Delete
-            </Button>
-          </DialogFooter>
+            )}
+
+            <DialogFooter className="gap-2 sm:gap-0 sm:justify-between pt-4 border-t border-white/5">
+              <Button variant="outline" className="gap-2 rounded-xl h-11 border-white/10 hover:bg-white/5 transition-all w-full sm:w-auto font-black italic uppercase text-xs" onClick={() => setDeleteTarget(selectedItem)}>
+                <Trash2 className="h-4 w-4 text-rose-500" /> Remove Resource
+              </Button>
+              <Button className="gap-2 rounded-xl h-11 px-8 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 w-full sm:w-auto font-black italic uppercase text-xs" onClick={() => { setEditingItem(selectedItem); setFormOpen(true); }}>
+                <Edit className="h-4 w-4" /> Adjust Parameters
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Add/Edit Form Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? "Edit Item" : "Add Item"}</DialogTitle>
-            <DialogDescription>
-              {editingItem ? "Update inventory item details." : "Add a new product to inventory."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
+        <DialogContent className="sm:max-w-2xl bg-card/95 backdrop-blur-2xl border-white/10 shadow-2xl p-0 overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-primary" />
+          <div className="p-8">
+            <DialogHeader className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Plus className={`h-6 w-6 text-primary transition-transform duration-500 ${editingItem ? 'rotate-180' : ''}`} />
+                </div>
+                <DialogTitle className="text-2xl font-black tracking-tighter uppercase italic">
+                  {editingItem ? "Update Resource Specs" : "Register New Material"}
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-xs font-bold text-muted-foreground tracking-wide uppercase">
+                {editingItem ? "Modifying engineering parameters and stock counts." : "Establishing new inventory record in the ledger."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-6 py-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Asset Nomenclature</Label>
+                  <Input
+                    className="h-11 rounded-xl bg-white/5 border-white/10 focus-visible:ring-primary/20 font-bold"
+                    value={(formValues.name as string) ?? ""}
+                    onChange={(e) => setFormValues((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="e.g., Al-6061 Aerospace Grade Billet"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Stock Keeping Unit (SKU)</Label>
+                  <Input
+                    className="h-11 rounded-xl bg-white/5 border-white/10 focus-visible:ring-primary/20 font-mono font-bold"
+                    value={(formValues.sku as string) ?? ""}
+                    onChange={(e) => setFormValues((p) => ({ ...p, sku: e.target.value }))}
+                    placeholder="MAT-AL-6061"
+                    disabled={!!editingItem}
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label>Name</Label>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Technical Description</Label>
                 <Input
-                  value={(formValues.name as string) ?? ""}
-                  onChange={(e) => setFormValues((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Product name"
+                  className="h-11 rounded-xl bg-white/5 border-white/10 focus-visible:ring-primary/20 text-xs font-medium"
+                  value={(formValues.description as string) ?? ""}
+                  onChange={(e) => setFormValues((p) => ({ ...p, description: e.target.value }))}
+                  placeholder="Material properties, grades, or usage notes..."
                 />
               </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Logistics Class</Label>
+                  <Select
+                    value={(formValues.category as string) ?? "Raw Metal"}
+                    onValueChange={(v) => setFormValues((p) => ({ ...p, category: v }))}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 focus:ring-primary/20 font-bold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card/95 backdrop-blur-xl border-white/10">
+                      {categories.filter((c) => c !== "All").map((c) => (
+                        <SelectItem key={c} value={c} className="font-bold uppercase text-[10px]">{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Storage Unit</Label>
+                  <Select
+                    value={(formValues.unit as string) ?? "pcs"}
+                    onValueChange={(v) => setFormValues((p) => ({ ...p, unit: v }))}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold uppercase italic text-[11px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card/95 backdrop-blur-xl border-white/10">
+                      <SelectItem value="pcs" className="font-bold uppercase text-[10px]">pcs</SelectItem>
+                      <SelectItem value="kg" className="font-bold uppercase text-[10px]">kg</SelectItem>
+                      <SelectItem value="m" className="font-bold uppercase text-[10px]">m</SelectItem>
+                      <SelectItem value="L" className="font-bold uppercase text-[10px]">L</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 hidden md:block">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Logistics loc</Label>
+                  <Input
+                    className="h-11 rounded-xl bg-white/5 border-white/10 focus-visible:ring-primary/20 font-bold italic"
+                    value={(formValues.location as string) ?? ""}
+                    onChange={(e) => setFormValues((p) => ({ ...p, location: e.target.value }))}
+                    placeholder="Bay A-1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Current Count</Label>
+                  <Input
+                    className="h-11 rounded-xl bg-white/5 border-white/10 font-mono font-black italic text-lg"
+                    type="number"
+                    min={0}
+                    value={(formValues.stock as number) ?? 0}
+                    onChange={(e) => setFormValues((p) => ({ ...p, stock: parseInt(e.target.value, 10) || 0 }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1 text-amber-500">Threshold</Label>
+                  <Input
+                    className="h-11 rounded-xl bg-white/5 border-white/10 border-amber-500/20 font-mono font-black italic text-lg text-amber-500"
+                    type="number"
+                    min={0}
+                    value={(formValues.reorderPoint as number) ?? 0}
+                    onChange={(e) => setFormValues((p) => ({ ...p, reorderPoint: parseInt(e.target.value, 10) || 0 }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1 text-emerald-500">Unit Cost</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-emerald-500 opacity-50">{symbol}</span>
+                    <Input
+                      className="h-11 pl-7 rounded-xl bg-white/5 border-white/10 border-emerald-500/20 font-mono font-black italic text-lg text-emerald-500"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={(formValues.unitCost as number) ?? 0}
+                      onChange={(e) => setFormValues((p) => ({ ...p, unitCost: parseFloat(e.target.value) || 0 }))}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Market Price</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black opacity-50">{symbol}</span>
+                    <Input
+                      className="h-11 pl-7 rounded-xl bg-white/5 border-white/10 font-mono font-black italic text-lg"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={(formValues.price as number) ?? 0}
+                      onChange={(e) => setFormValues((p) => ({ ...p, price: parseFloat(e.target.value) || 0 }))}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label>SKU</Label>
+                <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Primary Vendor</Label>
                 <Input
-                  value={(formValues.sku as string) ?? ""}
-                  onChange={(e) => setFormValues((p) => ({ ...p, sku: e.target.value }))}
-                  placeholder="SKU"
-                  disabled={!!editingItem}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Input
-                value={(formValues.description as string) ?? ""}
-                onChange={(e) => setFormValues((p) => ({ ...p, description: e.target.value }))}
-                placeholder="Optional description"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Category</Label>
-                <Select
-                  value={(formValues.category as string) ?? "Raw Metal"}
-                  onValueChange={(v) => setFormValues((p) => ({ ...p, category: v }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {categories.filter((c) => c !== "All").map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Unit</Label>
-                <Select
-                  value={(formValues.unit as string) ?? "pcs"}
-                  onValueChange={(v) => setFormValues((p) => ({ ...p, unit: v }))}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pcs">pcs</SelectItem>
-                    <SelectItem value="kg">kg</SelectItem>
-                    <SelectItem value="m">m</SelectItem>
-                    <SelectItem value="L">L</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Price</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={(formValues.price as number) ?? 0}
-                  onChange={(e) => setFormValues((p) => ({ ...p, price: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Unit Cost ({symbol})</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={(formValues.unitCost as number) ?? 0}
-                  onChange={(e) => setFormValues((p) => ({ ...p, unitCost: parseFloat(e.target.value) || 0 }))}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Stock</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={(formValues.stock as number) ?? 0}
-                  onChange={(e) => setFormValues((p) => ({ ...p, stock: parseInt(e.target.value, 10) || 0 }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Reorder Point</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={(formValues.reorderPoint as number) ?? 0}
-                  onChange={(e) => setFormValues((p) => ({ ...p, reorderPoint: parseInt(e.target.value, 10) || 0 }))}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Supplier</Label>
-                <Input
+                  className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
                   value={(formValues.supplier as string) ?? ""}
                   onChange={(e) => setFormValues((p) => ({ ...p, supplier: e.target.value }))}
-                  placeholder="Supplier name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Location</Label>
-                <Input
-                  value={(formValues.location as string) ?? ""}
-                  onChange={(e) => setFormValues((p) => ({ ...p, location: e.target.value }))}
-                  placeholder="Storage location"
+                  placeholder="Manufacturer or Trade Partner"
                 />
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
-            <Button
-              onClick={() => {
-                const payload = {
-                  name: formValues.name,
-                  sku: formValues.sku,
-                  description: formValues.description || undefined,
-                  category: formValues.category,
-                  price: Number(formValues.price),
-                  unitCost: Number(formValues.unitCost),
-                  stock: Number(formValues.stock),
-                  reorderPoint: Number(formValues.reorderPoint),
-                  unit: formValues.unit,
-                  supplier: formValues.supplier || undefined,
-                  location: formValues.location || undefined,
-                };
-                if (editingItem) {
-                  updateMutation.mutate({ id: editingItem._id, data: payload });
-                } else {
-                  if (!payload.name || !payload.sku) {
-                    toast.error("Name and SKU are required");
-                    return;
+
+            <DialogFooter className="mt-8 gap-3">
+              <Button variant="ghost" className="h-12 rounded-xl px-8 font-black uppercase italic text-xs tracking-widest" onClick={() => setFormOpen(false)}>Abort</Button>
+              <Button
+                className="h-12 rounded-xl px-12 font-black uppercase italic text-xs tracking-widest shadow-xl shadow-primary/20 animate-pulse-slow active:scale-95 transition-all"
+                onClick={() => {
+                  const payload = {
+                    name: formValues.name,
+                    sku: formValues.sku,
+                    description: formValues.description || undefined,
+                    category: formValues.category,
+                    price: Number(formValues.price),
+                    unitCost: Number(formValues.unitCost),
+                    stock: Number(formValues.stock),
+                    reorderPoint: Number(formValues.reorderPoint),
+                    unit: formValues.unit,
+                    supplier: formValues.supplier || undefined,
+                    location: formValues.location || undefined,
+                  };
+                  if (editingItem) {
+                    updateMutation.mutate({ id: editingItem._id, data: payload });
+                  } else {
+                    if (!payload.name || !payload.sku) {
+                      toast.error("Resource name and SKU identification required");
+                      return;
+                    }
+                    createMutation.mutate(payload);
                   }
-                  createMutation.mutate(payload);
-                }
-              }}
-              disabled={createMutation.isPending || updateMutation.isPending}
-            >
-              {editingItem ? "Save Changes" : "Add Item"}
-            </Button>
-          </DialogFooter>
+                }}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {editingItem ? "Commit Specs" : "Authorize Record"}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-card/95 backdrop-blur-2xl border-white/10 shadow-3xl max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete item?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete {deleteTarget?.name} ({deleteTarget?.sku}). This action cannot be undone.
+            <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center mb-4">
+              <AlertTriangle className="h-6 w-6 text-rose-500" />
+            </div>
+            <AlertDialogTitle className="text-xl font-black uppercase italic tracking-tighter">Decommission Resource?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm font-medium text-muted-foreground">
+              You are about to purge <span className="text-foreground font-black">{deleteTarget?.name}</span> from the active ledger. This protocol is irreversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="mt-6 gap-2">
+            <AlertDialogCancel className="h-11 rounded-xl bg-white/5 border-white/10 font-bold uppercase text-[10px]">Cancel Protocol</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="h-11 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-black uppercase text-[10px] tracking-widest"
               onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget._id)}
             >
-              Delete
+              Confirm Purge
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

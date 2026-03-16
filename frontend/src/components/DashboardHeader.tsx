@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Bell, Settings as SettingsIcon, LogOut, User, Package, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Search, Bell, Settings as SettingsIcon, LogOut, User, Package, AlertTriangle, CheckCircle2, Loader2, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -21,44 +21,95 @@ import { useNavigate, Link } from "react-router-dom";
 import { useSettings } from "@/hooks/use-settings";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { formatDistanceToNow } from "date-fns";
 
 const API_BASE_URL = "http://localhost:5000/api";
+
+interface NotificationData {
+  _id: string;
+  title: string;
+  description: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  isRead: boolean;
+  createdAt: string;
+}
 
 export function DashboardHeader() {
   const navigate = useNavigate();
   const { settings } = useSettings();
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
 
-  const notifications = [
-    {
-      id: 1,
-      title: "Low Stock Alert",
-      description: "Aluminum Sheet 2024 is below reorder point.",
-      time: "10m ago",
-      icon: <AlertTriangle className="h-4 w-4 text-warning" />,
-      color: "bg-warning/10"
-    },
-    {
-      id: 2,
-      title: "New Production Job",
-      description: "JOB-1052 created for Client A.",
-      time: "1h ago",
-      icon: <Package className="h-4 w-4 text-primary" />,
-      color: "bg-primary/10"
-    },
-    {
-      id: 3,
-      title: "Job Completed",
-      description: "JOB-1048 has been successfully finished.",
-      time: "3h ago",
-      icon: <CheckCircle2 className="h-4 w-4 text-success" />,
-      color: "bg-success/10"
+  // Notifications State
+  const [notifications, setNotifications] = useState<NotificationData[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (token) {
+      fetchNotifications();
+      // Poll every 60 seconds
+      const intervalId = setInterval(fetchNotifications, 60000);
+      return () => clearInterval(intervalId);
     }
-  ];
+  }, [token]);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/notifications`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setNotifications(data.data);
+        setUnreadCount(data.data.filter((n: NotificationData) => !n.isRead).length);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+    }
+  };
+
+  const handleMarkAsRead = async (id: string, isRead: boolean) => {
+    if (isRead) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+        toast.success("All notifications marked as read");
+      }
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+      toast.error("Failed to update notifications");
+    }
+  };
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -77,7 +128,11 @@ export function DashboardHeader() {
     setIsSearching(true);
     setShowSearch(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`${API_BASE_URL}/search?q=${encodeURIComponent(searchQuery)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       const data = await response.json();
       if (data.success) {
         setSearchResults(data.data);
@@ -97,6 +152,16 @@ export function DashboardHeader() {
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'warning': return { icon: <AlertTriangle className="h-4 w-4 text-warning" />, color: "bg-warning/10" };
+      case 'error': return { icon: <AlertTriangle className="h-4 w-4 text-destructive" />, color: "bg-destructive/10" };
+      case 'success': return { icon: <CheckCircle2 className="h-4 w-4 text-success" />, color: "bg-success/10" };
+      case 'info':
+      default: return { icon: <Info className="h-4 w-4 text-primary" />, color: "bg-primary/10" };
+    }
   };
 
   return (
@@ -162,34 +227,59 @@ export function DashboardHeader() {
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="relative h-9 w-9">
               <Bell className="h-4 w-4 text-muted-foreground" />
-              <span className="absolute right-2 top-2 flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
-              </span>
+              {unreadCount > 0 && (
+                <span className="absolute right-2 top-2 flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
+                </span>
+              )}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80 p-0" align="end">
-            <div className="p-4 border-b">
-              <h3 className="font-semibold text-sm">Notifications</h3>
+            <div className="p-3 border-b flex justify-between items-center">
+              <h3 className="font-semibold text-sm">Notifications {unreadCount > 0 && `(${unreadCount})`}</h3>
+              {unreadCount > 0 && (
+                <button 
+                  onClick={handleMarkAllAsRead}
+                  className="text-xs text-primary hover:underline font-medium"
+                >
+                  Mark all read
+                </button>
+              )}
             </div>
             <div className="max-h-[300px] overflow-y-auto">
-              {notifications.map((n) => (
-                <div key={n.id} className="flex gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer border-b last:border-0 text-sm">
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${n.color}`}>
-                    {n.icon}
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-medium leading-none">{n.title}</p>
-                    <p className="text-xs text-muted-foreground leading-snug">{n.description}</p>
-                    <p className="text-[10px] text-muted-foreground pt-1">{n.time}</p>
-                  </div>
+              {notifications.length === 0 ? (
+                <div className="p-8 text-center text-sm text-muted-foreground">
+                  No notifications yet.
                 </div>
-              ))}
-            </div>
-            <div className="p-2 border-t">
-              <Button variant="ghost" className="w-full text-xs h-8 text-primary" onClick={() => navigate("/notifications")}>
-                View all notifications
-              </Button>
+              ) : (
+                notifications.map((n) => {
+                  const uiTheme = getNotificationIcon(n.type);
+                  return (
+                    <div 
+                      key={n._id} 
+                      onClick={() => handleMarkAsRead(n._id, n.isRead)}
+                      className={`flex gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer border-b last:border-0 text-sm ${!n.isRead ? 'bg-primary/5' : ''}`}
+                    >
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${uiTheme.color}`}>
+                        {uiTheme.icon}
+                      </div>
+                      <div className="space-y-1 w-full">
+                        <div className="flex justify-between items-start">
+                          <p className={`font-medium leading-none ${!n.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            {n.title}
+                          </p>
+                          {!n.isRead && <span className="h-2 w-2 rounded-full bg-primary shrink-0 z-10" />}
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-snug">{n.description}</p>
+                        <p className="text-[10px] text-muted-foreground pt-1">
+                          {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </PopoverContent>
         </Popover>

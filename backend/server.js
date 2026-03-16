@@ -25,6 +25,7 @@ const { getEmployees, createEmployee, updateEmployee, getAttendance, logAttendan
 const { getTransactions, createInvoice, createExpense, getFinanceStats } = require('./controllers/financeController');
 const { globalSearch } = require('./controllers/searchController');
 const authRoutes = require('./routes/authRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const { protect, authorize } = require('./middleware/authMiddleware');
 
 // Auth Routes
@@ -83,6 +84,9 @@ app.get('/api/finance/transactions', getTransactions);
 app.post('/api/finance/invoices', createInvoice);
 app.post('/api/finance/expenses', createExpense);
 app.get('/api/finance/stats', getFinanceStats);
+
+// Notification Routes
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Factory Flow ERP Backend is running' });

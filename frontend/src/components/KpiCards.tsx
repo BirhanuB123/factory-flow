@@ -69,20 +69,33 @@ export function KpiCards() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       {kpis.map((kpi) => (
-        <Card key={kpi.label} className="shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <Card 
+          key={kpi.label} 
+          className="relative overflow-hidden group border-none shadow-md bg-card/60 backdrop-blur-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+        >
+          {/* Subtle gradient overlay */}
+          <div className={`absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 rounded-full blur-3xl opacity-20 transition-opacity group-hover:opacity-30 ${kpi.iconBg}`} />
+          
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between relative z-10">
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">
                   {kpi.label}
                 </p>
-                <p className={`text-3xl font-bold tracking-tight ${kpi.alert ? "text-destructive" : "text-foreground"}`}>
-                  {kpi.value}
-                </p>
-                <p className="text-xs text-muted-foreground">{kpi.change}</p>
+                <div className="flex items-baseline gap-1">
+                  <h3 className={`text-4xl font-extrabold tracking-tighter ${kpi.alert ? "text-destructive" : "text-foreground"}`}>
+                    {kpi.value}
+                  </h3>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className={`h-1.5 w-1.5 rounded-full ${kpi.alert ? "bg-destructive animate-pulse" : "bg-success"}`} />
+                  <p className="text-[11px] font-medium text-muted-foreground inline-flex items-center">
+                    {kpi.change}
+                  </p>
+                </div>
               </div>
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${kpi.iconBg}`}>
-                <kpi.icon className={`h-5 w-5 ${kpi.iconColor}`} />
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-inner transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6 ${kpi.iconBg}`}>
+                <kpi.icon className={`h-6 w-6 ${kpi.iconColor}`} />
               </div>
             </div>
           </CardContent>

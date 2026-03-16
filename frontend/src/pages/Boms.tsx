@@ -142,154 +142,151 @@ export default function Boms() {
   const avgCost = bomsData.length > 0 ? bomsData.reduce((sum, b) => sum + calcBomCost(b.components), 0) / bomsData.length : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <FileStack className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total BOMs</p>
-              <p className="text-xl font-bold text-foreground">{bomsData.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center">
-              <Layers className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Active</p>
-              <p className="text-xl font-bold text-foreground">{activeCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center">
-              <Hash className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Components</p>
-              <p className="text-xl font-bold text-foreground">{totalComponents}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center">
-              <DollarSign className="h-5 w-5 text-info" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Avg BOM Cost</p>
-              <p className="text-xl font-bold text-foreground">{symbol}{avgCost.toFixed(2)}</p>
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          { label: "Total BOMs", value: bomsData.length, icon: FileStack, color: "text-primary", bg: "bg-primary/10" },
+          { label: "Active", value: activeCount, icon: Layers, color: "text-success", bg: "bg-success/10" },
+          { label: "Total Components", value: totalComponents, icon: Hash, color: "text-warning", bg: "bg-warning/10" },
+          { label: "Avg BOM Cost", value: `${symbol}${avgCost.toFixed(2)}`, icon: DollarSign, color: "text-info", bg: "bg-info/10" }
+        ].map((stat, idx) => (
+          <Card key={idx} className="border-none shadow-md bg-card/60 backdrop-blur-md overflow-hidden group">
+            <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full blur-3xl opacity-10 ${stat.bg}`} />
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className={`h-12 w-12 rounded-xl ${stat.bg} flex items-center justify-center transition-transform group-hover:scale-110 duration-300`}>
+                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                <p className="text-2xl font-black tracking-tighter">{stat.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Filter & Table */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <CardTitle className="text-lg">Bills of Materials</CardTitle>
-            <Button size="sm" className="gap-1.5 w-fit" onClick={() => { resetForm(); setFormOpen(true); }}>
-              <Plus className="h-4 w-4" /> New BOM
+      {/* Main Container */}
+      <Card className="border-none shadow-xl bg-card/60 backdrop-blur-xl overflow-hidden">
+        <CardHeader className="pb-6 border-b border-white/5 bg-white/5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-1 bg-primary rounded-full" />
+                <CardTitle className="text-xl font-black tracking-tighter uppercase italic">Bill of Materials</CardTitle>
+              </div>
+              <p className="text-xs font-medium text-muted-foreground tracking-wide">Technical specifications and product engineering data</p>
+            </div>
+            <Button 
+              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5" 
+              onClick={() => { resetForm(); setFormOpen(true); }}
+            >
+              <Plus className="h-4 w-4" /> 
+              <span className="font-bold">Engineer New BOM</span>
             </Button>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 pt-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+
+          <div className="flex flex-col lg:flex-row gap-4 pt-6">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
-                placeholder="Search by name, part number, or ID..."
-                className="pl-9"
+                placeholder="Search specs, part numbers, or system IDs..."
+                className="pl-10 bg-background/50 border-border/50 focus-visible:ring-primary/20 h-11 rounded-xl transition-all"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="flex gap-1.5">
+            <div className="flex items-center p-1 bg-secondary/50 border border-border/50 rounded-xl gap-1">
               {(["All", "Active", "Draft", "Archived"] as const).map((s) => (
-                <Button
+                <button
                   key={s}
-                  variant={statusFilter === s ? "default" : "outline"}
-                  size="sm"
                   onClick={() => setStatusFilter(s)}
+                  className={`px-4 py-1.5 text-xs font-black uppercase tracking-tight rounded-lg transition-all ${
+                    statusFilter === s 
+                    ? "bg-primary text-primary-foreground shadow-md" 
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  }`}
                 >
                   {s}
-                </Button>
+                </button>
               ))}
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">Part #</TableHead>
-                <TableHead className="hidden lg:table-cell">Rev</TableHead>
-                <TableHead className="text-center">Parts</TableHead>
-                <TableHead className="hidden lg:table-cell text-right">Est. Cost</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[60px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    Loading BOMs...
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/10">
+                <TableRow className="hover:bg-transparent border-white/5">
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground pl-6 h-12">System ID</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12">Product Name</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden md:table-cell">Engineering Part #</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden lg:table-cell text-center">Version</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 text-center">Components</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden lg:table-cell text-right">Est. Cost</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12">Lifecycle</TableHead>
+                  <TableHead className="w-[80px] pr-6"></TableHead>
                 </TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No BOMs found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((bom) => (
-                  <TableRow
-                    key={bom._id}
-                    className="cursor-pointer"
-                    onClick={() => setSelectedBom(bom)}
-                  >
-                    <TableCell className="font-mono text-xs text-muted-foreground">{bom._id.substring(0, 8)}...</TableCell>
-                    <TableCell>
-                      <span className="font-medium text-foreground">{bom.name}</span>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell font-mono text-xs text-muted-foreground">
-                      {bom.partNumber}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <Badge variant="outline" className="text-xs">{bom.revision}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center font-mono">{bom.components.length}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-right font-mono">
-                      {symbol}{calcBomCost(bom.components).toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant[bom.status]}>{bom.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={(e) => { e.stopPropagation(); setSelectedBom(bom); }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-20 text-muted-foreground font-medium italic">
+                      Synchronizing with engineering database...
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-20 text-muted-foreground font-medium">
+                      No matching specifications found in repository.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((bom) => (
+                    <TableRow
+                      key={bom._id}
+                      className="cursor-pointer transition-colors hover:bg-white/5 border-white/5 group/row"
+                      onClick={() => setSelectedBom(bom)}
+                    >
+                      <TableCell className="pl-6 font-mono text-[10px] font-bold text-muted-foreground opacity-50 group-hover/row:opacity-100 transition-opacity">
+                        {bom._id.substring(0, 8)}...
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-black text-[13px] tracking-tight text-foreground">{bom.name}</span>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell font-mono text-[11px] font-bold text-primary italic">
+                        {bom.partNumber}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-center">
+                        <Badge variant="outline" className="text-[10px] font-black uppercase rounded-md border-primary/30 px-2">
+                          {bom.revision}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center font-mono text-[13px] font-black">{bom.components.length}</TableCell>
+                      <TableCell className="hidden lg:table-cell text-right font-mono text-[13px] font-black text-info">
+                        {symbol}{calcBomCost(bom.components).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant[bom.status]} className="text-[10px] font-black uppercase tracking-tight py-0 px-2 rounded-md">
+                          {bom.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="pr-6 text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg opacity-0 group-hover/row:opacity-100 transition-all hover:bg-primary hover:text-primary-foreground"
+                          onClick={(e) => { e.stopPropagation(); setSelectedBom(bom); }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

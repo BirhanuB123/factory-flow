@@ -4,6 +4,7 @@ import { clientsApi } from "@/lib/api";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Search, Plus, Users, Eye, Edit, Trash2 } from "lucide-react";
+import { Search, Plus, Users, Eye, Edit, Trash2, FileStack, Layers, Hash } from "lucide-react";
 
 interface Client {
   _id: string;
@@ -112,25 +113,56 @@ export default function Clients() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Clients</h1>
-          <p className="text-sm text-muted-foreground">Manage customer accounts</p>
-        </div>
-        <Button className="gap-2 shrink-0" onClick={() => { setEditingClient(null); setFormValues({ ...defaultForm }); setFormOpen(true); }}>
-          <Plus className="h-4 w-4" /> Add Client
-        </Button>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: "Partner Network", value: clients.length, icon: Users, color: "text-primary", bg: "bg-primary/10" },
+          { label: "Enterprise Accounts", value: clients.filter((c: Client) => c.industry === "Manufacturing").length, icon: FileStack, color: "text-success", bg: "bg-success/10" },
+          { label: "Recent Expansion", value: "+2", icon: Layers, color: "text-info", bg: "bg-info/10" },
+          { label: "Active Locations", value: "8", icon: Hash, color: "text-warning", bg: "bg-warning/10" }
+        ].map((stat, idx) => (
+          <Card key={idx} className="border-none shadow-md bg-card/60 backdrop-blur-md overflow-hidden group">
+            <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full blur-3xl opacity-10 ${stat.bg}`} />
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className={`h-12 w-12 rounded-xl ${stat.bg} flex items-center justify-center transition-transform group-hover:scale-110 duration-300`}>
+                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                <p className="text-2xl font-black tracking-tighter">{stat.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      {/* Main Container */}
+      <Card className="border-none shadow-xl bg-card/60 backdrop-blur-xl overflow-hidden">
+        <CardHeader className="pb-6 border-b border-white/5 bg-white/5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-1 bg-primary rounded-full" />
+                <CardTitle className="text-xl font-black tracking-tighter uppercase italic">CRM / Accounts</CardTitle>
+              </div>
+              <p className="text-xs font-medium text-muted-foreground tracking-wide">Customer relationships, industrial sectors, and contact data</p>
+            </div>
+            <Button 
+              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5" 
+              onClick={() => { setEditingClient(null); setFormValues({ ...defaultForm }); setFormOpen(true); }}
+            >
+              <Plus className="h-4 w-4" /> 
+              <span className="font-bold">Onboard Partner</span>
+            </Button>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-4 pt-6">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input
-                placeholder="Search by name, email, or ID..."
-                className="pl-9"
+                placeholder="Search by corporate name, email, or system identifier..."
+                className="pl-10 bg-background/50 border-border/50 focus-visible:ring-primary/20 h-11 rounded-xl transition-all"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -138,50 +170,67 @@ export default function Clients() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead className="hidden lg:table-cell">Phone</TableHead>
-                <TableHead className="hidden lg:table-cell">Industry</TableHead>
-                <TableHead className="w-[60px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Loading...
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/10">
+                <TableRow className="hover:bg-transparent border-white/5">
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground pl-6 h-12">Corporate Entity</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden md:table-cell">Communication Channel</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden lg:table-cell">Direct Link</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden lg:table-cell">Industrial Vertical</TableHead>
+                  <TableHead className="w-[80px] pr-6"></TableHead>
                 </TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    No clients found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((client) => (
-                  <TableRow
-                    key={client._id}
-                    className="cursor-pointer"
-                    onClick={() => setSelectedClient(client)}
-                  >
-                    <TableCell className="font-medium">{client.name}</TableCell>
-                    <TableCell className="hidden md:table-cell text-muted-foreground">{client.email ?? "—"}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-muted-foreground">{client.phone ?? "—"}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{client.industry ?? "—"}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setSelectedClient(client); }}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-20 text-muted-foreground font-medium italic">
+                      Polling CRM database...
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-20 text-muted-foreground font-medium">
+                      No corporate records match current query.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((client) => (
+                    <TableRow
+                      key={client._id}
+                      className="cursor-pointer transition-colors hover:bg-white/5 border-white/5 group/row"
+                      onClick={() => setSelectedClient(client)}
+                    >
+                      <TableCell className="pl-6">
+                        <span className="font-black text-[13px] tracking-tight text-foreground">{client.name}</span>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell text-muted-foreground font-bold text-[11px] italic">
+                        {client.email ?? "—"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-muted-foreground font-mono text-[11px] font-bold">
+                        {client.phone ?? "—"}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <Badge variant="outline" className="text-[10px] font-black uppercase rounded-md border-primary/30 px-2">
+                          {client.industry ?? "General"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="pr-6 text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 rounded-lg opacity-0 group-hover/row:opacity-100 transition-all hover:bg-primary hover:text-primary-foreground" 
+                          onClick={(e) => { e.stopPropagation(); setSelectedClient(client); }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

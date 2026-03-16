@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
   SidebarContent,
@@ -26,12 +27,13 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const navItems = [
+// Defining nav items with required roles (no roles array = accessible by all authenticated users)
+const allNavItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Production", url: "/production", icon: Factory },
   { title: "Inventory", url: "/inventory", icon: Package },
-  { title: "HR", url: "/hr", icon: UserCog },
-  { title: "Finance", url: "/finance", icon: CircleDollarSign },
+  { title: "HR", url: "/hr", icon: UserCog, roles: ["Admin", "hr_head"] },
+  { title: "Finance", url: "/finance", icon: CircleDollarSign, roles: ["Admin", "finance_head"] },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
@@ -40,6 +42,13 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const currentPath = location.pathname;
+  const { user } = useAuth();
+  
+  const navItems = allNavItems.filter(item => {
+    if (!item.roles) return true;
+    if (user && item.roles.includes(user.role)) return true;
+    return false;
+  });
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">

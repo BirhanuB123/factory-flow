@@ -4,10 +4,9 @@ const Product = require('./models/Product');
 const BOM = require('./models/BOM');
 const ProductionJob = require('./models/ProductionJob');
 const Client = require('./models/Client');
+const Employee = require('./models/Employee');
 
 dotenv.config();
-
-mongoose.connect(process.env.MONGODB_URI);
 
 const products = [
   { name: "Aluminum 6061-T6 Bar Stock", sku: "AL6061-BAR-1", category: "Raw Metal", stock: 245, unit: "pcs", reorderPoint: 50, price: 50, unitCost: 28.50, supplier: "MetalPro Supply", location: "Rack A-01" },
@@ -26,9 +25,25 @@ const products = [
 
 const seedDB = async () => {
   try {
+    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+
     await Product.deleteMany();
     await BOM.deleteMany();
     await ProductionJob.deleteMany();
+    await Employee.deleteMany();
+
+    const employees = [
+      { employeeId: 'EMP-001', name: 'Admin User', role: 'Admin', department: 'Management', email: 'admin@integracnc.com', password: 'password123' },
+      { employeeId: 'EMP-002', name: 'Finance Head', role: 'finance_head', department: 'Finance', email: 'finance@integracnc.com', password: 'password123' },
+      { employeeId: 'EMP-003', name: 'HR Head', role: 'hr_head', department: 'HR', email: 'hr@integracnc.com', password: 'password123' },
+      { employeeId: 'EMP-004', name: 'Basic Employee', role: 'employee', department: 'Production', email: 'employee@integracnc.com', password: 'password123' }
+    ];
+
+    for (const emp of employees) {
+      await Employee.create(emp);
+    }
+    console.log('Employees seeded');
 
     const createdProducts = await Product.insertMany(products);
     console.log('Products seeded');

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Outlet } from "react-router-dom";
 import * as React from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,6 +8,10 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import Login from "./pages/Login.tsx";
+import Profile from "./pages/Profile.tsx";
 import Index from "./pages/Index.tsx";
 import ProductionJobs from "./pages/ProductionJobs.tsx";
 import Inventory from "./pages/Inventory.tsx";
@@ -117,7 +121,7 @@ function SidebarResizeHandle({
   );
 }
 
-const App = () => {
+const Layout = () => {
   const [sidebarWidthPx, setSidebarWidthPx] = React.useState(() => {
     const raw = localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
     const parsed = raw ? Number(raw) : NaN;
@@ -130,37 +134,55 @@ const App = () => {
   }, [sidebarWidthPx]);
 
   return (
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": `${sidebarWidthPx}px`,
+        } as React.CSSProperties
+      }
+    >
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <SidebarResizeHandle valuePx={sidebarWidthPx} onChange={setSidebarWidthPx} />
+        <div className="flex-1 flex flex-col min-w-0">
+          <DashboardHeader />
+          <main className="flex-1 p-4 lg:p-6 overflow-auto">
+            <Outlet />
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
+  );
+};
+
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <SidebarProvider
-            style={
-              {
-                "--sidebar-width": `${sidebarWidthPx}px`,
-              } as React.CSSProperties
-            }
-          >
-            <div className="min-h-screen flex w-full">
-              <AppSidebar />
-              <SidebarResizeHandle valuePx={sidebarWidthPx} onChange={setSidebarWidthPx} />
-              <div className="flex-1 flex flex-col min-w-0">
-                <DashboardHeader />
-                <main className="flex-1 p-4 lg:p-6 overflow-auto">
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/production" element={<Production />} />
-                    <Route path="/inventory" element={<Inventory />} />
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<Layout />}>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/production" element={<Production />} />
+                  <Route path="/inventory" element={<Inventory />} />
+                  <Route element={<ProtectedRoute allowedRoles={['Admin', 'hr_head']} />}>
                     <Route path="/hr" element={<Hr />} />
+                  </Route>
+                  <Route element={<ProtectedRoute allowedRoles={['Admin', 'finance_head']} />}>
                     <Route path="/finance" element={<Finance />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </main>
-              </div>
-            </div>
-          </SidebarProvider>
+                  </Route>
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+              </Route>
+            </Routes>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

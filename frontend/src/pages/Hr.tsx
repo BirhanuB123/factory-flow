@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Users, Loader2 } from "lucide-react";
+import { Plus, Search, Users, Loader2, Edit2 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
@@ -28,11 +29,15 @@ import {
 type EmploymentStatus = "Active" | "On Leave" | "Offboarded";
 
 type Employee = {
-  id: string;
+  _id?: string;
+  id: string; // employeeId
   name: string;
   role: string;
   department: string;
   status: EmploymentStatus;
+  email?: string;
+  phone?: string;
+  salary?: number;
 };
 
 const statusVariant: Record<EmploymentStatus, "success" | "warning" | "secondary"> = {
@@ -50,6 +55,7 @@ const seedEmployees: Employee[] = [
 const API_BASE_URL = "http://localhost:5000/api/hr";
 
 export default function Hr() {
+  const { token } = useAuth();
   const [q, setQ] = useState("");
   const [employees, setEmployees] = useState<Employee[]>(seedEmployees);
   const [loading, setLoading] = useState(false);
@@ -62,6 +68,9 @@ export default function Hr() {
     status: "Active" as EmploymentStatus,
   });
   
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+
   const [attendance, setAttendance] = useState<any[]>([]);
   const [payroll, setPayroll] = useState<any[]>([]);
   const [attLoading, setAttLoading] = useState(false);
@@ -78,7 +87,11 @@ export default function Hr() {
   const fetchAttendance = async () => {
     setAttLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/attendance`);
+      const response = await fetch(`${API_BASE_URL}/attendance`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setAttendance(data);
@@ -93,7 +106,11 @@ export default function Hr() {
   const fetchPayroll = async () => {
     setPayLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/payroll`);
+      const response = await fetch(`${API_BASE_URL}/payroll`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         setPayroll(data);
@@ -108,16 +125,24 @@ export default function Hr() {
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/employees`);
+      const response = await fetch(`${API_BASE_URL}/employees`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         if (data.length > 0) {
           setEmployees(data.map((e: any) => ({
+            _id: e._id,
             id: e.employeeId,
             name: e.name,
             role: e.role,
             department: e.department,
-            status: e.status
+            status: e.status,
+            email: e.email,
+            phone: e.phone,
+            salary: e.salary,
           })));
         }
       }
@@ -143,6 +168,7 @@ export default function Hr() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(newEmployee),
       });
@@ -173,6 +199,52 @@ export default function Hr() {
       toast({
         title: "Error",
         description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateEmployee = async () => {
+    if (!editingEmployee || !editingEmployee._id) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/employees/${editingEmployee._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: editingEmployee.name,
+          role: editingEmployee.role,
+          department: editingEmployee.department,
+          status: editingEmployee.status,
+          email: editingEmployee.email,
+          phone: editingEmployee.phone,
+          salary: editingEmployee.salary,
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Employee updated successfully.",
+        });
+        setIsEditDialogOpen(false);
+        fetchEmployees();
+        setEditingEmployee(null);
+      } else {
+        const data = await response.json();
+        toast({
+          title: "Error",
+          description: data.message || "Failed to update employee.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred during update.",
         variant: "destructive",
       });
     }
@@ -289,6 +361,93 @@ export default function Hr() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Employee Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Edit Employee</DialogTitle>
+              <DialogDescription>
+                Update the details for the employee here. Click save when you're done.
+              </DialogDescription>
+            </DialogHeader>
+            {editingEmployee && (
+              <>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-id" className="text-right">
+                    Employee ID
+                  </Label>
+                  <Input
+                    id="edit-id"
+                    value={editingEmployee.id}
+                    disabled
+                    className="col-span-3 bg-muted/50"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-name" className="text-right">
+                    Name
+                  </Label>
+                  <Input
+                    id="edit-name"
+                    value={editingEmployee.name}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, name: e.target.value })}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-role" className="text-right">
+                    Role
+                  </Label>
+                  <Input
+                    id="edit-role"
+                    value={editingEmployee.role}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, role: e.target.value })}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-department" className="text-right">
+                    Dept.
+                  </Label>
+                  <Input
+                    id="edit-department"
+                    value={editingEmployee.department}
+                    onChange={(e) => setEditingEmployee({ ...editingEmployee, department: e.target.value })}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-status" className="text-right">
+                    Status
+                  </Label>
+                  <Select
+                    value={editingEmployee.status}
+                    onValueChange={(value: EmploymentStatus) =>
+                      setEditingEmployee({ ...editingEmployee, status: value })
+                    }
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="On Leave">On Leave</SelectItem>
+                      <SelectItem value="Offboarded">Offboarded</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button id="save-employee-btn" onClick={handleUpdateEmployee}>
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -373,6 +532,9 @@ export default function Hr() {
                       <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground pr-6">
                         Status
                       </TableHead>
+                      <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground pr-6 text-right">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -385,7 +547,7 @@ export default function Hr() {
                       </TableRow>
                     ) : filteredEmployees.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                           No employees match your search.
                         </TableCell>
                       </TableRow>
@@ -400,6 +562,18 @@ export default function Hr() {
                             <Badge variant={statusVariant[e.status]} className="text-[11px]">
                               {e.status}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="pr-6 text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setEditingEmployee(e);
+                                setIsEditDialogOpen(true);
+                              }}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))

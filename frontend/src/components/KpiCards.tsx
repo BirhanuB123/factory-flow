@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 export function KpiCards() {
   const { symbol } = useCurrency();
   const { data: jobs = [] } = useQuery({
-    queryKey: ["production-jobs"],
+    queryKey: ["productions"],
     queryFn: productionApi.getAll,
   });
   const { data: inventory = [] } = useQuery({

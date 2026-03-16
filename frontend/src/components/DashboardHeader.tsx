@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { useNavigate, Link } from "react-router-dom";
 import { useSettings } from "@/hooks/use-settings";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 const API_BASE_URL = "http://localhost:5000/api";
@@ -26,6 +27,7 @@ const API_BASE_URL = "http://localhost:5000/api";
 export function DashboardHeader() {
   const navigate = useNavigate();
   const { settings } = useSettings();
+  const { user, logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -88,8 +90,8 @@ export function DashboardHeader() {
   };
 
   const handleLogout = () => {
+    logout();
     toast.success("Logged out successfully");
-    // In a real app, clear auth tokens here
     navigate("/login");
   };
 
@@ -196,12 +198,12 @@ export function DashboardHeader() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 h-9 p-1 pl-2 hover:bg-secondary">
               <div className="hidden md:flex flex-col items-end mr-1 text-right">
-                <span className="text-xs font-semibold leading-none">{settings.displayName}</span>
-                <span className="text-[10px] text-muted-foreground">{settings.role}</span>
+                <span className="text-xs font-semibold leading-none">{user?.name || settings.displayName}</span>
+                <span className="text-[10px] text-muted-foreground">{user?.role || settings.role}</span>
               </div>
               <Avatar className="h-7 w-7 border shadow-sm">
                 <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-bold">
-                  {getInitials(settings.displayName)}
+                  {getInitials(user?.name || settings.displayName)}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -209,8 +211,8 @@ export function DashboardHeader() {
           <DropdownMenuContent className="w-56" align="end">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{settings.displayName}</p>
-                <p className="text-xs leading-none text-muted-foreground">{settings.shopEmail}</p>
+                <p className="text-sm font-medium leading-none">{user?.name || settings.displayName}</p>
+                <p className="text-xs leading-none text-muted-foreground">{user?.email || settings.shopEmail}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

@@ -21,9 +21,21 @@ const { getBoms, getBom, createBom, updateBom, deleteBom } = require('./controll
 const { getJobs, getJob, createJob, updateJob, deleteJob } = require('./controllers/productionController');
 const { getClients, getClient, createClient, updateClient, deleteClient } = require('./controllers/clientController');
 const { getOrders, getOrder, createOrder, updateOrder, deleteOrder } = require('./controllers/orderController');
-const { getEmployees, createEmployee, getAttendance, logAttendance, getPayroll, createPayroll } = require('./controllers/hrController');
+const { getEmployees, createEmployee, updateEmployee, getAttendance, logAttendance, getPayroll, createPayroll } = require('./controllers/hrController');
 const { getTransactions, createInvoice, createExpense, getFinanceStats } = require('./controllers/financeController');
 const { globalSearch } = require('./controllers/searchController');
+const authRoutes = require('./routes/authRoutes');
+const { protect, authorize } = require('./middleware/authMiddleware');
+
+// Auth Routes
+app.use('/api/auth', authRoutes);
+
+// Protect all following routes
+app.use('/api', protect);
+
+// Apply Role-Based Access Control (RBAC) to specific modules
+app.use('/api/finance', authorize('Admin', 'finance_head'));
+app.use('/api/hr', authorize('Admin', 'hr_head'));
 
 // API Routes
 app.get('/api/search', globalSearch);
@@ -60,6 +72,7 @@ app.delete('/api/orders/:id', deleteOrder);
 // HR Routes
 app.get('/api/hr/employees', getEmployees);
 app.post('/api/hr/employees', createEmployee);
+app.put('/api/hr/employees/:id', updateEmployee);
 app.get('/api/hr/attendance', getAttendance);
 app.post('/api/hr/attendance', logAttendance);
 app.get('/api/hr/payroll', getPayroll);

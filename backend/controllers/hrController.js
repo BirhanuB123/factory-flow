@@ -43,6 +43,46 @@ const createEmployee = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Update employee profile
+// @route   PUT /api/hr/employees/:id
+// @access  Private/Admin or HR Head
+const updateEmployee = asyncHandler(async (req, res) => {
+  const { name, role, department, status, email, phone, salary } = req.body;
+
+  const updatedEmployee = await Employee.findByIdAndUpdate(
+    req.params.id,
+    {
+      $set: {
+        name,
+        role,
+        department,
+        status,
+        email,
+        phone,
+        salary
+      }
+    },
+    { new: true } // Return the updated document
+  );
+
+  if (updatedEmployee) {
+    res.json({
+      _id: updatedEmployee._id,
+      employeeId: updatedEmployee.employeeId,
+      name: updatedEmployee.name,
+      role: updatedEmployee.role,
+      department: updatedEmployee.department,
+      status: updatedEmployee.status,
+      email: updatedEmployee.email,
+      phone: updatedEmployee.phone,
+      salary: updatedEmployee.salary
+    });
+  } else {
+    res.status(404);
+    throw new Error('Employee not found');
+  }
+});
+
 // @desc    Get all attendance records
 // @route   GET /api/hr/attendance
 // @access  Public
@@ -110,6 +150,7 @@ const createPayroll = asyncHandler(async (req, res) => {
 module.exports = {
   getEmployees,
   createEmployee,
+  updateEmployee,
   getAttendance,
   logAttendance,
   getPayroll,

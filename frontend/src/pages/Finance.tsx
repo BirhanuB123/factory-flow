@@ -190,12 +190,12 @@ export default function Finance() {
           <div className="space-y-1">
             <div className="flex items-center gap-2 mb-2">
               <div className="h-[1px] w-8 bg-primary" />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Capital Ledger</span>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-primary">Capital Ledger</span>
             </div>
-            <h1 className="text-6xl font-black italic tracking-tighter uppercase leading-[0.8] text-foreground">
-              FINANCE <span className="text-primary/40">OPS</span>
+            <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">
+              FINANCE OPS
             </h1>
-            <p className="text-sm font-bold text-muted-foreground/60 uppercase tracking-widest pt-2">Fiscal intelligence & liquidity monitoring</p>
+            <p className="text-sm font-medium text-muted-foreground">Fiscal intelligence & liquidity monitoring</p>
           </div>
           
           <div className="flex items-center gap-3">

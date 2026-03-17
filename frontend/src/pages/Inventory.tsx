@@ -179,10 +179,14 @@ export default function Inventory({ initialCategory = "All" }: { initialCategory
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <div className="h-4 w-1 bg-primary rounded-full" />
-                <CardTitle className="text-xl font-black tracking-tighter uppercase italic">Inventory Ledger</CardTitle>
+                <div className="h-8 w-1 bg-primary rounded-full" />
+                <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">
+                  Inventory Ledger
+                </h1>
               </div>
-              <p className="text-xs font-medium text-muted-foreground tracking-wide">Real-time material tracking and stock management</p>
+              <p className="text-sm font-medium text-muted-foreground">
+                Real-time material tracking and stock management
+              </p>
             </div>
             <Button 
               className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5" 

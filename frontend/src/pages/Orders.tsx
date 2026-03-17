@@ -128,6 +128,14 @@ export default function Orders() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="space-y-1 px-1">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-1 bg-primary rounded-full" />
+          <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">Order Pipeline</h1>
+        </div>
+        <p className="text-sm font-medium text-muted-foreground">Logistics, fulfillment status, and lifecycle monitoring</p>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[

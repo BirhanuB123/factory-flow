@@ -172,10 +172,12 @@ export default function Boms() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <div className="h-4 w-1 bg-primary rounded-full" />
-                <CardTitle className="text-xl font-black tracking-tighter uppercase italic">Bill of Materials</CardTitle>
+                <div className="h-8 w-1 bg-primary rounded-full" />
+                <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">
+                  Product Manifest (BOM)
+                </h1>
               </div>
-              <p className="text-xs font-medium text-muted-foreground tracking-wide">Technical specifications and product engineering data</p>
+              <p className="text-sm font-medium text-muted-foreground">Technical specifications and bill of materials ledger</p>
             </div>
             <Button 
               className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5" 

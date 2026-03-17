@@ -283,14 +283,14 @@ export default function Hr() {
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-primary font-black uppercase italic tracking-[0.2em] text-[10px]">
+          <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-[10px]">
             <Sparkles className="h-3 w-3" />
             Human Resources Ledger
           </div>
-          <h1 className="text-4xl font-black tracking-tighter italic bg-gradient-to-r from-foreground to-foreground/50 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">
             TALENT OPS
           </h1>
-          <p className="text-xs font-black uppercase text-muted-foreground/60 tracking-widest pl-1">
+          <p className="text-sm font-medium text-muted-foreground">
             Staff Records & Intelligence Partition
           </p>
         </div>

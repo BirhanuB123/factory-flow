@@ -9,7 +9,7 @@ import { Factory, Wrench, FileStack, Package, ShoppingCart, Users } from "lucide
 const Production = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex flex-col gap-2">
+      <div className="space-y-1">
         <div className="flex items-center gap-2">
           <div className="h-8 w-1 bg-primary rounded-full" />
           <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">Production Management</h1>

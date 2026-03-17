@@ -114,6 +114,14 @@ export default function Clients() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="space-y-1 px-1">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-1 bg-primary rounded-full" />
+          <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">Order Pipeline</h1>
+        </div>
+        <p className="text-sm font-medium text-muted-foreground">Logistics, fulfillment status, and lifecycle monitoring</p>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -143,10 +151,10 @@ export default function Clients() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <div className="h-4 w-1 bg-primary rounded-full" />
-                <CardTitle className="text-xl font-black tracking-tighter uppercase italic">CRM / Accounts</CardTitle>
+                <div className="h-8 w-1 bg-primary rounded-full" />
+                <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">CRM / Accounts</h1>
               </div>
-              <p className="text-xs font-medium text-muted-foreground tracking-wide">Customer relationships, industrial sectors, and contact data</p>
+              <p className="text-sm font-medium text-muted-foreground">Customer relationships, industrial sectors, and contact data</p>
             </div>
             <Button 
               className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5" 

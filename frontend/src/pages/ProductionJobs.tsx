@@ -181,10 +181,15 @@ const ProductionJobs = () => {
       {/* Control Bar */}
       <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md">
         <CardContent className="p-4 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-lg font-bold tracking-tight">Active Processes</h2>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Shop Floor Control</p>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2 border-b border-border/50">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-1 bg-primary rounded-full" />
+                <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">
+                  Production Ledger
+                </h1>
+              </div>
+              <p className="text-sm font-medium text-muted-foreground">Command center for all active and scheduled manufacturing cycles</p>
             </div>
             
             <div className="flex items-center gap-2">

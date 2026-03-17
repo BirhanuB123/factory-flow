@@ -43,7 +43,7 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const { user } = useAuth();
-  
+
   const navItems = allNavItems.filter(item => {
     if (!item.roles) return true;
     if (user && item.roles.includes(user.role)) return true;
@@ -103,7 +103,7 @@ export function AppSidebar() {
       <SidebarFooter className="p-4">
         {!collapsed && (
           <div className="text-[10px] text-sidebar-muted">
-            v1.0.0 — CNC Shop ERP
+            v1.0.0 — Integra ERP
           </div>
         )}
       </SidebarFooter>

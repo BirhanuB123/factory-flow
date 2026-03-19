@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api, { auditApi, ethiopiaTaxApi, type EthiopiaTaxSettings } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,10 +14,107 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
-  Factory, User, Bell, Shield, Clock, Globe, Palette, Save, Sparkles, Sliders, ShieldCheck, Zap
+  Factory,
+  User,
+  Bell,
+  Shield,
+  Clock,
+  Globe,
+  Palette,
+  Save,
+  Sparkles,
+  Sliders,
+  ShieldCheck,
+  Zap,
+  Settings as SettingsIcon,
+  ListTree,
+  Loader2,
+  Scale,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  ModuleDashboardLayout,
+  StickyModuleTabs,
+  moduleTabsListClassName,
+  moduleTabsTriggerClassName,
+} from "@/components/ModuleDashboardLayout";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const SETTINGS_KEY = "erp-settings";
+
+function AuditLogPanel() {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["audit-logs-ui"],
+    queryFn: () => auditApi.list({ limit: 150 }),
+  });
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (isError) {
+    return <p className="text-sm text-destructive">Could not load audit log.</p>;
+  }
+  const rows = data?.data ?? [];
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Requires <code className="text-primary">AUDIT_LOG_ENABLED=true</code> on the server for new entries.
+        Total rows: {data?.total ?? 0}
+      </p>
+      <div className="rounded-xl border border-white/10 overflow-x-auto max-h-[480px] overflow-y-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-[10px] uppercase">When</TableHead>
+              <TableHead className="text-[10px] uppercase">Action</TableHead>
+              <TableHead className="text-[10px] uppercase">Entity</TableHead>
+              <TableHead className="text-[10px] uppercase">Actor</TableHead>
+              <TableHead className="text-[10px] uppercase">Summary</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-12">
+                  No audit entries yet.
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((row) => (
+                <TableRow key={row._id}>
+                  <TableCell className="text-xs whitespace-nowrap">
+                    {row.at ? new Date(row.at).toLocaleString() : "—"}
+                  </TableCell>
+                  <TableCell className="text-xs font-mono">{row.action}</TableCell>
+                  <TableCell className="text-xs">
+                    {row.entityType}
+                    {row.entityId ? ` · ${String(row.entityId).slice(0, 12)}` : ""}
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {row.actor?.name ?? "—"} {row.actor?.role ? `(${row.actor.role})` : ""}
+                  </TableCell>
+                  <TableCell className="text-xs max-w-[280px] truncate" title={row.summary}>
+                    {row.summary}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
 
 const defaultSettings = {
   shopName: "Integra CNC",
@@ -23,7 +123,7 @@ const defaultSettings = {
   shopPhone: "(313) 555-0199",
   shopEmail: "ops@integracnc.com",
   timezone: "America/Detroit",
-  currency: "USD",
+  currency: "ETB",
   displayName: "Alex Torres",
   role: "Shop Manager",
   emailNotifications: true,
@@ -36,9 +136,28 @@ const defaultSettings = {
   compactView: false,
   dateFormat: "YYYY-MM-DD",
   defaultJobView: "table",
+  uiLanguage: "en" as "en" | "am" | "om",
+  showEthiopianDates: true,
 };
 
 export default function Settings() {
+  const { user } = useAuth();
+  const canAudit =
+    user?.role === "Admin" || user?.role === "finance_head" || user?.role === "finance_viewer";
+  const canFinance =
+    user?.role === "Admin" || user?.role === "finance_head" || user?.role === "finance_viewer";
+  const canEditEthTax = user?.role === "Admin" || user?.role === "finance_head";
+  const qcEth = useQueryClient();
+
+  const { data: permDoc } = useQuery({
+    queryKey: ["auth-permissions-doc"],
+    queryFn: async () => (await api.get("/auth/permissions")).data as {
+      role: string;
+      permissions: string[];
+      matrix: { note: string; actions: { label: string }[]; roles: { role: string; grants: string[] }[] };
+    },
+  });
+
   const [shopName, setShopName] = useState(defaultSettings.shopName);
   const [shopAddress, setShopAddress] = useState(defaultSettings.shopAddress);
   const [shopCity, setShopCity] = useState(defaultSettings.shopCity);
@@ -58,6 +177,27 @@ export default function Settings() {
   const [compactView, setCompactView] = useState(defaultSettings.compactView);
   const [dateFormat, setDateFormat] = useState(defaultSettings.dateFormat);
   const [defaultJobView, setDefaultJobView] = useState(defaultSettings.defaultJobView);
+  const [uiLanguage, setUiLanguage] = useState<"en" | "am" | "om">(defaultSettings.uiLanguage);
+  const [showEthiopianDates, setShowEthiopianDates] = useState(defaultSettings.showEthiopianDates);
+
+  const { data: ethTax, isLoading: ethTaxLoading } = useQuery({
+    queryKey: ["ethiopia-tax-settings"],
+    queryFn: ethiopiaTaxApi.getSettings,
+    enabled: canFinance,
+  });
+  const [ethForm, setEthForm] = useState<Partial<EthiopiaTaxSettings>>({});
+  useEffect(() => {
+    if (ethTax) setEthForm({ ...ethTax });
+  }, [ethTax]);
+  const saveEthTax = useMutation({
+    mutationFn: () => ethiopiaTaxApi.updateSettings(ethForm),
+    onSuccess: (d) => {
+      setEthForm({ ...d });
+      qcEth.invalidateQueries({ queryKey: ["ethiopia-tax-settings"] });
+      toast.success("Ethiopia tax settings saved");
+    },
+    onError: () => toast.error("Could not save tax settings"),
+  });
 
   useEffect(() => {
     try {
@@ -82,6 +222,10 @@ export default function Settings() {
         if (saved.compactView != null) setCompactView(Boolean(saved.compactView));
         if (saved.dateFormat != null) setDateFormat(String(saved.dateFormat));
         if (saved.defaultJobView != null) setDefaultJobView(String(saved.defaultJobView));
+        if (saved.uiLanguage === "am" || saved.uiLanguage === "om" || saved.uiLanguage === "en") {
+          setUiLanguage(saved.uiLanguage);
+        }
+        if (typeof saved.showEthiopianDates === "boolean") setShowEthiopianDates(saved.showEthiopianDates);
       }
     } catch {
       // ignore invalid stored data
@@ -108,6 +252,8 @@ export default function Settings() {
     compactView,
     dateFormat,
     defaultJobView,
+    uiLanguage,
+    showEthiopianDates,
   });
 
   const handleSave = () => {
@@ -147,53 +293,78 @@ export default function Settings() {
     setCompactView(defaultSettings.compactView);
     setDateFormat(defaultSettings.dateFormat);
     setDefaultJobView(defaultSettings.defaultJobView);
+    setUiLanguage(defaultSettings.uiLanguage);
+    setShowEthiopianDates(defaultSettings.showEthiopianDates);
     toast.success("Settings reset to defaults");
   };
 
   return (
-    <div className="space-y-8 pb-12 max-w-5xl">
-      {/* Header Section */}
-      <div className="relative p-8 rounded-[2rem] overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-blue-500/5 backdrop-blur-3xl" />
-        <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-[1px] w-8 bg-primary" />
-              <span className="text-[10px] uppercase font-bold tracking-widest text-primary">System Core</span>
-            </div>
-            <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">
-              CONTROL CENTER
-            </h1>
-            <p className="text-sm font-medium text-muted-foreground">Global configuration & preference overrides</p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Button 
-              onClick={handleSave} 
-              className="h-14 rounded-2xl px-10 font-black uppercase italic text-xs tracking-widest shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all bg-primary flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              Commit Configuration
-            </Button>
-          </div>
+    <ModuleDashboardLayout
+      className="max-w-5xl"
+      title="Control Center"
+      description="Global configuration, facility profile, and alerts—same command layout as Production."
+      icon={SettingsIcon}
+      healthStats={[
+        { label: "Core build", value: "1.2.0", accent: "text-primary" },
+        { label: "Timezone", value: timezone.split("/").pop() ?? timezone },
+        { label: "Currency", value: currency },
+      ]}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            className="h-11 rounded-xl font-black uppercase text-[10px] tracking-widest border-border/60"
+          >
+            Export
+          </Button>
+          <Button
+            onClick={handleSave}
+            className="h-11 rounded-xl px-8 font-black uppercase italic text-xs tracking-widest shadow-xl shadow-primary/20 gap-2 bg-primary"
+          >
+            <Save className="h-4 w-4" />
+            Save
+          </Button>
         </div>
-      </div>
-
+      }
+    >
       <Tabs defaultValue="shop" className="space-y-8">
-        <TabsList className="h-14 bg-white/5 backdrop-blur-2xl border border-white/10 p-1.5 rounded-2xl">
-          <TabsTrigger value="shop" className="rounded-xl px-8 font-black uppercase italic text-[10px] tracking-[0.2em] data-[state=active]:bg-primary data-[state=active]:shadow-xl shadow-primary/20 flex items-center gap-2">
-            <Factory className="h-4 w-4" /> Facility
-          </TabsTrigger>
-          <TabsTrigger value="user" className="rounded-xl px-8 font-black uppercase italic text-[10px] tracking-[0.2em] data-[state=active]:bg-primary data-[state=active]:shadow-xl shadow-primary/20 flex items-center gap-2">
-            <User className="h-4 w-4" /> Identity
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="rounded-xl px-8 font-black uppercase italic text-[10px] tracking-[0.2em] data-[state=active]:bg-primary data-[state=active]:shadow-xl shadow-primary/20 flex items-center gap-2">
-            <Bell className="h-4 w-4" /> Broadcasts
-          </TabsTrigger>
-          <TabsTrigger value="system" className="rounded-xl px-8 font-black uppercase italic text-[10px] tracking-[0.2em] data-[state=active]:bg-primary data-[state=active]:shadow-xl shadow-primary/20 flex items-center gap-2">
-            <Shield className="h-4 w-4" /> Hard-Core
-          </TabsTrigger>
-        </TabsList>
+        <StickyModuleTabs>
+          <TabsList className={moduleTabsListClassName()}>
+            <TabsTrigger value="shop" className={moduleTabsTriggerClassName()}>
+              <Factory className="h-4 w-4 shrink-0" />
+              Facility
+            </TabsTrigger>
+            <TabsTrigger value="user" className={moduleTabsTriggerClassName()}>
+              <User className="h-4 w-4 shrink-0" />
+              Identity
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className={moduleTabsTriggerClassName()}>
+              <Bell className="h-4 w-4 shrink-0" />
+              Alerts
+            </TabsTrigger>
+            <TabsTrigger value="system" className={moduleTabsTriggerClassName()}>
+              <Shield className="h-4 w-4 shrink-0" />
+              System
+            </TabsTrigger>
+            <TabsTrigger value="access" className={moduleTabsTriggerClassName()}>
+              <ShieldCheck className="h-4 w-4 shrink-0" />
+              Access (Phase 3)
+            </TabsTrigger>
+            {canAudit && (
+              <TabsTrigger value="audit" className={moduleTabsTriggerClassName()}>
+                <ListTree className="h-4 w-4 shrink-0" />
+                Audit log
+              </TabsTrigger>
+            )}
+            {canFinance && (
+              <TabsTrigger value="ethiopia-tax" className={moduleTabsTriggerClassName()}>
+                <Scale className="h-4 w-4 shrink-0" />
+                Ethiopia tax
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </StickyModuleTabs>
 
         {/* Shop Configuration */}
         <TabsContent value="shop" className="space-y-4">
@@ -269,13 +440,44 @@ export default function Settings() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-card/95 backdrop-blur-2xl border-white/10">
+                          <SelectItem value="ETB">ETB (Br) — default</SelectItem>
                           <SelectItem value="USD">USD ($)</SelectItem>
                           <SelectItem value="EUR">EUR (€)</SelectItem>
                           <SelectItem value="GBP">GBP (£)</SelectItem>
                           <SelectItem value="CAD">CAD (C$)</SelectItem>
-                          <SelectItem value="ETB">ETB (Br)</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">
+                        UI language (sidebar)
+                      </Label>
+                      <Select
+                        value={uiLanguage}
+                        onValueChange={(v) => setUiLanguage(v as "en" | "am" | "om")}
+                      >
+                        <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl font-bold">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="en">English</SelectItem>
+                          <SelectItem value="am">አማርኛ (Amharic)</SelectItem>
+                          <SelectItem value="om">Afaan Oromo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                      <div>
+                        <p className="text-xs font-black uppercase italic">Ethiopian dates</p>
+                        <p className="text-[9px] text-muted-foreground">
+                          Show EC next to Gregorian (G.C.) in lists
+                        </p>
+                      </div>
+                      <Switch
+                        checked={showEthiopianDates}
+                        onCheckedChange={setShowEthiopianDates}
+                        className="data-[state=checked]:bg-primary"
+                      />
                     </div>
                   </div>
                 </CardContent>
@@ -508,7 +710,241 @@ export default function Settings() {
             </div>
           </div>
         </TabsContent>
+
+        <TabsContent value="access" className="space-y-6">
+          <Card className="border-white/10 bg-white/[0.02] rounded-[2rem] overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-lg font-black uppercase">Role → permissions</CardTitle>
+              <CardDescription className="text-xs">
+                {permDoc?.matrix?.note} Seeded logins:{" "}
+                <code className="text-primary">buyer@integracnc.com</code>,{" "}
+                <code className="text-primary">warehouse@integracnc.com</code> (password123).
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {permDoc && (
+                <>
+                  <div className="rounded-xl border border-white/10 p-4 text-sm">
+                    <span className="text-muted-foreground">Your role:</span>{" "}
+                    <span className="font-black">{permDoc.role}</span>
+                    <br />
+                    <span className="text-muted-foreground">Permissions:</span>{" "}
+                    <span className="font-mono text-xs">{(permDoc.permissions || []).join(", ") || "—"}</span>
+                  </div>
+                  <div className="overflow-x-auto rounded-xl border border-white/10">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-white/10 bg-muted/30">
+                          <th className="text-left p-3 font-black uppercase">Role</th>
+                          <th className="text-left p-3 font-black uppercase">Granted actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(permDoc.matrix?.roles || []).map((r) => (
+                          <tr key={r.role} className="border-b border-white/5">
+                            <td className="p-3 font-bold align-top whitespace-nowrap">{r.role}</td>
+                            <td className="p-3 text-muted-foreground">{r.grants.join(" · ")}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {canAudit && (
+          <TabsContent value="audit" className="space-y-6">
+            <Card className="border-white/10 bg-white/[0.02] rounded-[2rem] overflow-hidden">
+              <CardHeader>
+                <CardTitle className="text-lg font-black uppercase">Audit trail</CardTitle>
+                <CardDescription className="text-xs">
+                  Compliance-friendly read-only log (SOX-style roles use finance_viewer + this tab).
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AuditLogPanel />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {canFinance && (
+          <TabsContent value="ethiopia-tax" className="space-y-6">
+            <Card className="border-white/10 bg-white/[0.02] rounded-[2rem] overflow-hidden">
+              <CardHeader>
+                <CardTitle className="text-lg font-black uppercase">Ethiopia — VAT & withholding</CardTitle>
+                <CardDescription className="text-xs">
+                  Company legal profile on tax invoices and statutory CSVs. Rates are indicative — confirm with ERCA
+                  and your accountant.{" "}
+                  {!canEditEthTax && (
+                    <span className="text-amber-600 dark:text-amber-400 font-bold">Read-only (finance_viewer).</span>
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {ethTaxLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase">Legal name</Label>
+                        <Input
+                          disabled={!canEditEthTax}
+                          value={ethForm.companyLegalName ?? ""}
+                          onChange={(e) => setEthForm((p) => ({ ...p, companyLegalName: e.target.value }))}
+                          className="rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase">Company TIN</Label>
+                        <Input
+                          disabled={!canEditEthTax}
+                          value={ethForm.companyTIN ?? ""}
+                          onChange={(e) => setEthForm((p) => ({ ...p, companyTIN: e.target.value }))}
+                          className="rounded-xl font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-[10px] font-black uppercase">Address</Label>
+                        <Textarea
+                          disabled={!canEditEthTax}
+                          value={ethForm.companyAddress ?? ""}
+                          onChange={(e) => setEthForm((p) => ({ ...p, companyAddress: e.target.value }))}
+                          className="rounded-xl min-h-[72px]"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase">Phone</Label>
+                        <Input
+                          disabled={!canEditEthTax}
+                          value={ethForm.companyPhone ?? ""}
+                          onChange={(e) => setEthForm((p) => ({ ...p, companyPhone: e.target.value }))}
+                          className="rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase">Currency</Label>
+                        <Input
+                          disabled={!canEditEthTax}
+                          value={ethForm.currency ?? "ETB"}
+                          onChange={(e) => setEthForm((p) => ({ ...p, currency: e.target.value }))}
+                          className="rounded-xl font-mono"
+                        />
+                      </div>
+                    </div>
+                    <Separator className="bg-white/10" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase">Default VAT %</Label>
+                        <Input
+                          type="number"
+                          disabled={!canEditEthTax}
+                          value={ethForm.defaultVatRatePercent ?? 15}
+                          onChange={(e) =>
+                            setEthForm((p) => ({ ...p, defaultVatRatePercent: parseFloat(e.target.value) || 0 }))
+                          }
+                          className="rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase">Sales WHT %</Label>
+                        <Input
+                          type="number"
+                          disabled={!canEditEthTax}
+                          value={ethForm.salesWithholdingRatePercent ?? 0}
+                          onChange={(e) =>
+                            setEthForm((p) => ({
+                              ...p,
+                              salesWithholdingRatePercent: parseFloat(e.target.value) || 0,
+                            }))
+                          }
+                          className="rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase">Sales WHT base</Label>
+                        <Select
+                          disabled={!canEditEthTax}
+                          value={ethForm.salesWhtBase ?? "taxable_excl_vat"}
+                          onValueChange={(v) => setEthForm((p) => ({ ...p, salesWhtBase: v }))}
+                        >
+                          <SelectTrigger className="rounded-xl">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="taxable_excl_vat">Taxable (excl. VAT)</SelectItem>
+                            <SelectItem value="total_incl_vat">Total (incl. VAT)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase">Purchase WHT %</Label>
+                        <Input
+                          type="number"
+                          disabled={!canEditEthTax}
+                          value={ethForm.purchaseWithholdingRatePercent ?? 0}
+                          onChange={(e) =>
+                            setEthForm((p) => ({
+                              ...p,
+                              purchaseWithholdingRatePercent: parseFloat(e.target.value) || 0,
+                            }))
+                          }
+                          className="rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase">Sales price basis</Label>
+                        <Select
+                          disabled={!canEditEthTax}
+                          value={ethForm.salesPriceBasis ?? "exclusive_vat"}
+                          onValueChange={(v) => setEthForm((p) => ({ ...p, salesPriceBasis: v }))}
+                        >
+                          <SelectTrigger className="rounded-xl">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="exclusive_vat">Exclusive of VAT</SelectItem>
+                            <SelectItem value="inclusive_vat">Inclusive of VAT</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase">E-invoicing / reporting notes</Label>
+                      <Textarea
+                        disabled={!canEditEthTax}
+                        value={ethForm.eInvoicingNotes ?? ""}
+                        onChange={(e) => setEthForm((p) => ({ ...p, eInvoicingNotes: e.target.value }))}
+                        placeholder="Internal notes when digital reporting rules stabilize…"
+                        className="rounded-xl min-h-[80px]"
+                      />
+                    </div>
+                    {canEditEthTax && (
+                      <Button
+                        onClick={() => saveEthTax.mutate()}
+                        disabled={saveEthTax.isPending}
+                        className="rounded-xl font-black uppercase text-xs"
+                      >
+                        {saveEthTax.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Save tax settings"
+                        )}
+                      </Button>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
-    </div>
+    </ModuleDashboardLayout>
   );
 }

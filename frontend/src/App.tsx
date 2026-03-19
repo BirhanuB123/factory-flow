@@ -7,8 +7,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { DashboardHeader } from "@/components/DashboardHeader";
+import { OfflineQueueBanner } from "@/components/OfflineQueueBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AuthProvider } from "./contexts/AuthContext";
+import { LocaleProvider } from "./contexts/LocaleContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Login from "./pages/Login.tsx";
 import Profile from "./pages/Profile.tsx";
@@ -21,10 +23,23 @@ import Clients from "./pages/Clients.tsx";
 import Hr from "./pages/Hr.tsx";
 import Finance from "./pages/Finance.tsx";
 import Production from "./pages/Production.tsx";
+import PurchaseOrders from "./pages/PurchaseOrders.tsx";
+import Shipments from "./pages/Shipments.tsx";
 import Settings from "./pages/Settings.tsx";
+import SmeBundle from "./pages/SmeBundle.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error: unknown) => {
+        const status = (error as { response?: { status: number } })?.response?.status;
+        if (status === 401) return false;
+        return failureCount < 2;
+      },
+    },
+  },
+});
 
 const SIDEBAR_WIDTH_STORAGE_KEY = "ff:sidebarWidthPx";
 const SIDEBAR_MIN_PX = 220;
@@ -146,6 +161,7 @@ const Layout = () => {
         <SidebarResizeHandle valuePx={sidebarWidthPx} onChange={setSidebarWidthPx} />
         <div className="flex-1 flex flex-col min-w-0">
           <DashboardHeader />
+          <OfflineQueueBanner />
           <main className="flex-1 p-4 lg:p-6 overflow-auto">
             <Outlet />
           </main>
@@ -163,25 +179,52 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <LocaleProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route element={<ProtectedRoute />}>
                 <Route element={<Layout />}>
                   <Route path="/" element={<Index />} />
                   <Route path="/production" element={<Production />} />
+                  <Route path="/production-jobs" element={<ProductionJobs />} />
+                  <Route path="/boms" element={<Boms />} />
+                  <Route path="/orders" element={<Orders />} />
+                  <Route path="/clients" element={<Clients />} />
                   <Route path="/inventory" element={<Inventory />} />
-                  <Route element={<ProtectedRoute allowedRoles={['Admin', 'hr_head']} />}>
+                  <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                  <Route element={<ProtectedRoute allowedRoles={['Admin', 'hr_head', 'finance_head']} />}>
                     <Route path="/hr" element={<Hr />} />
                   </Route>
-                  <Route element={<ProtectedRoute allowedRoles={['Admin', 'finance_head']} />}>
+                  <Route
+                    element={
+                      <ProtectedRoute allowedRoles={["Admin", "finance_head", "finance_viewer"]} />
+                    }
+                  >
                     <Route path="/finance" element={<Finance />} />
+                  </Route>
+                  <Route
+                    element={
+                      <ProtectedRoute
+                        allowedRoles={[
+                          "Admin",
+                          "warehouse_head",
+                          "finance_head",
+                          "finance_viewer",
+                          "purchasing_head",
+                        ]}
+                      />
+                    }
+                  >
+                    <Route path="/shipments" element={<Shipments />} />
                   </Route>
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/sme-bundle" element={<SmeBundle />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Route>
             </Routes>
+            </LocaleProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

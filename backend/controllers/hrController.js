@@ -14,8 +14,31 @@ const getEmployees = asyncHandler(async (req, res) => {
 // @desc    Create new employee
 // @route   POST /api/hr/employees
 // @access  Public
+const APP_ROLES = [
+  'Admin',
+  'hr_head',
+  'finance_head',
+  'employee',
+  'purchasing_head',
+  'warehouse_head',
+];
+
 const createEmployee = asyncHandler(async (req, res) => {
-  const { employeeId, name, role, department, status, email, phone, salary, password } = req.body;
+  const {
+    employeeId,
+    name,
+    role: roleOrTitle,
+    accessRole,
+    jobTitle: jobTitleBody,
+    department,
+    status,
+    email,
+    phone,
+    salary,
+    password,
+    tinNumber,
+    pensionMemberId,
+  } = req.body;
 
   const employeeExists = await Employee.findOne({ employeeId });
 
@@ -24,16 +47,33 @@ const createEmployee = asyncHandler(async (req, res) => {
     throw new Error('Employee already exists');
   }
 
+  let appRole = 'employee';
+  let jobTitle = '';
+
+  if (accessRole && APP_ROLES.includes(accessRole)) {
+    appRole = accessRole;
+    jobTitle = jobTitleBody || (APP_ROLES.includes(roleOrTitle) ? '' : roleOrTitle) || '';
+  } else if (roleOrTitle && APP_ROLES.includes(roleOrTitle)) {
+    appRole = roleOrTitle;
+    jobTitle = jobTitleBody || '';
+  } else {
+    appRole = 'employee';
+    jobTitle = roleOrTitle || jobTitleBody || '';
+  }
+
   const employee = await Employee.create({
     employeeId,
     name,
-    role,
+    role: appRole,
+    jobTitle,
     department,
     status,
     email,
     phone,
     salary,
-    password: password || 'factory123' // Default password if not provided, though it should be required
+    tinNumber: tinNumber != null ? String(tinNumber).trim() : '',
+    pensionMemberId: pensionMemberId != null ? String(pensionMemberId).trim() : '',
+    password: password || 'factory123', // Default password if not provided, though it should be required
   });
 
   if (employee) {
@@ -44,22 +84,42 @@ const createEmployee = asyncHandler(async (req, res) => {
   }
 });
 const updateEmployee = asyncHandler(async (req, res) => {
-  const { name, role, department, status, email, phone, salary } = req.body;
+  const {
+    name,
+    department,
+    status,
+    email,
+    phone,
+    salary,
+    jobTitle,
+    accessRole,
+    role,
+    tinNumber,
+    pensionMemberId,
+  } = req.body;
+
+  const set = {
+    name,
+    department,
+    status,
+    email,
+    phone,
+    salary,
+  };
+  if (jobTitle !== undefined) set.jobTitle = jobTitle;
+  if (role !== undefined && !APP_ROLES.includes(role) && !accessRole) {
+    set.jobTitle = role;
+  }
+  if (req.user.role === 'Admin' && accessRole && APP_ROLES.includes(accessRole)) {
+    set.role = accessRole;
+  }
+  if (tinNumber !== undefined) set.tinNumber = String(tinNumber).trim();
+  if (pensionMemberId !== undefined) set.pensionMemberId = String(pensionMemberId).trim();
 
   const updatedEmployee = await Employee.findByIdAndUpdate(
     req.params.id,
-    {
-      $set: {
-        name,
-        role,
-        department,
-        status,
-        email,
-        phone,
-        salary
-      }
-    },
-    { new: true } // Return the updated document
+    { $set: set },
+    { new: true }
   );
 
   if (updatedEmployee) {
@@ -68,11 +128,14 @@ const updateEmployee = asyncHandler(async (req, res) => {
       employeeId: updatedEmployee.employeeId,
       name: updatedEmployee.name,
       role: updatedEmployee.role,
+      jobTitle: updatedEmployee.jobTitle,
       department: updatedEmployee.department,
       status: updatedEmployee.status,
       email: updatedEmployee.email,
       phone: updatedEmployee.phone,
-      salary: updatedEmployee.salary
+      salary: updatedEmployee.salary,
+      tinNumber: updatedEmployee.tinNumber,
+      pensionMemberId: updatedEmployee.pensionMemberId,
     });
   } else {
     res.status(404);
@@ -115,7 +178,13 @@ const logAttendance = asyncHandler(async (req, res) => {
 // @route   GET /api/hr/payroll
 // @access  Public
 const getPayroll = asyncHandler(async (req, res) => {
-  const payroll = await Payroll.find({}).populate('employee', 'name role');
+  const q = {};
+  if (req.query.month && /^\d{4}-\d{2}$/.test(String(req.query.month))) {
+    q.month = String(req.query.month).trim();
+  }
+  const payroll = await Payroll.find(q)
+    .populate('employee', 'name role employeeId department tinNumber')
+    .sort({ month: -1, createdAt: -1 });
   res.json(payroll);
 });
 

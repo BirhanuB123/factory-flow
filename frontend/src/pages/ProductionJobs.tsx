@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { productionApi, bomApi } from "@/lib/api";
+import { productionApi, bomApi, downloadReportCsv } from "@/lib/api";
+import { SavedViewsBar } from "@/components/SavedViewsBar";
 import { toast } from "sonner";
 
 type JobStatus = "Scheduled" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
@@ -21,6 +22,19 @@ const priorityVariant: Record<Priority, "destructive" | "warning" | "info" | "se
   Low: "info",
 };
 
+interface JobOp {
+  sequence: number;
+  code: string;
+  name: string;
+  workCenterCode: string;
+  status: string;
+  plannedSetupMin?: number;
+  plannedRunMin?: number;
+  actualLaborMin?: number;
+  scrapQty?: number;
+  reworkQty?: number;
+}
+
 interface Job {
   _id: string;
   jobId: string;
@@ -36,6 +50,11 @@ interface Job {
   assignedTo: string;
   notes: string;
   progress?: number;
+  /** Inventory consume/output posted when job completed */
+  inventoryPosted?: boolean;
+  materialsReserved?: boolean;
+  operations?: JobOp[];
+  travelerToken?: string;
 }
 
 import {
@@ -79,6 +98,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  Download,
+  ExternalLink,
+  RefreshCw,
+  Play,
+  CheckCircle2,
+  Timer,
 } from "lucide-react";
 
 const ITEMS_PER_PAGE = 8;
@@ -93,6 +118,10 @@ const ProductionJobs = () => {
   const [page, setPage] = useState(1);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [newJobOpen, setNewJobOpen] = useState(false);
+  const [opMinutes, setOpMinutes] = useState("15");
+  const [opNote, setOpNote] = useState("");
+  const [scrapIn, setScrapIn] = useState("0");
+  const [reworkIn, setReworkIn] = useState("0");
   const [updateStatusJob, setUpdateStatusJob] = useState<Job | null>(null);
   const [newJobForm, setNewJobForm] = useState({
     jobId: "",
@@ -119,6 +148,8 @@ const ProductionJobs = () => {
     mutationFn: (data: Record<string, unknown>) => productionApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['production-jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-movements'] });
       toast.success("Job created");
       setNewJobOpen(false);
       setNewJobForm({
@@ -132,8 +163,10 @@ const ProductionJobs = () => {
         notes: "",
       });
     },
-    onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err?.response?.data?.message || "Failed to create job");
+    onError: (err: { response?: { data?: { message?: string; error?: string } } }) => {
+      toast.error(
+        err?.response?.data?.message || err?.response?.data?.error || "Failed to create job"
+      );
     },
   });
 
@@ -142,14 +175,90 @@ const ProductionJobs = () => {
       productionApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['production-jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-movements'] });
       toast.success("Status updated");
       setUpdateStatusJob(null);
       setSelectedJob(null);
     },
-    onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err?.response?.data?.message || "Failed to update job");
+    onError: (err: { response?: { data?: { message?: string; error?: string } } }) => {
+      toast.error(
+        err?.response?.data?.message || err?.response?.data?.error || "Failed to update job"
+      );
     },
   });
+
+  const reserveMaterialsMutation = useMutation({
+    mutationFn: (jobId: string) => productionApi.reserveMaterials(jobId),
+    onSuccess: async (_, jobId) => {
+      queryClient.invalidateQueries({ queryKey: ["production-jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["mrp"] });
+      toast.success("Materials reserved for this job");
+      try {
+        const fresh = await productionApi.getOne(jobId);
+        setSelectedJob(fresh as Job);
+      } catch {
+        /* keep dialog */
+      }
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      toast.error(err?.response?.data?.message || "Could not reserve materials");
+    },
+  });
+
+  const refreshJob = async (id: string) => {
+    const fresh = await productionApi.getOne(id);
+    setSelectedJob(fresh as Job);
+  };
+
+  const syncOpsMut = useMutation({
+    mutationFn: (id: string) => productionApi.syncOperations(id),
+    onSuccess: async (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["production-jobs"] });
+      toast.success("Operations synced from BOM routing");
+      await refreshJob(id);
+    },
+    onError: (e: { response?: { data?: { message?: string } } }) =>
+      toast.error(e?.response?.data?.message || "Sync failed"),
+  });
+
+  const shopFloorMut = useMutation({
+    mutationFn: async ({
+      action,
+      jobId,
+      opIndex,
+    }: {
+      action: "start" | "complete" | "time" | "scrap";
+      jobId: string;
+      opIndex: number;
+    }) => {
+      if (action === "start") return productionApi.startOperation(jobId, opIndex);
+      if (action === "complete") return productionApi.completeOperation(jobId, opIndex);
+      if (action === "time") {
+        const m = parseFloat(opMinutes);
+        if (!m || m <= 0) throw new Error("Minutes required");
+        return productionApi.logOperationTime(jobId, opIndex, { minutes: m, note: opNote });
+      }
+      return productionApi.scrapReworkOperation(jobId, opIndex, {
+        scrapQty: parseFloat(scrapIn) || 0,
+        reworkQty: parseFloat(reworkIn) || 0,
+      });
+    },
+    onSuccess: async (_, v) => {
+      queryClient.invalidateQueries({ queryKey: ["production-jobs"] });
+      toast.success("Updated");
+      await refreshJob(v.jobId);
+      setOpNote("");
+    },
+    onError: (e: Error | { message?: string }) =>
+      toast.error((e as Error).message || "Action failed"),
+  });
+
+  const travelerBase =
+    (import.meta.env.VITE_API_BASE_URL as string)?.replace(/\/api\/?$/i, "") ||
+    "http://localhost:5000";
 
   const filtered = allJobs.filter((job: Job) => {
     const matchesSearch =
@@ -192,9 +301,21 @@ const ProductionJobs = () => {
               <p className="text-sm font-medium text-muted-foreground">Command center for all active and scheduled manufacturing cycles</p>
             </div>
             
-            <div className="flex items-center gap-2">
-              <Button 
-                className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl h-10" 
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                className="gap-2 rounded-xl h-10"
+                onClick={() =>
+                  downloadReportCsv("/reports/export/production", `production-${Date.now()}.csv`).catch(() =>
+                    toast.error("Export failed")
+                  )
+                }
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+              <Button
+                className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl h-10"
                 onClick={() => setNewJobOpen(true)}
               >
                 <Plus className="h-4 w-4" />
@@ -251,6 +372,17 @@ const ProductionJobs = () => {
                 className="pl-9 bg-background/50 border-border/80 focus-visible:ring-primary/20 h-10 rounded-xl"
               />
             </div>
+            <div className="flex flex-col gap-2 w-full sm:w-auto">
+              <SavedViewsBar
+                module="production"
+                filters={{ search, statusFilter, priorityFilter }}
+                onApply={(f) => {
+                  if (f.search != null) setSearch(String(f.search));
+                  if (f.statusFilter != null) setStatusFilter(String(f.statusFilter));
+                  if (f.priorityFilter != null) setPriorityFilter(String(f.priorityFilter));
+                  setPage(1);
+                }}
+              />
             <div className="flex gap-2">
               <Select
                 value={statusFilter}
@@ -290,6 +422,7 @@ const ProductionJobs = () => {
                   <SelectItem value="Low">Low</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
             </div>
           </div>
         </CardContent>
@@ -349,10 +482,17 @@ const ProductionJobs = () => {
                   </TableRow>
                 ) : (
                   paginated.map((job) => (
-                    <TableRow 
-                      key={job._id} 
-                      className="cursor-pointer transition-colors hover:bg-muted/40 border-border/40 group" 
-                      onClick={() => setSelectedJob(job)}
+                    <TableRow
+                      key={job._id}
+                      className="cursor-pointer transition-colors hover:bg-muted/40 border-border/40 group"
+                      onClick={async () => {
+                        try {
+                          const full = await productionApi.getOne(job._id);
+                          setSelectedJob(full as Job);
+                        } catch {
+                          setSelectedJob(job);
+                        }
+                      }}
                     >
                       <TableCell className="pl-6 font-mono text-xs font-bold text-primary">
                         {job.jobId}
@@ -368,9 +508,16 @@ const ProductionJobs = () => {
                       <TableCell className="text-[13px] font-mono font-bold">{job.quantity}</TableCell>
                       <TableCell className="text-[13px] font-medium text-muted-foreground">{new Date(job.dueDate).toLocaleDateString()}</TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant[job.status]} className="text-[10px] font-black uppercase tracking-tight py-0 px-2 rounded-md">
-                          {job.status}
-                        </Badge>
+                        <div className="flex flex-col gap-0.5">
+                          <Badge variant={statusVariant[job.status]} className="text-[10px] font-black uppercase tracking-tight py-0 px-2 rounded-md w-fit">
+                            {job.status}
+                          </Badge>
+                          {job.status === "Completed" && job.inventoryPosted && (
+                            <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tight">
+                              Stock posted
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3 min-w-[120px]">
@@ -437,7 +584,7 @@ const ProductionJobs = () => {
 
       {/* Job Detail Dialog */}
       <Dialog open={!!selectedJob} onOpenChange={() => setSelectedJob(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           {selectedJob && (
             <>
               <DialogHeader>
@@ -449,6 +596,185 @@ const ProductionJobs = () => {
                 </DialogTitle>
                 <DialogDescription>{selectedJob.bom?.name} · {selectedJob.bom?.partNumber}</DialogDescription>
               </DialogHeader>
+
+              <div className="flex flex-wrap gap-2 py-2 border-b">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1"
+                  disabled={syncOpsMut.isPending}
+                  onClick={() => syncOpsMut.mutate(selectedJob._id)}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Sync ops from BOM
+                </Button>
+                {selectedJob.travelerToken && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-8 gap-1"
+                    onClick={() =>
+                      window.open(
+                        `${travelerBase}/api/production/traveler/${selectedJob.travelerToken}.html`,
+                        "_blank",
+                        "noopener,noreferrer"
+                      )
+                    }
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Traveler (print)
+                  </Button>
+                )}
+              </div>
+
+              <div className="space-y-3 py-3">
+                <p className="text-xs font-black uppercase text-muted-foreground tracking-widest">
+                  Shop floor — operations
+                </p>
+                {!selectedJob.operations?.length ? (
+                  <p className="text-sm text-muted-foreground">
+                    No operations yet. Add routing to the BOM, then <strong>Sync ops from BOM</strong>.
+                  </p>
+                ) : (
+                  <div className="rounded-lg border overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-muted/50 border-b">
+                          <th className="text-left p-2">#</th>
+                          <th className="text-left p-2">Op</th>
+                          <th className="text-left p-2">WC</th>
+                          <th className="text-left p-2">Status</th>
+                          <th className="text-right p-2">Labor</th>
+                          <th className="text-right p-2">S/R</th>
+                          <th className="text-right p-2 w-[200px]">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedJob.operations.map((op, i) => (
+                          <tr key={i} className="border-b">
+                            <td className="p-2 font-mono">{i + 1}</td>
+                            <td className="p-2">
+                              <span className="font-bold">{op.code}</span> {op.name}
+                            </td>
+                            <td className="p-2">{op.workCenterCode || "—"}</td>
+                            <td className="p-2">
+                              <Badge variant="outline" className="text-[10px]">
+                                {op.status}
+                              </Badge>
+                            </td>
+                            <td className="p-2 text-right">{op.actualLaborMin ?? 0} min</td>
+                            <td className="p-2 text-right text-muted-foreground">
+                              {op.scrapQty || 0}/{op.reworkQty || 0}
+                            </td>
+                            <td className="p-2 text-right space-x-1">
+                              {op.status !== "done" && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2"
+                                    disabled={shopFloorMut.isPending}
+                                    onClick={() =>
+                                      shopFloorMut.mutate({
+                                        action: "start",
+                                        jobId: selectedJob._id,
+                                        opIndex: i,
+                                      })
+                                    }
+                                  >
+                                    <Play className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2"
+                                    disabled={shopFloorMut.isPending}
+                                    onClick={() =>
+                                      shopFloorMut.mutate({
+                                        action: "complete",
+                                        jobId: selectedJob._id,
+                                        opIndex: i,
+                                      })
+                                    }
+                                  >
+                                    <CheckCircle2 className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 px-2"
+                                    title="Log time"
+                                    disabled={shopFloorMut.isPending}
+                                    onClick={() =>
+                                      shopFloorMut.mutate({
+                                        action: "time",
+                                        jobId: selectedJob._id,
+                                        opIndex: i,
+                                      })
+                                    }
+                                  >
+                                    <Timer className="h-3 w-3" />
+                                  </Button>
+                                </>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-[10px]"
+                                disabled={shopFloorMut.isPending}
+                                onClick={() =>
+                                  shopFloorMut.mutate({
+                                    action: "scrap",
+                                    jobId: selectedJob._id,
+                                    opIndex: i,
+                                  })
+                                }
+                              >
+                                +S/R
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2 items-end text-xs">
+                  <div>
+                    <Label className="text-[10px]">Log time (min)</Label>
+                    <Input
+                      className="h-8 w-20 mt-0.5"
+                      value={opMinutes}
+                      onChange={(e) => setOpMinutes(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[120px]">
+                    <Label className="text-[10px]">Note</Label>
+                    <Input
+                      className="h-8 mt-0.5"
+                      value={opNote}
+                      onChange={(e) => setOpNote(e.target.value)}
+                      placeholder="optional"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Scrap qty</Label>
+                    <Input
+                      className="h-8 w-16 mt-0.5"
+                      value={scrapIn}
+                      onChange={(e) => setScrapIn(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Rework</Label>
+                    <Input
+                      className="h-8 w-16 mt-0.5"
+                      value={reworkIn}
+                      onChange={(e) => setReworkIn(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-4 py-4">
                 <div className="space-y-1">
@@ -485,6 +811,25 @@ const ProductionJobs = () => {
                 </div>
                 <Progress value={selectedJob.progress || 0} className="h-2.5" />
               </div>
+
+              {["Scheduled", "In Progress", "On Hold"].includes(selectedJob.status) && (
+                <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground border-t">
+                  {selectedJob.materialsReserved ? (
+                    <Badge variant="secondary" className="text-[10px]">Materials reserved</Badge>
+                  ) : (
+                    <span>Allocate BOM components so other orders see lower ATP.</span>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="ml-auto h-8"
+                    disabled={reserveMaterialsMutation.isPending}
+                    onClick={() => reserveMaterialsMutation.mutate(selectedJob._id)}
+                  >
+                    Reserve BOM materials
+                  </Button>
+                </div>
+              )}
 
               <DialogFooter className="gap-2 sm:gap-0">
                 <Button variant="outline" onClick={() => setSelectedJob(null)}>

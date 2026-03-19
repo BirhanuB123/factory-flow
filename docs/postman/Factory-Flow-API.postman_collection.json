@@ -1,0 +1,851 @@
+{
+  "info": {
+    "name": "Factory Flow ERP API",
+    "description": "## Setup (required)\n\n1. **Seed the database** (from `backend/`): `node seeder.js` — creates users and sample data. *This wipes existing employees/products.*\n2. **Start API**: `npm start` in `backend/` (default **http://localhost:5000**).\n3. **Login** below uses **seeded** credentials. Change body if you use different users.\n\n## Auth\nRun **Auth → Login (seeded Admin)** first. Test script saves `token` to collection + environment.\n\n**`baseUrl`** must be the API origin only: `http://localhost:5000` — **not** `.../api`.\n\nOther requests use `Authorization: Bearer {{token}}`.\n\n## Seeded logins (password: `password123`)\n| Email | Role |\n|-------|------|\n| admin@integracnc.com | Admin |\n| finance@integracnc.com | finance_head |\n| hr@integracnc.com | hr_head |\n| employee@integracnc.com | employee |\n| buyer@integracnc.com | purchasing_head |\n| warehouse@integracnc.com | warehouse_head |\n\nOr **employeeId**: `EMP-001` … `EMP-006` with same password.\n\nReplace Mongo `_id` placeholders in URLs after listing resources.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "token", "value": "" },
+    { "key": "productId", "value": "" },
+    { "key": "clientId", "value": "" },
+    { "key": "orderId", "value": "" },
+    { "key": "poId", "value": "" },
+    { "key": "vendorId", "value": "" },
+    { "key": "vendorBillId", "value": "" },
+    { "key": "shipmentId", "value": "" },
+    { "key": "invoiceMongoId", "value": "" },
+    { "key": "approvalId", "value": "" },
+    { "key": "employeeId", "value": "" },
+    { "key": "savedViewId", "value": "" },
+    { "key": "reservationId", "value": "" },
+    { "key": "notificationId", "value": "" },
+    { "key": "jobId", "value": "" },
+    { "key": "bomId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (seeded Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.token) {",
+                  "    pm.collectionVariables.set('token', j.token);",
+                  "    try { pm.environment.set('token', j.token); } catch (e) {}",
+                  "    console.log('Token saved (collection + env if active).');",
+                  "  }",
+                  "} else {",
+                  "  try { console.log('Login failed:', pm.response.json()); } catch (e) {}",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@integracnc.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "After `node seeder.js`. Or: `\"employeeId\": \"EMP-001\"` + same password. Other roles: see collection description."
+          }
+        },
+        {
+          "name": "Login (Purchasing — PO routes)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.token) {",
+                  "    pm.collectionVariables.set('token', j.token);",
+                  "    try { pm.environment.set('token', j.token); } catch (e) {}",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"buyer@integracnc.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Login (Warehouse — shipments)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  if (j.token) {",
+                  "    pm.collectionVariables.set('token', j.token);",
+                  "    try { pm.environment.set('token', j.token); } catch (e) {}",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"warehouse@integracnc.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Permissions matrix",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/permissions"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health & Search",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/health"
+          }
+        },
+        {
+          "name": "Global search",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/search?q=test"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List products",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/products" }
+        },
+        {
+          "name": "Product by barcode",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/products/by-barcode/SKU-001" }
+        },
+        {
+          "name": "Get product",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/products/{{productId}}" }
+        },
+        {
+          "name": "Create product",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Widget A\",\n  \"sku\": \"W-A-001\",\n  \"unit\": \"ea\",\n  \"stock\": 0,\n  \"unitCost\": 10,\n  \"costingMethod\": \"average\",\n  \"standardUnitCost\": 0,\n  \"barcode\": \"BC123456\",\n  \"minStockLevel\": 5\n}"
+            },
+            "url": "{{baseUrl}}/api/products"
+          }
+        },
+        {
+          "name": "Update product",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Widget A (rev 2)\"\n}" },
+            "url": "{{baseUrl}}/api/products/{{productId}}"
+          }
+        },
+        {
+          "name": "Delete product",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/products/{{productId}}" }
+        }
+      ]
+    },
+    {
+      "name": "BOMs",
+      "item": [
+        { "name": "List BOMs", "request": { "method": "GET", "url": "{{baseUrl}}/api/boms" } },
+        {
+          "name": "Get BOM",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/boms/{{bomId}}" }
+        },
+        {
+          "name": "Create BOM",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product\": \"{{productId}}\",\n  \"name\": \"Assembly BOM\",\n  \"lines\": [\n    { \"componentProduct\": \"OTHER_PRODUCT_ID\", \"quantity\": 2 }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/boms"
+          }
+        },
+        {
+          "name": "Update BOM",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/boms/{{bomId}}"
+          }
+        },
+        {
+          "name": "Delete BOM",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/boms/{{bomId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Clients",
+      "item": [
+        { "name": "List clients", "request": { "method": "GET", "url": "{{baseUrl}}/api/clients" } },
+        {
+          "name": "Get client",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/clients/{{clientId}}" }
+        },
+        {
+          "name": "Create client",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Corp\",\n  \"email\": \"buyer@acme.com\",\n  \"phone\": \"555-0100\",\n  \"address\": \"123 Main St\"\n}"
+            },
+            "url": "{{baseUrl}}/api/clients"
+          }
+        },
+        {
+          "name": "Update client",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/clients/{{clientId}}"
+          }
+        },
+        {
+          "name": "Delete client",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/clients/{{clientId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        { "name": "List orders", "request": { "method": "GET", "url": "{{baseUrl}}/api/orders" } },
+        {
+          "name": "Get order",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/orders/{{orderId}}" }
+        },
+        {
+          "name": "Create order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client\": \"{{clientId}}\",\n  \"items\": [\n    { \"product\": \"{{productId}}\", \"quantity\": 10, \"price\": 25.5 }\n  ],\n  \"totalAmount\": 255,\n  \"discountPercent\": 0,\n  \"status\": \"pending\"\n}"
+            },
+            "url": "{{baseUrl}}/api/orders"
+          }
+        },
+        {
+          "name": "Update order",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"processing\"\n}" },
+            "url": "{{baseUrl}}/api/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "Delete order",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/orders/{{orderId}}" }
+        },
+        {
+          "name": "Reserve order line",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lineIndex\": 0,\n  \"quantity\": 5\n}"
+            },
+            "url": "{{baseUrl}}/api/orders/{{orderId}}/reserve-line"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shipments",
+      "item": [
+        {
+          "name": "List shipments",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/shipments" }
+        },
+        {
+          "name": "Shipments for order",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/shipments/order/{{orderId}}" }
+        },
+        {
+          "name": "Get shipment",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/shipments/{{shipmentId}}" }
+        },
+        {
+          "name": "Create shipment (draft)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"lines\": [\n    { \"lineIndex\": 0, \"quantity\": 5 }\n  ],\n  \"carrier\": \"\",\n  \"trackingNumber\": \"\"\n}"
+            },
+            "url": "{{baseUrl}}/api/shipments"
+          }
+        },
+        {
+          "name": "Update shipment status",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"picked\"\n}" },
+            "url": "{{baseUrl}}/api/shipments/{{shipmentId}}/status"
+          }
+        },
+        {
+          "name": "Ship (finalize)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"carrier\": \"UPS\",\n  \"trackingNumber\": \"1Z999AA10123456784\"\n}"
+            },
+            "url": "{{baseUrl}}/api/shipments/{{shipmentId}}/ship"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Purchase orders",
+      "item": [
+        {
+          "name": "List POs",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/purchase-orders" }
+        },
+        {
+          "name": "Get PO",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/purchase-orders/{{poId}}" }
+        },
+        {
+          "name": "Create PO",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"supplierName\": \"Supplier Inc\",\n  \"vendor\": \"{{vendorId}}\",\n  \"notes\": \"\",\n  \"lines\": [\n    {\n      \"product\": \"{{productId}}\",\n      \"quantityOrdered\": 100,\n      \"unitCost\": 8.5\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/purchase-orders"
+          }
+        },
+        {
+          "name": "Update PO (draft only)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/purchase-orders/{{poId}}"
+          }
+        },
+        {
+          "name": "Approve PO",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/purchase-orders/{{poId}}/approve" }
+        },
+        {
+          "name": "Receive PO",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receipts\": [\n    { \"lineIndex\": 0, \"quantity\": 50 }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/purchase-orders/{{poId}}/receive"
+          }
+        },
+        {
+          "name": "Cancel PO",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/purchase-orders/{{poId}}/cancel" }
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "List movements",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/inventory/movements" }
+        },
+        {
+          "name": "Post movement",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"kind\": \"receipt\",\n  \"quantity\": 10,\n  \"note\": \"Manual receipt\"\n}"
+            },
+            "url": "{{baseUrl}}/api/inventory/movements",
+            "description": "kind: receipt | issue | adjustment"
+          }
+        },
+        {
+          "name": "Valuation report",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/inventory/valuation" }
+        },
+        {
+          "name": "Low stock alerts",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/inventory/alerts" }
+        },
+        {
+          "name": "List reservations",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/inventory/reservations" }
+        },
+        {
+          "name": "Release reservation",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/inventory/reservations/{{reservationId}}" }
+        },
+        {
+          "name": "MRP suggestions",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/mrp/suggestions" }
+        }
+      ]
+    },
+    {
+      "name": "Production",
+      "item": [
+        {
+          "name": "List jobs",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/production" }
+        },
+        {
+          "name": "Get job",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/production/{{jobId}}" }
+        },
+        {
+          "name": "Create job",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/production"
+          }
+        },
+        {
+          "name": "Create job from order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"lineIndex\": 0\n}" },
+            "url": "{{baseUrl}}/api/production/from-order"
+          }
+        },
+        {
+          "name": "Reserve job materials",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/production/{{jobId}}/reserve-materials"
+          }
+        },
+        {
+          "name": "Update job",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/production/{{jobId}}"
+          }
+        },
+        {
+          "name": "Delete job",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/production/{{jobId}}" }
+        }
+      ]
+    },
+    {
+      "name": "HR",
+      "item": [
+        {
+          "name": "List employees",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/hr/employees" }
+        },
+        {
+          "name": "Create employee",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"EMP999\",\n  \"name\": \"New User\",\n  \"department\": \"Operations\",\n  \"role\": \"employee\",\n  \"email\": \"new@example.com\",\n  \"password\": \"changeme123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/hr/employees"
+          }
+        },
+        {
+          "name": "Update employee",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/hr/employees/{{employeeId}}"
+          }
+        },
+        {
+          "name": "Get attendance",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/hr/attendance" }
+        },
+        {
+          "name": "Log attendance",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/hr/attendance"
+          }
+        },
+        {
+          "name": "Get payroll",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/hr/payroll" }
+        },
+        {
+          "name": "Create payroll",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/hr/payroll"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Finance — AR & core",
+      "item": [
+        {
+          "name": "Transactions (combined)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/finance/transactions" }
+        },
+        {
+          "name": "Finance stats",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/finance/stats" }
+        },
+        {
+          "name": "AR aging",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/finance/ar-aging" }
+        },
+        {
+          "name": "Create invoice (manual)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client\": \"{{clientId}}\",\n  \"invoiceId\": \"INV-MANUAL-001\",\n  \"amount\": 500,\n  \"dueDate\": \"2026-04-01\",\n  \"description\": \"Services\",\n  \"status\": \"Pending\"\n}"
+            },
+            "url": "{{baseUrl}}/api/finance/invoices"
+          }
+        },
+        {
+          "name": "Invoice from order (full)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"dueDate\": \"2026-04-15\"\n}"
+            },
+            "url": "{{baseUrl}}/api/finance/invoices/from-order",
+            "description": "Only if order has no shipped shipments yet."
+          }
+        },
+        {
+          "name": "Invoice from order (per shipment)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"shipmentId\": \"{{shipmentId}}\",\n  \"dueDate\": \"2026-04-15\"\n}"
+            },
+            "url": "{{baseUrl}}/api/finance/invoices/from-order"
+          }
+        },
+        {
+          "name": "COGS for invoice",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/finance/invoices/{{invoiceMongoId}}/cogs",
+            "description": "invoiceMongoId = Invoice document _id (not invoiceId string)"
+          }
+        },
+        {
+          "name": "Create expense",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"Utilities\",\n  \"amount\": 120,\n  \"date\": \"2026-03-01\",\n  \"description\": \"Electric\",\n  \"status\": \"Paid\"\n}"
+            },
+            "url": "{{baseUrl}}/api/finance/expenses"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Finance — AP & vendors",
+      "item": [
+        {
+          "name": "List vendors (active)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/finance/vendors" }
+        },
+        {
+          "name": "List all vendors",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/finance/vendors/all" }
+        },
+        {
+          "name": "Create vendor",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"VEND-001\",\n  \"name\": \"Acme Supplies\",\n  \"email\": \"ap@acme.com\",\n  \"paymentTermsDays\": 30\n}"
+            },
+            "url": "{{baseUrl}}/api/finance/vendors"
+          }
+        },
+        {
+          "name": "Update vendor",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"active\": true\n}" },
+            "url": "{{baseUrl}}/api/finance/vendors/{{vendorId}}"
+          }
+        },
+        {
+          "name": "List vendor bills",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/finance/vendor-bills" }
+        },
+        {
+          "name": "Create vendor bill",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendor\": \"{{vendorId}}\",\n  \"lines\": [\n    {\n      \"description\": \"Consulting\",\n      \"quantity\": 1,\n      \"unitCost\": 2500,\n      \"amount\": 2500\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/finance/vendor-bills"
+          }
+        },
+        {
+          "name": "Vendor bill from PO",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/finance/vendor-bills/from-po/{{poId}}"
+          }
+        },
+        {
+          "name": "Record payment on bill",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 100,\n  \"method\": \"ach\",\n  \"reference\": \"TXN-123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/finance/vendor-bills/{{vendorBillId}}/payments"
+          }
+        },
+        {
+          "name": "AP aging",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/finance/ap-aging" }
+        }
+      ]
+    },
+    {
+      "name": "Reports & saved views",
+      "item": [
+        {
+          "name": "Export orders CSV",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/reports/export/orders" }
+        },
+        {
+          "name": "Export inventory CSV",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/reports/export/inventory" }
+        },
+        {
+          "name": "Export production CSV",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/reports/export/production" }
+        },
+        {
+          "name": "Export AR CSV",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/reports/export/ar" }
+        },
+        {
+          "name": "Export AP CSV",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/reports/export/ap" }
+        },
+        {
+          "name": "Email digest (trigger)",
+          "request": { "method": "POST", "url": "{{baseUrl}}/api/reports/email-digest" }
+        },
+        {
+          "name": "List saved views",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/saved-views?module=orders" }
+        },
+        {
+          "name": "Create saved view",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"My open orders\",\n  \"module\": \"orders\",\n  \"filters\": { \"status\": \"pending\" }\n}"
+            },
+            "url": "{{baseUrl}}/api/saved-views"
+          }
+        },
+        {
+          "name": "Delete saved view",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/saved-views/{{savedViewId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Approvals & audit",
+      "item": [
+        {
+          "name": "Pending approvals",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/approvals/pending" }
+        },
+        {
+          "name": "Approve request",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"note\": \"OK\"\n}" },
+            "url": "{{baseUrl}}/api/approvals/{{approvalId}}/approve"
+          }
+        },
+        {
+          "name": "Reject request",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"note\": \"Discount too high\"\n}" },
+            "url": "{{baseUrl}}/api/approvals/{{approvalId}}/reject"
+          }
+        },
+        {
+          "name": "Audit logs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/audit-logs?limit=50&skip=0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Integrations (CSV)",
+      "item": [
+        {
+          "name": "Xero-style invoices CSV",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/integrations/xero/invoices.csv" }
+        },
+        {
+          "name": "QuickBooks bills CSV",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/integrations/qb/bills.csv" }
+        },
+        {
+          "name": "QuickBooks expenses CSV",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/integrations/qb/expenses.csv" }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List notifications",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/notifications" }
+        },
+        {
+          "name": "Create notification",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/notifications"
+          }
+        },
+        {
+          "name": "Mark all read",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/notifications/read-all" }
+        },
+        {
+          "name": "Mark one read",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/notifications/{{notificationId}}/read" }
+        }
+      ]
+    }
+  ]
+}

@@ -1,10 +1,31 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, CircleDollarSign, TrendingUp, TrendingDown, Receipt, Loader2, Sparkles, Clock, CreditCard, ArrowRightLeft } from "lucide-react";
+import {
+  Plus,
+  Search,
+  CircleDollarSign,
+  TrendingUp,
+  TrendingDown,
+  Loader2,
+  ArrowRightLeft,
+  Clock,
+  FileInput,
+  Download,
+  Building2,
+  FileText,
+} from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { financeExtendedApi, ordersApi } from "@/lib/api";
+import { toast as sonnerToast } from "sonner";
+import {
+  ModuleDashboardLayout,
+  StickyModuleTabs,
+  moduleTabsListClassName,
+  moduleTabsTriggerClassName,
+} from "@/components/ModuleDashboardLayout";
 import { useMemo, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/use-currency";
@@ -26,6 +47,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FinanceMetrics } from "@/components/FinanceMetrics";
+import { FinanceApTab } from "@/components/finance/FinanceApTab";
+import { useAuth } from "@/contexts/AuthContext";
+import { downloadReportCsv, ethiopiaTaxApi, shipmentsApi } from "@/lib/api";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 type FinanceStatus = "Paid" | "Pending" | "Overdue";
 type TransactionType = "Income" | "Expense";
 
@@ -37,6 +67,10 @@ type Transaction = {
   status: FinanceStatus;
   type: TransactionType;
   description: string;
+  sourceId?: string;
+  grossBeforeWht?: number;
+  vatAmount?: number;
+  salesWhtAmount?: number;
 };
 
 const statusVariant: Record<FinanceStatus, "success" | "warning" | "destructive"> = {
@@ -47,8 +81,164 @@ const statusVariant: Record<FinanceStatus, "success" | "warning" | "destructive"
 
 const API_BASE_URL = "http://localhost:5000/api/finance";
 
+function authHeaders(): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${localStorage.getItem("erp_token") || ""}`,
+  };
+}
+
+function FinanceLedgerTable({
+  rows,
+  loading,
+  onOpenTaxInvoice,
+}: {
+  rows: Transaction[];
+  loading: boolean;
+  onOpenTaxInvoice?: (invoiceMongoId: string) => void;
+}) {
+  const { formatAmount, symbol } = useCurrency();
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-xl overflow-hidden shadow-xl">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-secondary/30">
+            <TableRow className="border-border/40 hover:bg-transparent">
+              <TableHead className="py-4 pl-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 w-32">
+                Journal ID
+              </TableHead>
+              <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+                Type
+              </TableHead>
+              <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+                Category
+              </TableHead>
+              <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+                Description
+              </TableHead>
+              <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+                Value
+              </TableHead>
+              <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+                Date
+              </TableHead>
+              <TableHead className="py-4 pr-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 text-right">
+                Status
+              </TableHead>
+              {onOpenTaxInvoice && (
+                <TableHead className="py-4 pr-6 w-[52px] text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 text-center">
+                  Tax
+                </TableHead>
+              )}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={onOpenTaxInvoice ? 8 : 7} className="h-48 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary opacity-50" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      Syncing ledger…
+                    </span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={onOpenTaxInvoice ? 8 : 7} className="h-48 text-center text-sm text-muted-foreground">
+                  No entries in this view.
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((t) => (
+                <TableRow
+                  key={t.id + t.date + t.type}
+                  className="group/row border-border/30 hover:bg-secondary/20 transition-colors"
+                >
+                  <TableCell className="py-3 pl-6">
+                    <span className="font-mono text-[10px] font-bold text-muted-foreground group-hover/row:text-primary transition-colors">
+                      FIN-{t.id.substring(Math.max(0, t.id.length - 6)).toUpperCase()}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div
+                      className={`text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${
+                        t.type === "Income"
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                          : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                      }`}
+                    >
+                      {t.type === "Income" ? (
+                        <TrendingUp className="h-3 w-3" />
+                      ) : (
+                        <TrendingDown className="h-3 w-3" />
+                      )}
+                      {t.type}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs font-bold uppercase tracking-tight">{t.category}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{t.description}</TableCell>
+                  <TableCell>
+                    <span
+                      className={`text-sm font-black ${
+                        t.type === "Income" ? "text-emerald-500" : "text-rose-500"
+                      }`}
+                      title={
+                        t.type === "Income" && t.grossBeforeWht != null
+                          ? `Net receivable. Gross before WHT: ${symbol}${formatAmount(t.grossBeforeWht)}`
+                          : undefined
+                      }
+                    >
+                      {t.type === "Income" ? "+" : "-"}
+                      {symbol}
+                      {formatAmount(t.amount)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-[10px] font-mono text-muted-foreground">
+                    {new Date(t.date).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="pr-6 text-right">
+                    <Badge
+                      variant={statusVariant[t.status]}
+                      className="text-[9px] font-black uppercase tracking-wide"
+                    >
+                      {t.status}
+                    </Badge>
+                  </TableCell>
+                  {onOpenTaxInvoice && (
+                    <TableCell className="pr-6 text-center">
+                      {t.type === "Income" && t.sourceId ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary"
+                          title="Printable tax invoice"
+                          onClick={() => onOpenTaxInvoice(t.sourceId!)}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <span className="text-muted-foreground/30">—</span>
+                      )}
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
 export default function Finance() {
-  const { symbol } = useCurrency();
+  const { user } = useAuth();
+  const canWriteFinance = user?.role === "Admin" || user?.role === "finance_head";
+  const canFinance = ["Admin", "finance_head", "finance_viewer"].includes(user?.role ?? "");
+  const { format, formatAmount, symbol } = useCurrency();
   const [q, setQ] = useState("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
@@ -70,6 +260,66 @@ export default function Finance() {
   });
 
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [invFromOrderOpen, setInvFromOrderOpen] = useState(false);
+  const [invOrderId, setInvOrderId] = useState("");
+  const [invShipmentId, setInvShipmentId] = useState("");
+  const [invDue, setInvDue] = useState(() => new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
+  const [ethCsvOpen, setEthCsvOpen] = useState(false);
+  const [ethFrom, setEthFrom] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  });
+  const [ethTo, setEthTo] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const openTaxInvoice = async (invoiceMongoId: string) => {
+    try {
+      await ethiopiaTaxApi.openTaxInvoiceHtml(invoiceMongoId);
+    } catch {
+      sonnerToast.error("Could not open tax invoice (popup blocked or network error)");
+    }
+  };
+
+  const { data: arPayload } = useQuery({
+    queryKey: ["ar-aging"],
+    queryFn: financeExtendedApi.getARAging,
+  });
+
+  const { data: ordersForInv = [] } = useQuery({
+    queryKey: ["orders"],
+    queryFn: ordersApi.getAll,
+    enabled: invFromOrderOpen,
+  });
+
+  const { data: shipForInv = [] } = useQuery({
+    queryKey: ["shipments-order", invOrderId],
+    queryFn: () => shipmentsApi.listForOrder(invOrderId),
+    enabled: invFromOrderOpen && !!invOrderId,
+  });
+
+  const shippedOnOrder = (shipForInv as { _id: string; status: string; shipmentNumber: string }[]).filter(
+    (s) => s.status === "shipped"
+  );
+  const needShipmentInvoice = shippedOnOrder.length > 0;
+
+  const invFromOrderMut = useMutation({
+    mutationFn: () =>
+      financeExtendedApi.createInvoiceFromOrder({
+        orderId: invOrderId,
+        dueDate: new Date(invDue).toISOString(),
+        ...(needShipmentInvoice && invShipmentId ? { shipmentId: invShipmentId } : {}),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ar-aging"] });
+      sonnerToast.success("Invoice created from order");
+      setInvFromOrderOpen(false);
+      fetchTransactions();
+      fetchStats();
+    },
+    onError: (e: { response?: { data?: { message?: string } } }) => {
+      sonnerToast.error(e?.response?.data?.message || "Failed");
+    },
+  });
 
   useEffect(() => {
     fetchTransactions();
@@ -79,7 +329,7 @@ export default function Finance() {
   const fetchTransactions = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/transactions`);
+      const response = await fetch(`${API_BASE_URL}/transactions`, { headers: authHeaders() });
       if (response.ok) {
         const data = await response.json();
         setTransactions(data);
@@ -93,7 +343,7 @@ export default function Finance() {
 
   const fetchStats = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/stats`);
+      const response = await fetch(`${API_BASE_URL}/stats`, { headers: authHeaders() });
       if (response.ok) {
         const data = await response.json();
         setFinanceStats(data);
@@ -132,9 +382,7 @@ export default function Finance() {
 
       const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: authHeaders(),
         body: JSON.stringify(payload),
       });
 
@@ -182,30 +430,203 @@ export default function Finance() {
   }, [q, transactions]);
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Header Section */}
-      <div className="relative p-8 rounded-[2rem] overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-primary/5 to-purple-500/10 backdrop-blur-3xl" />
-        <div className="relative flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-[1px] w-8 bg-primary" />
-              <span className="text-[10px] uppercase font-bold tracking-widest text-primary">Capital Ledger</span>
-            </div>
-            <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">
-              FINANCE OPS
-            </h1>
-            <p className="text-sm font-medium text-muted-foreground">Fiscal intelligence & liquidity monitoring</p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="h-14 rounded-2xl px-8 font-black uppercase italic text-xs tracking-widest shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all gap-3 bg-primary">
-                  <Plus className="h-4 w-4" />
-                  Initialize Transaction
+    <ModuleDashboardLayout
+      title="Finance Operations"
+      description="Fiscal intelligence, liquidity, and journal activity—aligned with Production command style."
+      icon={CircleDollarSign}
+      healthStats={[
+        {
+          label: "Revenue",
+          value: format(financeStats.revenue ?? 0),
+          accent: "text-emerald-500",
+        },
+        {
+          label: "Net position",
+          value: format(financeStats.profit ?? 0),
+          accent: (financeStats.profit ?? 0) >= 0 ? "text-primary" : "text-destructive",
+        },
+        {
+          label: "Pending",
+          value: format(financeStats.pending ?? 0),
+          accent: "text-amber-500",
+        },
+      ]}
+      actions={
+        <div className="flex flex-wrap gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="h-11 rounded-xl font-black uppercase text-xs gap-2">
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                className="text-xs font-bold"
+                onClick={() => downloadReportCsv("/reports/export/ar", `ar-${Date.now()}.csv`)}
+              >
+                Open AR
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-xs font-bold"
+                onClick={() => downloadReportCsv("/reports/export/ap", `ap-${Date.now()}.csv`)}
+              >
+                Open AP
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-xs font-bold"
+                onClick={() => downloadReportCsv("/reports/export/orders", `orders-${Date.now()}.csv`)}
+              >
+                Orders
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-xs font-bold"
+                onClick={() => downloadReportCsv("/reports/export/inventory", `inventory-${Date.now()}.csv`)}
+              >
+                Inventory
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-xs font-bold"
+                onClick={() => downloadReportCsv("/reports/export/production", `production-${Date.now()}.csv`)}
+              >
+                Production
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {canFinance && (
+            <>
+              <Button
+                variant="outline"
+                className="h-11 rounded-xl font-black uppercase text-xs gap-2 border-amber-500/40 text-amber-700 dark:text-amber-400"
+                onClick={() => setEthCsvOpen(true)}
+              >
+                <FileText className="h-4 w-4" />
+                Ethiopia tax CSV
+              </Button>
+              <Dialog open={ethCsvOpen} onOpenChange={setEthCsvOpen}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="font-black uppercase">Statutory CSV exports</DialogTitle>
+                    <DialogDescription className="text-xs">
+                      Date range filters invoice/bill dates. See docs for accountant column mapping.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid grid-cols-2 gap-3 py-2">
+                    <div>
+                      <Label className="text-[10px] uppercase">From</Label>
+                      <Input type="date" value={ethFrom} onChange={(e) => setEthFrom(e.target.value)} className="mt-1" />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] uppercase">To</Label>
+                      <Input type="date" value={ethTo} onChange={(e) => setEthTo(e.target.value)} className="mt-1" />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    {[
+                      { path: "/finance/reports/ethiopia/vat-sales.csv", file: "vat-sales" },
+                      { path: "/finance/reports/ethiopia/vat-purchases.csv", file: "vat-purchases" },
+                      { path: "/finance/reports/ethiopia/withholding-sales.csv", file: "wht-sales" },
+                      { path: "/finance/reports/ethiopia/withholding-purchases.csv", file: "wht-purchases" },
+                    ].map(({ path, file }) => (
+                      <Button
+                        key={path}
+                        variant="secondary"
+                        className="justify-start font-mono text-xs"
+                        onClick={() =>
+                          downloadReportCsv(path, `${file}-${ethFrom}-${ethTo}.csv`, { from: ethFrom, to: ethTo })
+                        }
+                      >
+                        Download {file}
+                      </Button>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+          {canWriteFinance && (
+          <Dialog open={invFromOrderOpen} onOpenChange={(o) => { setInvFromOrderOpen(o); if (!o) setInvShipmentId(""); }}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="h-11 rounded-xl font-black uppercase text-xs gap-2">
+                <FileInput className="h-4 w-4" />
+                Invoice from order
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Invoice from sales order</DialogTitle>
+                <DialogDescription>
+                  If the order has shipped packages, pick a shipment to invoice. Otherwise one full-order invoice.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-2">
+                <div className="space-y-2">
+                  <Label>Order</Label>
+                  <Select
+                    value={invOrderId}
+                    onValueChange={(v) => {
+                      setInvOrderId(v);
+                      setInvShipmentId("");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select order" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-64">
+                      {(ordersForInv as { _id: string; client?: { name: string }; totalAmount: number }[]).map((o) => (
+                        <SelectItem key={o._id} value={o._id}>
+                          {o.client?.name ?? "—"} · ${o.totalAmount} · …{o._id.slice(-6)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {needShipmentInvoice && (
+                  <div className="space-y-2">
+                    <Label>Shipment (shipped)</Label>
+                    <Select value={invShipmentId} onValueChange={setInvShipmentId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select shipment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {shippedOnOrder.map((s) => (
+                          <SelectItem key={s._id} value={s._id}>
+                            {s.shipmentNumber}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label>Due date</Label>
+                  <Input type="date" value={invDue} onChange={(e) => setInvDue(e.target.value)} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setInvFromOrderOpen(false)}>Cancel</Button>
+                <Button
+                  disabled={
+                    !invOrderId ||
+                    invFromOrderMut.isPending ||
+                    (needShipmentInvoice && !invShipmentId)
+                  }
+                  onClick={() => invFromOrderMut.mutate()}
+                >
+                  Create invoice
                 </Button>
-              </DialogTrigger>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          )}
+        {canWriteFinance && (
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="h-11 rounded-xl px-6 font-black uppercase italic text-xs tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all gap-2 bg-primary">
+              <Plus className="h-4 w-4" />
+              New entry
+            </Button>
+          </DialogTrigger>
               <DialogContent className="sm:max-w-xl bg-card/95 backdrop-blur-2xl border-white/10 shadow-3xl">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-primary to-purple-500" />
                 <DialogHeader className="space-y-4">
@@ -293,104 +714,143 @@ export default function Finance() {
                   </Button>
                 </DialogFooter>
               </DialogContent>
-            </Dialog>
-          </div>
+        </Dialog>
+        )}
         </div>
-      </div>
-
-      {/* Metrics Section */}
+      }
+    >
       <FinanceMetrics stats={financeStats} />
 
-      {/* Ledger Section */}
       <Tabs defaultValue="all" className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <TabsList className="h-12 bg-white/5 backdrop-blur-2xl border border-white/10 p-1.5 rounded-2xl">
-            <TabsTrigger value="all" className="rounded-xl px-6 font-black uppercase italic text-[10px] tracking-[0.15em] data-[state=active]:bg-primary data-[state=active]:shadow-xl shadow-primary/20">All Journals</TabsTrigger>
-            <TabsTrigger value="income" className="rounded-xl px-6 font-black uppercase italic text-[10px] tracking-[0.15em] data-[state=active]:bg-emerald-500 data-[state=active]:text-white">Invoices</TabsTrigger>
-            <TabsTrigger value="expense" className="rounded-xl px-6 font-black uppercase italic text-[10px] tracking-[0.15em] data-[state=active]:bg-rose-500 data-[state=active]:text-white">Direct Expenses</TabsTrigger>
-          </TabsList>
-          
-          <div className="relative w-full md:w-80 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="FILTER LEDGER..."
-              className="h-12 pl-11 bg-white/5 border-white/10 rounded-2xl font-black uppercase italic text-[10px] tracking-widest transition-all focus:ring-primary/20 focus:border-primary/30"
-            />
-          </div>
-        </div>
-
-        <TabsContent value="all" className="mt-0">
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.02] backdrop-blur-3xl overflow-hidden shadow-2xl">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-white/[0.03]">
-                  <TableRow className="border-white/5 hover:bg-transparent">
-                    <TableHead className="py-5 pl-8 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 w-32">Journal ID</TableHead>
-                    <TableHead className="py-5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Type</TableHead>
-                    <TableHead className="py-5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Category</TableHead>
-                    <TableHead className="py-5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Description</TableHead>
-                    <TableHead className="py-5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Value</TableHead>
-                    <TableHead className="py-5 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Timestamp</TableHead>
-                    <TableHead className="py-5 pr-8 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 text-right">Lifecycle</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-64 text-center">
-                        <div className="flex flex-col items-center gap-4">
-                          <Loader2 className="h-8 w-8 animate-spin text-primary opacity-50" />
-                          <span className="text-[10px] font-black uppercase tracking-widest opacity-40 italic">Syncing Capital Streams...</span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredTransactions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-64 text-center">
-                        <span className="text-[10px] font-black uppercase tracking-widest opacity-40 italic">No activity detected within partition.</span>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredTransactions.map((t) => (
-                      <TableRow key={t.id} className="group/row transition-all hover:bg-white/[0.02] border-white/5">
-                        <TableCell className="py-4 pl-8">
-                          <span className="font-mono text-[10px] font-black uppercase tracking-tighter text-muted-foreground/80 group-hover/row:text-primary transition-colors">
-                            FIN-{t.id.substring(t.id.length - 6).toUpperCase()}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className={`text-[9px] font-black uppercase italic tracking-widest px-2.5 py-0.5 rounded-lg inline-flex items-center gap-1.5 ${t.type === 'Income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                            {t.type === 'Income' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                            {t.type}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-[11px] font-black uppercase tracking-tight italic opacity-80">{t.category}</TableCell>
-                        <TableCell className="text-[11px] font-bold text-muted-foreground/60 italic max-w-xs truncate">{t.description}</TableCell>
-                        <TableCell>
-                          <div className={`text-base font-black italic tracking-tighter ${t.type === 'Income' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                            {t.type === "Income" ? "+" : "-"}{symbol}{t.amount.toLocaleString()}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-[10px] font-bold text-muted-foreground/40 font-mono italic">
-                          {new Date(t.date).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="pr-8 text-right">
-                          <Badge variant={statusVariant[t.status]} className="text-[9px] font-black uppercase italic tracking-widest px-2.5 py-0.5 rounded-lg border-white/5">
-                            {t.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+        <StickyModuleTabs>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <TabsList className={moduleTabsListClassName()}>
+              <TabsTrigger value="all" className={moduleTabsTriggerClassName()}>
+                All journals
+              </TabsTrigger>
+              <TabsTrigger
+                value="income"
+                className={`${moduleTabsTriggerClassName()} data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-emerald-500/25`}
+              >
+                <TrendingUp className="h-4 w-4 shrink-0" />
+                Invoices
+              </TabsTrigger>
+              <TabsTrigger
+                value="expense"
+                className={`${moduleTabsTriggerClassName()} data-[state=active]:bg-rose-600 data-[state=active]:text-white data-[state=active]:shadow-rose-500/25`}
+              >
+                <TrendingDown className="h-4 w-4 shrink-0" />
+                Expenses
+              </TabsTrigger>
+              <TabsTrigger value="ar-aging" className={moduleTabsTriggerClassName()}>
+                <Clock className="h-4 w-4 shrink-0" />
+                AR aging
+              </TabsTrigger>
+              <TabsTrigger value="ap" className={moduleTabsTriggerClassName()}>
+                <Building2 className="h-4 w-4 shrink-0" />
+                AP & vendors
+              </TabsTrigger>
+            </TabsList>
+            <div className="relative w-full sm:max-w-xs group shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search ledger…"
+                className="h-10 pl-10 bg-secondary/50 border rounded-xl text-sm"
+              />
             </div>
           </div>
+        </StickyModuleTabs>
+
+        <TabsContent value="all" className="mt-0 focus-visible:outline-none">
+          <FinanceLedgerTable
+            rows={filteredTransactions}
+            loading={loading}
+            onOpenTaxInvoice={canFinance ? openTaxInvoice : undefined}
+          />
         </TabsContent>
-        {/* Same layout for filtered contents if needed, but the technical ledger design should be unified */}
+        <TabsContent value="income" className="mt-0 focus-visible:outline-none">
+          <FinanceLedgerTable
+            rows={filteredTransactions.filter((t) => t.type === "Income")}
+            loading={loading}
+            onOpenTaxInvoice={canFinance ? openTaxInvoice : undefined}
+          />
+        </TabsContent>
+        <TabsContent value="expense" className="mt-0 focus-visible:outline-none">
+          <FinanceLedgerTable
+            rows={filteredTransactions.filter((t) => t.type === "Expense")}
+            loading={loading}
+          />
+        </TabsContent>
+        <TabsContent value="ar-aging" className="mt-0 space-y-6 focus-visible:outline-none">
+          {arPayload && (
+            <>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {[
+                  { label: "Not due", k: "notDue" as const, t: arPayload.totals.notDue },
+                  { label: "1–30 d", k: "days1_30" as const, t: arPayload.totals.days1_30 },
+                  { label: "31–60 d", k: "days31_60" as const, t: arPayload.totals.days31_60 },
+                  { label: "61–90 d", k: "days61_90" as const, t: arPayload.totals.days61_90 },
+                  { label: "90+ d", k: "days90plus" as const, t: arPayload.totals.days90plus },
+                ].map((b) => (
+                  <div key={b.k} className="rounded-xl border bg-card/60 p-4">
+                    <p className="text-[10px] font-black uppercase text-muted-foreground">{b.label}</p>
+                    <p className="text-xl font-black">{format(b.t)}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm font-bold">
+                Open AR: {format(arPayload.totals.openAR)}
+              </p>
+              {(
+                [
+                  ["days90plus", "90+ days past due"],
+                  ["days61_90", "61–90 days past due"],
+                  ["days31_60", "31–60 days past due"],
+                  ["days1_30", "1–30 days past due"],
+                  ["notDue", "Not yet due"],
+                ] as const
+              ).map(([bucket, title]) => (
+                <div key={bucket} className="rounded-xl border overflow-hidden">
+                  <p className="text-xs font-black uppercase px-4 py-2 bg-muted/50">{title}</p>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice</TableHead>
+                        <TableHead>Client</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>Due</TableHead>
+                        <TableHead className="text-right">Days late</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(arPayload.buckets[bucket] as { invoiceId: string; clientName: string; amount: number; dueDate: string; daysPastDue: number }[]).length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-6">—</TableCell>
+                        </TableRow>
+                      ) : (
+                        (arPayload.buckets[bucket] as { invoiceId: string; clientName: string; amount: number; dueDate: string; daysPastDue: number }[]).map((row) => (
+                          <TableRow key={row.invoiceId + bucket}>
+                            <TableCell className="font-mono text-xs">{row.invoiceId}</TableCell>
+                            <TableCell>{row.clientName}</TableCell>
+                            <TableCell className="text-right font-bold">{format(row.amount)}</TableCell>
+                            <TableCell className="text-xs">{new Date(row.dueDate).toLocaleDateString()}</TableCell>
+                            <TableCell className="text-right">{row.daysPastDue}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              ))}
+            </>
+          )}
+        </TabsContent>
+        <TabsContent value="ap" className="mt-0 focus-visible:outline-none">
+          <FinanceApTab symbol={symbol} canWrite={canWriteFinance} />
+        </TabsContent>
       </Tabs>
-    </div>
+    </ModuleDashboardLayout>
   );
 }

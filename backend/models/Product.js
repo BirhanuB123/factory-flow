@@ -21,6 +21,20 @@ const ProductSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  costingMethod: {
+    type: String,
+    enum: ['average', 'standard'],
+    default: 'average',
+  },
+  standardUnitCost: {
+    type: Number,
+    default: 0,
+  },
+  barcode: {
+    type: String,
+    default: '',
+    trim: true,
+  },
   stock: {
     type: Number,
     default: 0

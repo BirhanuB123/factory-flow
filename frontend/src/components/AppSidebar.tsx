@@ -9,10 +9,14 @@ import {
   Settings,
   Factory,
   CircleDollarSign,
+  Truck,
+  PackageCheck,
+  Layers,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocale } from "@/contexts/LocaleContext";
 import {
   Sidebar,
   SidebarContent,
@@ -29,13 +33,30 @@ import {
 
 // Defining nav items with required roles (no roles array = accessible by all authenticated users)
 const allNavItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Production", url: "/production", icon: Factory },
-  { title: "Inventory", url: "/inventory", icon: Package },
-  { title: "HR", url: "/hr", icon: UserCog, roles: ["Admin", "hr_head"] },
-  { title: "Finance", url: "/finance", icon: CircleDollarSign, roles: ["Admin", "finance_head"] },
-  { title: "Settings", url: "/settings", icon: Settings },
-];
+  { titleKey: "nav.dashboard", url: "/", icon: LayoutDashboard },
+  { titleKey: "nav.production", url: "/production", icon: Factory },
+  { titleKey: "nav.jobs", url: "/production-jobs", icon: Wrench },
+  { titleKey: "nav.boms", url: "/boms", icon: FileStack },
+  { titleKey: "nav.orders", url: "/orders", icon: ShoppingCart },
+  { titleKey: "nav.clients", url: "/clients", icon: Users },
+  { titleKey: "nav.inventory", url: "/inventory", icon: Package },
+  { titleKey: "nav.purchasing", url: "/purchase-orders", icon: Truck },
+  {
+    titleKey: "nav.shipments",
+    url: "/shipments",
+    icon: PackageCheck,
+    roles: ["Admin", "warehouse_head", "finance_head", "finance_viewer", "purchasing_head"],
+  },
+  { titleKey: "nav.hr", url: "/hr", icon: UserCog, roles: ["Admin", "hr_head", "finance_head"] },
+  {
+    titleKey: "nav.finance",
+    url: "/finance",
+    icon: CircleDollarSign,
+    roles: ["Admin", "finance_head", "finance_viewer"],
+  },
+  { titleKey: "nav.smeBundle", url: "/sme-bundle", icon: Layers },
+  { titleKey: "nav.settings", url: "/settings", icon: Settings },
+] as const;
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -43,6 +64,7 @@ export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const { user } = useAuth();
+  const { t } = useLocale();
 
   const navItems = allNavItems.filter(item => {
     if (!item.roles) return true;
@@ -63,7 +85,7 @@ export function AppSidebar() {
                 INTEGRA
               </span>
               <span className="text-[10px] text-sidebar-muted uppercase tracking-widest">
-                ERP System
+                {t("nav.erpSubtitle")}
               </span>
             </div>
           )}
@@ -73,14 +95,17 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-muted text-[10px] uppercase tracking-widest">
-            Navigation
+            {t("nav.navigation")}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const active = currentPath === item.url;
+                const active =
+                  item.url === "/"
+                    ? currentPath === "/"
+                    : currentPath === item.url || currentPath.startsWith(item.url + "/");
                 return (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.titleKey}>
                     <SidebarMenuButton asChild isActive={active}>
                       <NavLink
                         to={item.url}
@@ -89,7 +114,7 @@ export function AppSidebar() {
                         activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                       >
                         <item.icon className="mr-2 h-4 w-4" />
-                        {!collapsed && <span>{item.title}</span>}
+                        {!collapsed && <span>{t(item.titleKey)}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -102,7 +127,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4">
         {!collapsed && (
-          <div className="text-[10px] text-sidebar-muted">
+          <div className="text-[14px] text-sidebar-muted">
             v1.0.0 — Integra ERP
           </div>
         )}

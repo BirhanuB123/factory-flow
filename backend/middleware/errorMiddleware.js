@@ -1,9 +1,8 @@
+const logger = require('../config/logger');
+
 const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
-
-  // Log to console for dev
-  console.log(err);
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
@@ -19,13 +18,22 @@ const errorHandler = (err, req, res, next) => {
 
   // Mongoose validation error
   if (err.name === 'ValidationError') {
-    const message = Object.values(err.errors).map(val => val.message);
+    const message = Object.values(err.errors).map((val) => val.message);
     error = { message, statusCode: 400 };
   }
 
-  res.status(error.statusCode || 500).json({
+  const msg = error.message || 'Server Error';
+  const errorText = Array.isArray(msg) ? msg.join(', ') : msg;
+  const httpStatus = error.statusCode || err.statusCode || 500;
+
+  if (httpStatus >= 500) {
+    logger.error({ err: err.message, stack: err.stack }, 'request error');
+  }
+
+  res.status(httpStatus).json({
     success: false,
-    error: error.message || 'Server Error'
+    error: msg,
+    message: errorText,
   });
 };
 

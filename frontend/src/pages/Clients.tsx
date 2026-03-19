@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Search, Plus, Users, Eye, Edit, Trash2, FileStack, Layers, Hash } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Client {
   _id: string;
@@ -25,15 +26,32 @@ interface Client {
   phone?: string;
   address?: string;
   industry?: string;
+  tin?: string;
+  vatRegistered?: boolean;
 }
 
-const defaultForm: Partial<Client> = {
+const defaultForm: Record<string, unknown> = {
   name: "",
   email: "",
   phone: "",
   address: "",
   industry: "",
+  tin: "",
+  vatRegistered: true,
 };
+
+function apiErrorMessage(err: unknown): string {
+  const ax = err as {
+    response?: { data?: { message?: string; error?: string | string[] } };
+    message?: string;
+  };
+  const d = ax?.response?.data;
+  if (d?.message) return d.message;
+  if (d?.error != null) {
+    return Array.isArray(d.error) ? d.error.join(", ") : String(d.error);
+  }
+  return ax?.message || "Request failed";
+}
 
 export default function Clients() {
   const queryClient = useQueryClient();
@@ -57,8 +75,8 @@ export default function Clients() {
       setFormOpen(false);
       setFormValues({ ...defaultForm });
     },
-    onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err?.response?.data?.message || "Failed to add client");
+    onError: (err: unknown) => {
+      toast.error(apiErrorMessage(err) || "Failed to add client");
     },
   });
 
@@ -73,8 +91,8 @@ export default function Clients() {
       setSelectedClient(null);
       setFormValues({ ...defaultForm });
     },
-    onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err?.response?.data?.message || "Failed to update client");
+    onError: (err: unknown) => {
+      toast.error(apiErrorMessage(err) || "Failed to update client");
     },
   });
 
@@ -86,8 +104,8 @@ export default function Clients() {
       setDeleteTarget(null);
       setSelectedClient(null);
     },
-    onError: (err: { response?: { data?: { message?: string } } }) => {
-      toast.error(err?.response?.data?.message || "Failed to delete client");
+    onError: (err: unknown) => {
+      toast.error(apiErrorMessage(err) || "Failed to delete client");
     },
   });
 
@@ -99,6 +117,8 @@ export default function Clients() {
         phone: editingClient.phone ?? "",
         address: editingClient.address ?? "",
         industry: editingClient.industry ?? "",
+        tin: editingClient.tin ?? "",
+        vatRegistered: editingClient.vatRegistered !== false,
       });
     } else {
       setFormValues({ ...defaultForm });
@@ -158,7 +178,12 @@ export default function Clients() {
             </div>
             <Button 
               className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5" 
-              onClick={() => { setEditingClient(null); setFormValues({ ...defaultForm }); setFormOpen(true); }}
+              onClick={() => {
+                setSelectedClient(null);
+                setEditingClient(null);
+                setFormValues({ ...defaultForm });
+                setFormOpen(true);
+              }}
             >
               <Plus className="h-4 w-4" /> 
               <span className="font-bold">Onboard Partner</span>
@@ -257,10 +282,22 @@ export default function Clients() {
               <div><span className="text-muted-foreground">Phone</span><br />{selectedClient.phone ?? "—"}</div>
               <div><span className="text-muted-foreground">Address</span><br />{selectedClient.address ?? "—"}</div>
               <div><span className="text-muted-foreground">Industry</span><br />{selectedClient.industry ?? "—"}</div>
+              <div><span className="text-muted-foreground">TIN</span><br />{selectedClient.tin ?? "—"}</div>
+              <div><span className="text-muted-foreground">VAT registered</span><br />{selectedClient.vatRegistered !== false ? "Yes" : "No"}</div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setEditingClient(selectedClient); setFormOpen(true); }}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => {
+                const c = selectedClient;
+                setSelectedClient(null);
+                setEditingClient(c);
+                setFormOpen(true);
+              }}
+            >
               <Edit className="h-3.5 w-3.5" /> Edit
             </Button>
             <Button variant="destructive" size="sm" className="gap-1.5" onClick={() => setDeleteTarget(selectedClient)}>
@@ -270,7 +307,13 @@ export default function Clients() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      <Dialog
+        open={formOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) setEditingClient(null);
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editingClient ? "Edit Client" : "Add Client"}</DialogTitle>
@@ -297,22 +340,47 @@ export default function Clients() {
               <Label>Industry</Label>
               <Input value={(formValues.industry as string) ?? ""} onChange={(e) => setFormValues((p) => ({ ...p, industry: e.target.value }))} placeholder="Industry" />
             </div>
+            <div className="space-y-2">
+              <Label>TIN (tax ID)</Label>
+              <Input
+                value={(formValues.tin as string) ?? ""}
+                onChange={(e) => setFormValues((p) => ({ ...p, tin: e.target.value }))}
+                placeholder="Buyer TIN for tax invoices"
+                className="font-mono"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="vatReg"
+                checked={formValues.vatRegistered !== false}
+                onCheckedChange={(c) => setFormValues((p) => ({ ...p, vatRegistered: c === true }))}
+              />
+              <Label htmlFor="vatReg" className="text-sm font-normal cursor-pointer">
+                VAT-registered customer (output VAT on sales)
+              </Label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
             <Button
               onClick={() => {
+                const name = String(formValues.name ?? "").trim();
                 const payload = {
-                  name: formValues.name,
-                  email: formValues.email || undefined,
-                  phone: formValues.phone || undefined,
-                  address: formValues.address || undefined,
-                  industry: formValues.industry || undefined,
+                  name,
+                  email: (formValues.email as string)?.trim() || undefined,
+                  phone: (formValues.phone as string)?.trim() || undefined,
+                  address: (formValues.address as string)?.trim() || undefined,
+                  industry: (formValues.industry as string)?.trim() || undefined,
+                  tin: (formValues.tin as string)?.trim() || undefined,
+                  vatRegistered: formValues.vatRegistered !== false,
                 };
                 if (editingClient) {
                   updateMutation.mutate({ id: editingClient._id, data: payload });
                 } else {
-                  if (!payload.name) { toast.error("Name is required"); return; }
+                  if (!name) {
+                    toast.error("Name is required");
+                    return;
+                  }
                   createMutation.mutate(payload);
                 }
               }}

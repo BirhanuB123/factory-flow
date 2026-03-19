@@ -21,14 +21,28 @@ exports.getClient = asyncHandler(async (req, res, next) => {
 // @desc    Create new client
 // @route   POST /api/clients
 exports.createClient = asyncHandler(async (req, res, next) => {
-  const client = await Client.create(req.body);
+  const body = { ...req.body };
+  if (typeof body.name === 'string') body.name = body.name.trim();
+  if (!body.name) {
+    return res.status(400).json({ success: false, error: 'Name is required', message: 'Name is required' });
+  }
+  if (body.email === '') delete body.email;
+  const client = await Client.create(body);
   res.status(201).json({ success: true, data: client });
 });
 
 // @desc    Update client
 // @route   PUT /api/clients/:id
 exports.updateClient = asyncHandler(async (req, res, next) => {
-  const client = await Client.findByIdAndUpdate(req.params.id, req.body, {
+  const body = { ...req.body };
+  if (typeof body.name === 'string') {
+    body.name = body.name.trim();
+    if (!body.name) {
+      return res.status(400).json({ success: false, error: 'Name is required', message: 'Name is required' });
+    }
+  }
+  if (body.email === '') delete body.email;
+  const client = await Client.findByIdAndUpdate(req.params.id, body, {
     new: true,
     runValidators: true
   });

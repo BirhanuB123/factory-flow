@@ -23,7 +23,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ||
+  "http://localhost:5000/api";
 
 interface NotificationData {
   _id: string;
@@ -57,12 +59,20 @@ export function DashboardHeader() {
   }, [token]);
 
   const fetchNotifications = async () => {
+    const t = localStorage.getItem("erp_token") || token;
+    if (!t) return;
     try {
       const response = await fetch(`${API_BASE_URL}/notifications`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${t}` },
       });
+      if (response.status === 401) {
+        localStorage.removeItem("erp_token");
+        localStorage.removeItem("erp_user");
+        if (!window.location.pathname.startsWith("/login")) {
+          window.location.assign("/login");
+        }
+        return;
+      }
       const data = await response.json();
       if (data.success) {
         setNotifications(data.data);

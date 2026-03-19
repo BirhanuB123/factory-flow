@@ -1,6 +1,7 @@
 const asyncHandler = require('express-async-handler');
 const Employee = require('../models/Employee');
 const generateToken = require('../utils/generateToken');
+const { rolePermissions } = require('../config/permissions');
 
 // @desc    Auth user & get token
 // @route   POST /api/auth/login
@@ -21,6 +22,7 @@ const loginUser = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       department: user.department,
+      permissions: rolePermissions(user.role),
       token: generateToken(user._id),
     });
   } else {
@@ -41,6 +43,7 @@ const getMe = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       department: user.department,
+      permissions: rolePermissions(user.role),
     });
   } else {
     res.status(404);
@@ -48,7 +51,17 @@ const getMe = asyncHandler(async (req, res) => {
   }
 });
 
+const getPermissionsDoc = asyncHandler(async (req, res) => {
+  const { getMatrixDoc, rolePermissions } = require('../config/permissions');
+  res.json({
+    role: req.user.role,
+    permissions: rolePermissions(req.user.role),
+    matrix: getMatrixDoc(),
+  });
+});
+
 module.exports = {
   loginUser,
   getMe,
+  getPermissionsDoc,
 };

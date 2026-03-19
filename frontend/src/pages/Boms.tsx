@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { bomApi, inventoryApi } from "@/lib/api";
 import { useCurrency } from "@/hooks/use-currency";
@@ -39,13 +39,27 @@ interface BomComponent {
   quantity: number;
 }
 
+interface BomRoutingRow {
+  sequence: number;
+  code: string;
+  name: string;
+  workCenterCode: string;
+  setupMinutes: number;
+  runMinutesPerUnit: number;
+  leadTimeDays: number;
+}
+
 interface Bom {
   _id: string;
   name: string;
   partNumber: string;
   revision: string;
   status: BomStatus;
+  outputProduct?: string | { _id: string; name: string; sku: string };
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
   components: BomComponent[];
+  routing?: BomRoutingRow[];
   createdAt: string;
   updatedAt: string;
   notes: string;
@@ -74,6 +88,15 @@ export default function Boms() {
   const [formStatus, setFormStatus] = useState<BomStatus>("Draft");
   const [formNotes, setFormNotes] = useState("");
   const [formComponents, setFormComponents] = useState<BomComponentRow[]>([{ productId: "", quantity: 1 }]);
+  const [formOutputProductId, setFormOutputProductId] = useState("");
+  const [formEffectiveFrom, setFormEffectiveFrom] = useState("");
+  const [formEffectiveTo, setFormEffectiveTo] = useState("");
+  const [editOutputProductId, setEditOutputProductId] = useState("");
+  const [editEffectiveFrom, setEditEffectiveFrom] = useState("");
+  const [editEffectiveTo, setEditEffectiveTo] = useState("");
+  const [editRouting, setEditRouting] = useState<BomRoutingRow[]>([
+    { sequence: 10, code: "ASSY", name: "Assembly", workCenterCode: "MAIN", setupMinutes: 0, runMinutesPerUnit: 0, leadTimeDays: 0 },
+  ]);
 
   const { data: bomsData = [], isLoading } = useQuery({
     queryKey: ['boms'],
@@ -85,9 +108,38 @@ export default function Boms() {
     queryFn: inventoryApi.getAll,
   });
 
+  const updateBomMutation = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Record<string, unknown>;
+    }) => bomApi.update(id, data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["boms"] });
+      toast.success("BOM updated");
+      if (data && typeof data === "object" && "_id" in data) {
+        setSelectedBom(data as Bom);
+      }
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      toast.error(err?.response?.data?.message || "Failed to update BOM");
+    },
+  });
+
   const createBomMutation = useMutation({
-    mutationFn: (data: { name: string; partNumber: string; revision?: string; status?: string; notes?: string; components: { product: string; quantity: number }[] }) =>
-      bomApi.create(data),
+    mutationFn: (data: {
+      name: string;
+      partNumber: string;
+      revision?: string;
+      status?: string;
+      notes?: string;
+      outputProduct: string;
+      effectiveFrom?: string | null;
+      effectiveTo?: string | null;
+      components: { product: string; quantity: number }[];
+    }) => bomApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['boms'] });
       toast.success("BOM created");
@@ -107,6 +159,15 @@ export default function Boms() {
     setFormStatus("Draft");
     setFormNotes("");
     setFormComponents([{ productId: "", quantity: 1 }]);
+    setFormOutputProductId("");
+    setFormEffectiveFrom("");
+    setFormEffectiveTo("");
+  }
+
+  function bomOutputId(b: Bom | null): string {
+    if (!b?.outputProduct) return "";
+    if (typeof b.outputProduct === "string") return b.outputProduct;
+    return b.outputProduct._id;
   }
 
   function openForDuplicate(bom: Bom) {
@@ -124,6 +185,13 @@ export default function Boms() {
           }))
         : [{ productId: "", quantity: 1 }]
     );
+    setFormOutputProductId(bomOutputId(bom) || "");
+    setFormEffectiveFrom(
+      bom.effectiveFrom ? new Date(bom.effectiveFrom).toISOString().slice(0, 10) : ""
+    );
+    setFormEffectiveTo(
+      bom.effectiveTo ? new Date(bom.effectiveTo).toISOString().slice(0, 10) : ""
+    );
     setFormOpen(true);
   }
 
@@ -135,6 +203,46 @@ export default function Boms() {
     const matchesStatus = statusFilter === "All" || bom.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  useEffect(() => {
+    if (selectedBom) {
+      setEditOutputProductId(bomOutputId(selectedBom));
+      setEditEffectiveFrom(
+        selectedBom.effectiveFrom
+          ? new Date(selectedBom.effectiveFrom).toISOString().slice(0, 10)
+          : ""
+      );
+      setEditEffectiveTo(
+        selectedBom.effectiveTo
+          ? new Date(selectedBom.effectiveTo).toISOString().slice(0, 10)
+          : ""
+      );
+      const r = selectedBom.routing;
+      setEditRouting(
+        r?.length
+          ? r.map((x) => ({
+              sequence: x.sequence ?? 10,
+              code: x.code || "OP",
+              name: x.name || "Operation",
+              workCenterCode: x.workCenterCode || "",
+              setupMinutes: Number(x.setupMinutes) || 0,
+              runMinutesPerUnit: Number(x.runMinutesPerUnit) || 0,
+              leadTimeDays: Number(x.leadTimeDays) || 0,
+            }))
+          : [
+              {
+                sequence: 10,
+                code: "ASSY",
+                name: "Assembly",
+                workCenterCode: "MAIN",
+                setupMinutes: 0,
+                runMinutesPerUnit: 0,
+                leadTimeDays: 0,
+              },
+            ]
+      );
+    }
+  }, [selectedBom?._id]);
 
   const activeCount = bomsData.filter((b) => b.status === "Active").length;
   const draftCount = bomsData.filter((b) => b.status === "Draft").length;
@@ -222,6 +330,7 @@ export default function Boms() {
                 <TableRow className="hover:bg-transparent border-white/5">
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground pl-6 h-12">System ID</TableHead>
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12">Product Name</TableHead>
+                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden sm:table-cell">Output SKU</TableHead>
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden md:table-cell">Engineering Part #</TableHead>
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden lg:table-cell text-center">Version</TableHead>
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 text-center">Components</TableHead>
@@ -233,13 +342,13 @@ export default function Boms() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-20 text-muted-foreground font-medium italic">
+                    <TableCell colSpan={9} className="text-center py-20 text-muted-foreground font-medium italic">
                       Synchronizing with engineering database...
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-20 text-muted-foreground font-medium">
+                    <TableCell colSpan={9} className="text-center py-20 text-muted-foreground font-medium">
                       No matching specifications found in repository.
                     </TableCell>
                   </TableRow>
@@ -255,6 +364,11 @@ export default function Boms() {
                       </TableCell>
                       <TableCell>
                         <span className="font-black text-[13px] tracking-tight text-foreground">{bom.name}</span>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell font-mono text-[10px] text-muted-foreground">
+                        {typeof bom.outputProduct === "object" && bom.outputProduct?.sku
+                          ? bom.outputProduct.sku
+                          : "—"}
                       </TableCell>
                       <TableCell className="hidden md:table-cell font-mono text-[11px] font-bold text-primary italic">
                         {bom.partNumber}
@@ -366,6 +480,206 @@ export default function Boms() {
                   <p className="text-sm text-foreground">{selectedBom.notes}</p>
                 </div>
               )}
+
+              <div className="border-t pt-4 space-y-3">
+                <h4 className="text-sm font-semibold text-foreground">Finished good & effectivity</h4>
+                <p className="text-xs text-muted-foreground">
+                  Required for production completion: stock is consumed from components and added to the output SKU.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Output product (FG)</Label>
+                    <Select
+                      value={editOutputProductId || "__none__"}
+                      onValueChange={(v) => setEditOutputProductId(v === "__none__" ? "" : v)}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select finished good" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— Not set —</SelectItem>
+                        {(products as { _id: string; name: string; sku: string }[]).map((prod) => (
+                          <SelectItem key={prod._id} value={prod._id}>
+                            {prod.name} ({prod.sku})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Effective from</Label>
+                      <Input
+                        type="date"
+                        value={editEffectiveFrom}
+                        onChange={(e) => setEditEffectiveFrom(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Effective to</Label>
+                      <Input
+                        type="date"
+                        value={editEffectiveTo}
+                        onChange={(e) => setEditEffectiveTo(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={!editOutputProductId || updateBomMutation.isPending}
+                  onClick={() =>
+                    selectedBom &&
+                    updateBomMutation.mutate({
+                      id: selectedBom._id,
+                      data: {
+                        outputProduct: editOutputProductId,
+                        effectiveFrom: editEffectiveFrom
+                          ? new Date(editEffectiveFrom).toISOString()
+                          : null,
+                        effectiveTo: editEffectiveTo
+                          ? new Date(editEffectiveTo).toISOString()
+                          : null,
+                      },
+                    })
+                  }
+                >
+                  Save output & dates
+                </Button>
+              </div>
+
+              <div className="border-t pt-4 space-y-2">
+                <h4 className="text-sm font-semibold text-foreground">Routing (shop floor / MRP lead)</h4>
+                <p className="text-xs text-muted-foreground">
+                  Operations appear on job traveler; leadTimeDays rolls into MRP explosion critical path.
+                </p>
+                <div className="space-y-2 max-h-56 overflow-y-auto text-[10px]">
+                  {editRouting.map((row, i) => (
+                    <div key={i} className="flex flex-wrap gap-1 items-center border rounded-md p-2 bg-muted/20">
+                      <span className="text-muted-foreground w-4">{i + 1}</span>
+                      <Input
+                        className="h-8 w-14"
+                        type="number"
+                        title="Seq"
+                        value={row.sequence}
+                        onChange={(e) =>
+                          setEditRouting((p) =>
+                            p.map((r, j) => (j === i ? { ...r, sequence: parseInt(e.target.value, 10) || 0 } : r))
+                          )
+                        }
+                      />
+                      <Input
+                        className="h-8 w-16 font-mono"
+                        placeholder="code"
+                        value={row.code}
+                        onChange={(e) =>
+                          setEditRouting((p) => p.map((r, j) => (j === i ? { ...r, code: e.target.value } : r)))
+                        }
+                      />
+                      <Input
+                        className="h-8 flex-1 min-w-[100px]"
+                        placeholder="Operation name"
+                        value={row.name}
+                        onChange={(e) =>
+                          setEditRouting((p) => p.map((r, j) => (j === i ? { ...r, name: e.target.value } : r)))
+                        }
+                      />
+                      <Input
+                        className="h-8 w-20 font-mono"
+                        placeholder="WC"
+                        value={row.workCenterCode}
+                        onChange={(e) =>
+                          setEditRouting((p) =>
+                            p.map((r, j) => (j === i ? { ...r, workCenterCode: e.target.value } : r))
+                          )
+                        }
+                      />
+                      <Input
+                        className="h-8 w-14"
+                        type="number"
+                        title="Setup min"
+                        value={row.setupMinutes}
+                        onChange={(e) =>
+                          setEditRouting((p) =>
+                            p.map((r, j) =>
+                              j === i ? { ...r, setupMinutes: parseFloat(e.target.value) || 0 } : r
+                            )
+                          )
+                        }
+                      />
+                      <Input
+                        className="h-8 w-14"
+                        type="number"
+                        title="Run min/u"
+                        value={row.runMinutesPerUnit}
+                        onChange={(e) =>
+                          setEditRouting((p) =>
+                            p.map((r, j) =>
+                              j === i ? { ...r, runMinutesPerUnit: parseFloat(e.target.value) || 0 } : r
+                            )
+                          )
+                        }
+                      />
+                      <Input
+                        className="h-8 w-14"
+                        type="number"
+                        title="Lead days"
+                        value={row.leadTimeDays}
+                        onChange={(e) =>
+                          setEditRouting((p) =>
+                            p.map((r, j) =>
+                              j === i ? { ...r, leadTimeDays: parseFloat(e.target.value) || 0 } : r
+                            )
+                          )
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-destructive"
+                        onClick={() => setEditRouting((p) => p.filter((_, j) => j !== i))}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setEditRouting((p) => [
+                        ...p,
+                        {
+                          sequence: (p[p.length - 1]?.sequence || 0) + 10,
+                          code: "OP",
+                          name: "Operation",
+                          workCenterCode: "",
+                          setupMinutes: 0,
+                          runMinutesPerUnit: 0,
+                          leadTimeDays: 0,
+                        },
+                      ])
+                    }
+                  >
+                    + Step
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={updateBomMutation.isPending || !selectedBom}
+                    onClick={() =>
+                      selectedBom &&
+                      updateBomMutation.mutate({
+                        id: selectedBom._id,
+                        data: { routing: editRouting.filter((r) => r.name.trim()) },
+                      })
+                    }
+                  >
+                    Save routing
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
           <DialogFooter>
@@ -416,6 +730,31 @@ export default function Boms() {
             <div className="space-y-2">
               <Label>Notes</Label>
               <Input value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder="Optional notes" />
+            </div>
+            <div className="space-y-2">
+              <Label>Output product (finished good) *</Label>
+              <Select
+                value={formOutputProductId || "__pick__"}
+                onValueChange={(v) => setFormOutputProductId(v === "__pick__" ? "" : v)}
+              >
+                <SelectTrigger><SelectValue placeholder="SKU produced when job completes" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__pick__">Select product…</SelectItem>
+                  {(products as { _id: string; name: string; sku: string }[]).map((prod) => (
+                    <SelectItem key={prod._id} value={prod._id}>{prod.name} ({prod.sku})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Effective from</Label>
+                <Input type="date" value={formEffectiveFrom} onChange={(e) => setFormEffectiveFrom(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Effective to (optional)</Label>
+                <Input type="date" value={formEffectiveTo} onChange={(e) => setFormEffectiveTo(e.target.value)} />
+              </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -478,12 +817,23 @@ export default function Boms() {
                   toast.error("Add at least one component");
                   return;
                 }
+                if (!formOutputProductId) {
+                  toast.error("Select the output product (finished good SKU)");
+                  return;
+                }
                 createBomMutation.mutate({
                   name: formName.trim(),
                   partNumber: formPartNumber.trim(),
                   revision: formRevision || "Rev A",
                   status: formStatus,
                   notes: formNotes || undefined,
+                  outputProduct: formOutputProductId,
+                  effectiveFrom: formEffectiveFrom
+                    ? new Date(formEffectiveFrom).toISOString()
+                    : null,
+                  effectiveTo: formEffectiveTo
+                    ? new Date(formEffectiveTo).toISOString()
+                    : null,
                   components,
                 });
               }}

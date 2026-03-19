@@ -13,8 +13,12 @@ const employeeSchema = mongoose.Schema({
   role: {
     type: String,
     required: true,
-    enum: ['employee', 'Admin', 'finance_head', 'hr_head'],
     default: 'employee'
+  },
+  /** Job title / position (separate from app permission role) */
+  jobTitle: {
+    type: String,
+    default: '',
   },
   department: {
     type: String,
@@ -36,7 +40,18 @@ const employeeSchema = mongoose.Schema({
   },
   salary: {
     type: Number,
-    required: false
+    required: false,
+  },
+  /** TIN for payroll / tax reporting */
+  tinNumber: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  pensionMemberId: {
+    type: String,
+    default: '',
+    trim: true,
   },
   password: {
     type: String,
@@ -53,15 +68,11 @@ employeeSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Encrypt password using bcrypt
-employeeSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
-
+// Encrypt password using bcrypt (async hook: do not call next — Mongoose 8+)
+employeeSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
-  next();
 });
 
 const Employee = mongoose.model('Employee', employeeSchema);

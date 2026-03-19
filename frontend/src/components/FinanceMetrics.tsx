@@ -12,12 +12,12 @@ interface FinanceMetricsProps {
 }
 
 export function FinanceMetrics({ stats }: FinanceMetricsProps) {
-  const { symbol } = useCurrency();
+  const { format } = useCurrency();
 
   const metrics = [
     {
       title: "Gross Revenue",
-      value: `${symbol}${stats.revenue.toLocaleString()}`,
+      value: format(stats.revenue),
       change: "+12.5%",
       trend: "up",
       icon: TrendingUp,
@@ -27,7 +27,7 @@ export function FinanceMetrics({ stats }: FinanceMetricsProps) {
     },
     {
       title: "Operational Outflux",
-      value: `${symbol}${stats.expenses.toLocaleString()}`,
+      value: format(stats.expenses),
       change: "-4.2%",
       trend: "down",
       icon: TrendingDown,
@@ -37,7 +37,7 @@ export function FinanceMetrics({ stats }: FinanceMetricsProps) {
     },
     {
       title: "Net Net Profit",
-      value: `${symbol}${stats.profit.toLocaleString()}`,
+      value: format(stats.profit),
       change: "+8.1%",
       trend: "up",
       icon: CircleDollarSign,
@@ -47,7 +47,7 @@ export function FinanceMetrics({ stats }: FinanceMetricsProps) {
     },
     {
       title: "Pending Liquidity",
-      value: `${symbol}${stats.pending.toLocaleString()}`,
+      value: format(stats.pending),
       change: "Critical",
       trend: "neutral",
       icon: Receipt,

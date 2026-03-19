@@ -55,7 +55,7 @@ const Production = () => {
         </TabsContent>
 
         <TabsContent value="materials" className="space-y-4 border-none p-0 outline-none">
-          <Inventory initialCategory="Raw Metal" />
+          <Inventory initialCategory="Raw Metal" embedded />
         </TabsContent>
 
         <TabsContent value="orders" className="space-y-4 border-none p-0 outline-none">

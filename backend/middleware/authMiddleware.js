@@ -1,6 +1,31 @@
 const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
 const Employee = require('../models/Employee');
+const { getJwtVerifySecrets } = require('../config/loadEnv');
+
+function verifyBearerToken(token) {
+  const secrets = getJwtVerifySecrets();
+  let lastErr;
+  for (const secret of secrets) {
+    try {
+      return jwt.verify(token, secret);
+    } catch (e) {
+      lastErr = e;
+      if (e.name === 'TokenExpiredError') throw e;
+      if (e.name === 'JsonWebTokenError' && String(e.message).includes('invalid signature')) {
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastErr;
+}
+
+function auth401(message) {
+  const err = new Error(message);
+  err.statusCode = 401;
+  return err;
+}
 
 const protect = asyncHandler(async (req, res, next) => {
   let token;
@@ -12,21 +37,28 @@ const protect = asyncHandler(async (req, res, next) => {
     try {
       token = req.headers.authorization.split(' ')[1];
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+      const decoded = verifyBearerToken(token);
 
       req.user = await Employee.findById(decoded.id).select('-password');
+      if (!req.user) {
+        throw auth401(
+          'Your session is no longer valid (e.g. after a database reset). Please log in again.'
+        );
+      }
 
       next();
     } catch (error) {
-      console.error(error);
-      res.status(401);
-      throw new Error('Not authorized, token failed');
+      if (error.statusCode === 401) throw error;
+      throw auth401(
+        error.name === 'TokenExpiredError'
+          ? 'Session expired. Please log in again.'
+          : 'Not authorized, token failed'
+      );
     }
   }
 
   if (!token) {
-    res.status(401);
-    throw new Error('Not authorized, no token');
+    throw auth401('Not authorized, no token');
   }
 });
 
@@ -40,4 +72,6 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = { protect, authorize };
+const { authorizePerm, can, rolePermissions, getMatrixDoc, P } = require('../config/permissions');
+
+module.exports = { protect, authorize, authorizePerm, can, rolePermissions, getMatrixDoc, P };

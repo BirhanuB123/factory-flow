@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { formatMoneyAmount, formatMoneyWithSymbol } from "@/lib/formatMoney";
 
 const SETTINGS_KEY = "erp-settings";
 
@@ -16,15 +17,15 @@ export function useCurrency() {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
-        return saved.currency || "USD";
+        return saved.currency || "ETB";
       }
     } catch (e) {
       console.error("Failed to parse erp-settings", e);
     }
-    return "USD";
+    return "ETB";
   });
 
-  const symbol = currencySymbols[currency] || "$";
+  const symbol = currencySymbols[currency] || (currency === "ETB" ? "Br" : "$");
 
   useEffect(() => {
     const handleSettingsUpdate = () => {
@@ -32,7 +33,7 @@ export function useCurrency() {
         const raw = localStorage.getItem(SETTINGS_KEY);
         if (raw) {
           const saved = JSON.parse(raw);
-          setCurrency(saved.currency || "USD");
+          setCurrency(saved.currency || "ETB");
         }
       } catch (e) {
         // ignore
@@ -52,5 +53,14 @@ export function useCurrency() {
     };
   }, []);
 
-  return { code: currency, symbol };
+  const format = useCallback(
+    (amount: number) => formatMoneyWithSymbol(amount, currency, symbol),
+    [currency, symbol]
+  );
+  const formatAmount = useCallback(
+    (amount: number) => formatMoneyAmount(amount, currency),
+    [currency]
+  );
+
+  return { code: currency, symbol, format, formatAmount };
 }

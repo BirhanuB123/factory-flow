@@ -66,9 +66,10 @@ export function AppSidebar() {
   const { user } = useAuth();
   const { t } = useLocale();
 
-  const navItems = allNavItems.filter(item => {
-    if (!item.roles) return true;
-    if (user && item.roles.includes(user.role)) return true;
+  const navItems = allNavItems.filter((item) => {
+    if (!("roles" in item)) return true;
+    const allowed = item.roles as readonly string[];
+    if (user && allowed.includes(user.role)) return true;
     return false;
   });
 

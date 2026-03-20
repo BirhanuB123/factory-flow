@@ -184,6 +184,10 @@ app.use('/api/auth', authRoutes);
 
 app.get('/api/production/traveler/:token.html', getTravelerHtml);
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'Factory Flow ERP Backend is running' });
+});
+
 app.use('/api', protect);
 
 app.use('/api/finance', financeAccess);
@@ -436,10 +440,6 @@ app.post('/api/finance/expenses', createExpense);
 app.get('/api/finance/stats', getFinanceStats);
 
 app.use('/api/notifications', notificationRoutes);
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Factory Flow ERP Backend is running' });
-});
 
 app.use(require('./middleware/errorMiddleware'));
 

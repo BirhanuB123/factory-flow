@@ -18,13 +18,12 @@ const TRANSPORT_TAX_EXEMPT_ETB = 600;
  */
 function monthlyIncomeTaxFromTaxable(taxableMonthly) {
   const x = Math.max(0, Number(taxableMonthly) || 0);
-  if (x <= 600) return 0;
-  if (x <= 1500) return Math.max(0, x * 0.1 - 60);
-  if (x <= 2500) return Math.max(0, x * 0.15 - 135);
-  if (x <= 3500) return Math.max(0, x * 0.2 - 260);
-  if (x <= 5000) return Math.max(0, x * 0.25 - 435);
-  if (x <= 7500) return Math.max(0, x * 0.3 - 685);
-  return Math.max(0, x * 0.35 - 1060);
+  if (x <= 2000) return 0;
+  if (x <= 4000) return Math.max(0, x * 0.15 - 300);
+  if (x <= 7000) return Math.max(0, x * 0.2 - 500);
+  if (x <= 10000) return Math.max(0, x * 0.25 - 850);
+  if (x <= 14000) return Math.max(0, x * 0.3 - 1350);
+  return Math.max(0, x * 0.35 - 2050);
 }
 
 function round2(n) {

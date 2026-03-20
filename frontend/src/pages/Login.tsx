@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Building2, Loader2 } from 'lucide-react';
+import { Building2, Loader2, Shield } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -59,94 +59,134 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Left Decoration / Image (Hidden on smaller screens) */}
-      <div className="relative hidden lg:flex w-1/2 flex-col justify-end overflow-hidden p-12 text-white">
-        <div className="absolute inset-0 bg-primary/20 z-10" />
+    <div className="flex min-h-screen overflow-hidden bg-background">
+      {/* Left: hero (desktop) */}
+      <div className="relative hidden lg:flex lg:w-[62.5%] flex-col justify-end overflow-hidden px-12 py-14 xl:px-16 xl:py-16 text-white">
+        <div className="absolute inset-0 bg-primary/15 z-10" aria-hidden />
         <img
-          src="/login-bg.png"
-          alt="Factory Flow Manufacturing"
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-[10000ms] ease-linear hover:scale-110"
+          //src="/login-bg.png"
+          src="/erp-login2.png"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-[12s] ease-out hover:scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent z-20" />
+        {/* Layered scrims for readable type on any photo */}
+        <div
+          className="absolute inset-0 z-20 bg-gradient-to-t from-background via-background/75 to-transparent"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 z-[21] bg-gradient-to-r from-black/55 via-black/25 to-transparent"
+          aria-hidden
+        />
 
-        <div className="relative z-30 flex flex-col items-start max-w-lg mb-8 animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both delay-300">
-          <div className="rounded-2xl bg-white/10 backdrop-blur-md p-4 mb-6 border border-white/20 shadow-xl">
-            <Building2 className="h-10 w-10 text-white" />
+        <div className="relative z-30 mb-6 max-w-xl animate-in fade-in slide-in-from-bottom-6 duration-1000 fill-mode-both delay-200">
+          <div className="mb-6 inline-flex rounded-2xl border border-white/15 bg-white/10 p-3.5 shadow-lg backdrop-blur-md">
+            <Building2 className="h-9 w-9 text-white" aria-hidden />
           </div>
-          <h2 className="text-5xl font-extrabold tracking-tight mb-6 drop-shadow-xl text-white">
+          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
+            Manufacturing ERP
+          </p>
+          <h2 className="mb-5 text-4xl font-extrabold leading-[1.1] tracking-tight text-white drop-shadow-md xl:text-[2.65rem]">
             Integra - ERP
           </h2>
-          <p className="text-xl text-white/90 drop-shadow-lg font-medium leading-relaxed">
-            Streamline your manufacturing processes with our state-of-the-art ERP system.
-            Enhance productivity, efficiency, and clarity from the shop floor to top floor.
+          <p className="max-w-md text-base font-medium leading-relaxed text-white/88 xl:text-lg">
+            Streamline manufacturing from the shop floor to the top floor—clearer operations,
+            better productivity, and one place for your team to work.
           </p>
         </div>
       </div>
 
-      {/* Right Login Form */}
-      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center p-8 sm:p-12 lg:p-16 bg-card relative shadow-2xl z-30">
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent lg:hidden" />
+      {/* Right: sign-in */}
+      <div className="relative z-30 flex w-full flex-col items-center justify-center bg-gradient-to-b from-card via-card to-muted/30 px-5 py-10 sm:px-8 sm:py-12 lg:w-[37.5%] lg:border-l lg:border-border/50 lg:px-10 lg:py-14">
+        <div
+          className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent lg:hidden"
+          aria-hidden
+        />
 
-        <div className="w-full max-w-md space-y-8 animate-in zoom-in-95 fade-in duration-700 fill-mode-both">
-          <div className="flex flex-col items-center lg:items-start space-y-3 text-center lg:text-left">
-            <div className="lg:hidden rounded-2xl bg-primary/10 p-4 mb-4 shadow-sm border border-primary/20">
-              <Building2 className="h-10 w-10 text-primary" />
-            </div>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">Sign in</h1>
-            <p className="text-base text-muted-foreground w-full">
-              Enter your company credentials to access the ERP platform
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6 mt-8">
-            <div className="space-y-5">
-              <div className="space-y-2 group">
-                <Label htmlFor="emailOrId" className="text-sm font-semibold transition-colors group-focus-within:text-primary">
-                  Company Email or ID
-                </Label>
-                <Input
-                  id="emailOrId"
-                  placeholder=""
-                  value={emailOrId}
-                  onChange={(e) => setEmailOrId(e.target.value)}
-                  required
-                  className="h-12 text-base bg-muted/30 transition-all border-muted-foreground/20 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/50 shadow-sm"
-                />
+        <div className="w-full max-w-[400px] animate-in fade-in zoom-in-95 duration-700 fill-mode-both">
+          <div className="rounded-2xl border border-border/80 bg-card/95 p-8 shadow-[0_4px_28px_-6px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.04] sm:p-9 dark:ring-white/[0.06]">
+            <div className="mb-8 flex flex-col items-center space-y-3 text-center lg:items-start lg:text-left">
+              <div className="mb-1 flex lg:hidden">
+                <div className="rounded-2xl border border-primary/20 bg-primary/10 p-3.5 shadow-sm">
+                  <Building2 className="h-9 w-9 text-primary" aria-hidden />
+                </div>
               </div>
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">
+                  Integra
+                </p>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  Sign in
+                </h1>
+              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
+                Use your company email or employee ID and password to continue.
+              </p>
+            </div>
 
-              <div className="space-y-2 group">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-semibold transition-colors group-focus-within:text-primary">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-5">
+                <div className="space-y-2 group">
+                  <Label
+                    htmlFor="emailOrId"
+                    className="text-sm font-medium transition-colors group-focus-within:text-primary"
+                  >
+                    Email or employee ID
+                  </Label>
+                  <Input
+                    id="emailOrId"
+                    name="username"
+                    autoComplete="username"
+                    placeholder=""
+                    value={emailOrId}
+                    onChange={(e) => setEmailOrId(e.target.value)}
+                    required
+                    className="h-12 border-muted-foreground/20 bg-muted/25 text-base shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/40"
+                  />
+                </div>
+
+                <div className="space-y-2 group">
+                  <Label
+                    htmlFor="password"
+                    className="text-sm font-medium transition-colors group-focus-within:text-primary"
+                  >
                     Password
                   </Label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder=""
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="h-12 border-muted-foreground/20 bg-muted/25 text-base shadow-sm transition-all placeholder:text-muted-foreground/50 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/40"
+                  />
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder=""
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="h-12 text-base bg-muted/30 transition-all border-muted-foreground/20 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/50 shadow-sm"
-                />
               </div>
-            </div>
 
-            <Button
-              type="submit"
-              className="w-full h-12 text-base font-bold shadow-lg hover:shadow-primary/25 transition-all hover:-translate-y-0.5"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin" /> Authenticating...
-                </span>
-              ) : (
-                'Sign in'
-              )}
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                className="h-12 w-full text-base font-semibold shadow-md transition-all hover:shadow-lg hover:shadow-primary/15"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                    Signing in…
+                  </span>
+                ) : (
+                  'Sign in'
+                )}
+              </Button>
+            </form>
+          </div>
+
+          <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">
+            <Shield className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+            <span>Your session is protected with industry-standard security.</span>
+          </p>
         </div>
       </div>
     </div>

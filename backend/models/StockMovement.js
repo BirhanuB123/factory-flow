@@ -10,6 +10,12 @@ const MOVEMENT_TYPES = [
 ];
 
 const StockMovementSchema = new mongoose.Schema({
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
+  },
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
@@ -50,7 +56,7 @@ const StockMovementSchema = new mongoose.Schema({
 });
 
 StockMovementSchema.index({ createdAt: -1 });
-StockMovementSchema.index({ product: 1, createdAt: -1 });
+StockMovementSchema.index({ tenantId: 1, product: 1, createdAt: -1 });
 
 module.exports = mongoose.model('StockMovement', StockMovementSchema);
 module.exports.MOVEMENT_TYPES = MOVEMENT_TYPES;

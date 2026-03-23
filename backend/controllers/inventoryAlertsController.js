@@ -1,13 +1,14 @@
 const asyncHandler = require('../middleware/asyncHandler');
 const Product = require('../models/Product');
 const { getAvailableToReserve } = require('../services/reservationService');
+const { byTenant } = require('../utils/tenantQuery');
 
 exports.getLowStockAlerts = asyncHandler(async (req, res) => {
-  const products = await Product.find({}).lean();
+  const products = await Product.find(byTenant(req)).lean();
   const alerts = [];
 
   for (const p of products) {
-    const { available, stock, reserved } = await getAvailableToReserve(p._id);
+    const { available, stock, reserved } = await getAvailableToReserve(p._id, req.tenantId);
     if (available <= (p.reorderPoint || 0)) {
       let severity = 'low';
       if (available <= 0) severity = 'critical';

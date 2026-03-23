@@ -2,6 +2,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const Invoice = require('../models/Invoice');
 const VendorBill = require('../models/VendorBill');
 const Expense = require('../models/Expense');
+const { byTenant } = require('../utils/tenantQuery');
 
 function csvEscape(s) {
   if (s == null) return '';
@@ -12,7 +13,7 @@ function csvEscape(s) {
 
 /** Xero-style sales invoice export (minimal columns). */
 exports.xeroInvoicesCsv = asyncHandler(async (req, res) => {
-  const inv = await Invoice.find()
+  const inv = await Invoice.find(byTenant(req))
     .populate('client', 'name')
     .sort({ invoiceDate: -1 })
     .limit(2000)
@@ -37,7 +38,11 @@ exports.xeroInvoicesCsv = asyncHandler(async (req, res) => {
 
 /** QuickBooks-style bill export (vendor AP). */
 exports.quickBooksBillsCsv = asyncHandler(async (req, res) => {
-  const bills = await VendorBill.find().populate('vendor', 'name').sort({ billDate: -1 }).limit(2000).lean();
+  const bills = await VendorBill.find(byTenant(req))
+    .populate('vendor', 'name')
+    .sort({ billDate: -1 })
+    .limit(2000)
+    .lean();
   const rows = bills.map((b) => ({
     Vendor: b.vendor?.name || '',
     RefNumber: b.billNumber,
@@ -55,7 +60,7 @@ exports.quickBooksBillsCsv = asyncHandler(async (req, res) => {
 });
 
 exports.qbExpensesCsv = asyncHandler(async (req, res) => {
-  const exps = await Expense.find().sort({ date: -1 }).limit(2000).lean();
+  const exps = await Expense.find(byTenant(req)).sort({ date: -1 }).limit(2000).lean();
   const rows = exps.map((e) => ({
     Date: e.date ? new Date(e.date).toISOString().slice(0, 10) : '',
     Account: e.category || 'Expense',

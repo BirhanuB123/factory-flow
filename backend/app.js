@@ -3,7 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const pinoHttp = require('pino-http');
 const logger = require('./config/logger');
-const { apiLimiter } = require('./middleware/rateLimits');
+const { apiLimiter, platformLimiter } = require('./middleware/rateLimits');
 
 const {
   getProducts,
@@ -135,7 +135,16 @@ const { getMovements, createMovement } = require('./controllers/inventoryMovemen
 const { movementRules, handleValidation } = require('./middleware/validateRequest');
 const authRoutes = require('./routes/authRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
-const { protect, authorize, authorizePerm, P } = require('./middleware/authMiddleware');
+const announcementRoutes = require('./routes/announcementRoutes');
+const platformRoutes = require('./routes/platformRoutes');
+const billingWebhookRoutes = require('./routes/billingWebhookRoutes');
+const { protect, authorize, authorizePerm, P, requireSuperAdmin } = require('./middleware/authMiddleware');
+const { withTenant } = require('./middleware/tenantMiddleware');
+const { touchTenantApiActivity } = require('./middleware/tenantActivityMiddleware');
+const {
+  enforceSuperAdminIpAllowlist,
+  requireStepUpForPlatformMutation,
+} = require('./middleware/superAdminGuardrails');
 const financeAccess = require('./middleware/financeAccess');
 
 const app = express();
@@ -158,7 +167,16 @@ app.use(
   })
 );
 
-app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '200kb' }));
+app.use(
+  express.json({
+    limit: process.env.JSON_BODY_LIMIT || '200kb',
+    verify: (req, _res, buf) => {
+      if (req.originalUrl === '/api/billing/webhook/stripe') {
+        req.rawBody = buf;
+      }
+    },
+  })
+);
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(
@@ -181,6 +199,7 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 app.use('/api/auth', authRoutes);
+app.use('/api/billing/webhook', billingWebhookRoutes);
 
 app.get('/api/production/traveler/:token.html', getTravelerHtml);
 
@@ -188,7 +207,20 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Factory Flow ERP Backend is running' });
 });
 
+app.use(
+  '/api/platform',
+  platformLimiter,
+  protect,
+  requireSuperAdmin,
+  enforceSuperAdminIpAllowlist,
+  requireStepUpForPlatformMutation,
+  platformRoutes
+);
+
 app.use('/api', protect);
+app.use('/api', withTenant);
+app.use('/api', touchTenantApiActivity);
+app.use('/api/announcements', announcementRoutes);
 
 app.use('/api/finance', financeAccess);
 app.use('/api/hr', authorize('Admin', 'hr_head', 'finance_head'));

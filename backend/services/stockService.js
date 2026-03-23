@@ -9,6 +9,7 @@ const StockMovement = require('../models/StockMovement');
  */
 async function applyMovement(session, options) {
   const {
+    tenantId,
     productId,
     delta,
     movementType,
@@ -19,22 +20,27 @@ async function applyMovement(session, options) {
     batchNumber = '',
   } = options;
 
+  if (!tenantId) {
+    throw new Error('applyMovement: tenantId is required');
+  }
+
   if (delta === 0) {
     return null;
   }
 
   const id = new mongoose.Types.ObjectId(productId);
+  const tid = new mongoose.Types.ObjectId(tenantId);
   const sessionOpt = session ? { session } : {};
 
   let product;
   if (delta < 0) {
     product = await Product.findOneAndUpdate(
-      { _id: id, stock: { $gte: -delta } },
+      { _id: id, tenantId: tid, stock: { $gte: -delta } },
       { $inc: { stock: delta } },
       { new: true, ...sessionOpt }
     );
     if (!product) {
-      const p = await Product.findById(id).session(session || null);
+      const p = await Product.findOne({ _id: id, tenantId: tid }).session(session || null);
       if (!p) throw new Error('Product not found');
       throw new Error(
         `Insufficient stock for ${p.sku}: need ${-delta}, have ${p.stock}`
@@ -42,7 +48,7 @@ async function applyMovement(session, options) {
     }
   } else {
     product = await Product.findOneAndUpdate(
-      { _id: id },
+      { _id: id, tenantId: tid },
       { $inc: { stock: delta } },
       { new: true, ...sessionOpt }
     );
@@ -52,6 +58,7 @@ async function applyMovement(session, options) {
   const [movement] = await StockMovement.create(
     [
       {
+        tenantId: tid,
         product: id,
         delta,
         movementType,

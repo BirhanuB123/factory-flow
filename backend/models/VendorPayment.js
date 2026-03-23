@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 
 const VendorPaymentSchema = new mongoose.Schema(
   {
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+      index: true,
+    },
     vendorBill: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'VendorBill',

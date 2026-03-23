@@ -2,6 +2,7 @@ const asyncHandler = require('express-async-handler');
 const Employee = require('../models/Employee');
 const Payroll = require('../models/Payroll');
 const { computeEthiopiaPayroll } = require('../services/ethiopiaPayrollService');
+const { byTenant } = require('../utils/tenantQuery');
 
 function csvEscape(val) {
   const s = val == null ? '' : String(val);
@@ -22,7 +23,7 @@ exports.previewPayroll = asyncHandler(async (req, res) => {
   if (!empId) {
     return res.status(400).json({ success: false, message: 'employee (id) required' });
   }
-  const emp = await Employee.findById(empId);
+  const emp = await Employee.findOne(byTenant(req, { _id: empId }));
   if (!emp) {
     return res.status(404).json({ success: false, message: 'Employee not found' });
   }
@@ -56,11 +57,11 @@ exports.preparePayroll = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'month=YYYY-MM required' });
   }
   const m = String(month).trim();
-  const emps = await Employee.find({ status: { $in: ['Active', 'On Leave'] } })
+  const emps = await Employee.find(byTenant(req, { status: { $in: ['Active', 'On Leave'] } }))
     .select('employeeId name salary department status tinNumber')
     .sort({ employeeId: 1 })
     .lean();
-  const payrolls = await Payroll.find({ month: m }).lean();
+  const payrolls = await Payroll.find(byTenant(req, { month: m })).lean();
   const byEmp = new Map(payrolls.map((p) => [String(p.employee), p]));
 
   const rows = emps.map((e) => {
@@ -128,7 +129,7 @@ exports.runPayrollMonth = asyncHandler(async (req, res) => {
   if (entryList.length > 0) {
     for (const row of entryList) {
       if (row.includeInRun === false) continue;
-      const e = await Employee.findById(row.employee);
+      const e = await Employee.findOne(byTenant(req, { _id: row.employee }));
       if (!e || !['Active', 'On Leave'].includes(e.status)) {
         skipped.push({
           employee: row.employee,
@@ -152,10 +153,12 @@ exports.runPayrollMonth = asyncHandler(async (req, res) => {
       toProcess.push({ employee: e, basicSalary: basic, ...n });
     }
   } else {
-    const actives = await Employee.find({
-      status: { $in: ['Active', 'On Leave'] },
-      salary: { $gt: 0 },
-    });
+    const actives = await Employee.find(
+      byTenant(req, {
+        status: { $in: ['Active', 'On Leave'] },
+        salary: { $gt: 0 },
+      })
+    );
     for (const e of actives) {
       toProcess.push({
         employee: e,
@@ -180,9 +183,10 @@ exports.runPayrollMonth = asyncHandler(async (req, res) => {
     let doc;
     try {
       doc = await Payroll.findOneAndUpdate(
-        { employee: e._id, month: m },
+        byTenant(req, { employee: e._id, month: m }),
         {
           $set: {
+            tenantId: req.tenantId,
             basicSalary: calc.basicSalary,
             bonuses: calc.otherTaxableAllowances,
             deductions: totalDed,
@@ -243,7 +247,9 @@ exports.updatePayrollRecord = asyncHandler(async (req, res) => {
   if (Object.keys(set).length === 0) {
     return res.status(400).json({ success: false, message: 'paymentStatus or paymentDate required' });
   }
-  const p = await Payroll.findByIdAndUpdate(req.params.id, { $set: set }, { new: true })
+  const p = await Payroll.findOneAndUpdate(byTenant(req, { _id: req.params.id }), { $set: set }, {
+    new: true,
+  })
     .populate('employee', 'name employeeId department')
     .lean();
   if (!p) {
@@ -260,7 +266,7 @@ exports.exportPensionCsv = asyncHandler(async (req, res) => {
   if (!monthRe(month)) {
     return res.status(400).json({ success: false, message: 'month=YYYY-MM required' });
   }
-  const rows = await Payroll.find({ month: String(month).trim() })
+  const rows = await Payroll.find(byTenant(req, { month: String(month).trim() }))
     .populate('employee', 'name employeeId pensionMemberId')
     .lean();
 
@@ -304,7 +310,7 @@ exports.exportIncomeTaxCsv = asyncHandler(async (req, res) => {
   if (!monthRe(month)) {
     return res.status(400).json({ success: false, message: 'month=YYYY-MM required' });
   }
-  const rows = await Payroll.find({ month: String(month).trim() })
+  const rows = await Payroll.find(byTenant(req, { month: String(month).trim() }))
     .populate('employee', 'name employeeId')
     .lean();
 
@@ -354,7 +360,7 @@ function escHtml(s) {
  * GET /api/hr/payroll/payslip/:id/html
  */
 exports.getPayslipHtml = asyncHandler(async (req, res) => {
-  const p = await Payroll.findById(req.params.id).populate(
+  const p = await Payroll.findOne(byTenant(req, { _id: req.params.id })).populate(
     'employee',
     'name employeeId department tinNumber'
   );

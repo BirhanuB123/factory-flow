@@ -6,6 +6,7 @@ const {
   sumReservedForOrderLine,
   getAvailableToReserve,
 } = require('../services/reservationService');
+const { byTenant } = require('../utils/tenantQuery');
 
 /**
  * Demand → supply: open order lines with BOMs, coverage from reservations + linked jobs.
@@ -29,21 +30,24 @@ exports.getMrpSuggestions = asyncHandler(async (req, res) => {
       const pid = prod._id;
 
       const bom =
-        (await BOM.findOne({ outputProduct: pid, status: 'Active' }).lean()) ||
-        (await BOM.findOne({ outputProduct: pid }).lean());
+        (await BOM.findOne(byTenant(req, { outputProduct: pid, status: 'Active' })).lean()) ||
+        (await BOM.findOne(byTenant(req, { outputProduct: pid })).lean());
       if (!bom) continue;
 
-      const reserved = await sumReservedForOrderLine(order._id, i, pid);
+      const reserved = await sumReservedForOrderLine(order._id, i, pid, req.tenantId);
       let jobCoverage = 0;
       if (line.productionJob) {
-        const jobDoc = await ProductionJob.findById(line.productionJob).lean();
+        const jobDoc = await ProductionJob.findOne({
+          _id: line.productionJob,
+          tenantId: req.tenantId,
+        }).lean();
         if (jobDoc && jobDoc.status !== 'Cancelled') {
           jobCoverage = Math.min(line.quantity, jobDoc.quantity);
         }
       }
 
       const suggestedMakeQty = Math.max(0, line.quantity - reserved - jobCoverage);
-      const { available, stock } = await getAvailableToReserve(pid);
+      const { available, stock } = await getAvailableToReserve(pid, req.tenantId);
 
       suggestions.push({
         orderId: order._id,
@@ -95,13 +99,15 @@ exports.getMrpExplosion = asyncHandler(async (req, res) => {
       });
       return 0;
     }
-    const p = await Product.findById(productId).lean();
+    const p = await Product.findOne(byTenant(req, { _id: productId })).lean();
     if (!p) return 0;
 
-    const bom = await BOM.findOne({
-      outputProduct: productId,
-      status: 'Active',
-    }).lean();
+    const bom = await BOM.findOne(
+      byTenant(req, {
+        outputProduct: productId,
+        status: 'Active',
+      })
+    ).lean();
 
     if (!bom) {
       lines.push({
@@ -143,7 +149,7 @@ exports.getMrpExplosion = asyncHandler(async (req, res) => {
     return routeLead + maxChildChain;
   }
 
-  const root = await Product.findById(rootPid).lean();
+  const root = await Product.findOne(byTenant(req, { _id: rootPid })).lean();
   if (!root) {
     return res.status(404).json({ success: false, message: 'Product not found' });
   }

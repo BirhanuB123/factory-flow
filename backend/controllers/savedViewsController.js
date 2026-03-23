@@ -1,11 +1,12 @@
 const asyncHandler = require('../middleware/asyncHandler');
 const SavedView = require('../models/SavedView');
+const { byTenant } = require('../utils/tenantQuery');
 
 const MODULES = ['orders', 'inventory', 'production', 'finance_ar', 'finance_ap'];
 
 exports.list = asyncHandler(async (req, res) => {
   const { module } = req.query;
-  const q = { user: req.user._id };
+  const q = byTenant(req, { user: req.user._id });
   if (module && MODULES.includes(module)) q.module = module;
   const list = await SavedView.find(q).sort({ updatedAt: -1 });
   res.json({ success: true, data: list });
@@ -29,10 +30,12 @@ exports.create = asyncHandler(async (req, res) => {
 });
 
 exports.remove = asyncHandler(async (req, res) => {
-  const r = await SavedView.findOneAndDelete({
-    _id: req.params.id,
-    user: req.user._id,
-  });
+  const r = await SavedView.findOneAndDelete(
+    byTenant(req, {
+      _id: req.params.id,
+      user: req.user._id,
+    })
+  );
   if (!r) return res.status(404).json({ success: false, message: 'Not found' });
   res.json({ success: true, data: {} });
 });

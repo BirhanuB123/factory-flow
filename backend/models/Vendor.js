@@ -2,7 +2,13 @@ const mongoose = require('mongoose');
 
 const VendorSchema = new mongoose.Schema(
   {
-    code: { type: String, required: true, unique: true, trim: true, uppercase: true },
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+      index: true,
+    },
+    code: { type: String, required: true, trim: true, uppercase: true },
     name: { type: String, required: true, trim: true },
     email: { type: String, default: '' },
     phone: { type: String, default: '' },
@@ -17,5 +23,7 @@ const VendorSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+VendorSchema.index({ tenantId: 1, code: 1 }, { unique: true });
 
 module.exports = mongoose.model('Vendor', VendorSchema);

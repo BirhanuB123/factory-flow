@@ -1,8 +1,11 @@
 const Order = require('../models/Order');
 const ProductionJob = require('../models/ProductionJob');
 const ApprovalRequest = require('../models/ApprovalRequest');
+const Client = require('../models/Client');
+const Product = require('../models/Product');
 const asyncHandler = require('../middleware/asyncHandler');
 const { releaseOrderReservations } = require('../services/reservationService');
+const { byTenant } = require('../utils/tenantQuery');
 
 const APPROVAL_DISCOUNT_PCT = Number(process.env.APPROVAL_DISCOUNT_PCT) || 5;
 const APPROVAL_ORDER_AMOUNT = Number(process.env.APPROVAL_ORDER_AMOUNT) || 50000;
@@ -13,14 +16,17 @@ function orderNeedsApproval(doc) {
   return d >= APPROVAL_DISCOUNT_PCT || t >= APPROVAL_ORDER_AMOUNT;
 }
 
-async function ensureOrderApprovalState(orderId, userId, prevSnapshot) {
-  const fresh = await Order.findById(orderId);
+async function ensureOrderApprovalState(orderId, userId, prevSnapshot, tenantId) {
+  const fresh = await Order.findOne({ _id: orderId, tenantId });
   if (!fresh) return;
   if (!orderNeedsApproval(fresh)) {
-    await Order.findByIdAndUpdate(orderId, {
+    await Order.findOneAndUpdate(
+      { _id: orderId, tenantId },
+      {
       approvalStatus: 'none',
       pendingApprovalId: null,
-    });
+      }
+    );
     return;
   }
   const wasApproved = prevSnapshot && prevSnapshot.approvalStatus === 'approved';
@@ -32,7 +38,12 @@ async function ensureOrderApprovalState(orderId, userId, prevSnapshot) {
     return;
   }
   await ApprovalRequest.updateMany(
-    { entityId: orderId, entityType: 'Order', status: 'pending' },
+    {
+      tenantId,
+      entityId: orderId,
+      entityType: 'Order',
+      status: 'pending',
+    },
     { $set: { status: 'rejected', note: 'Superseded by order update' } }
   );
   const type =
@@ -40,6 +51,7 @@ async function ensureOrderApprovalState(orderId, userId, prevSnapshot) {
       ? 'order_discount'
       : 'order_large';
   const ar = await ApprovalRequest.create({
+    tenantId,
     type,
     entityType: 'Order',
     entityId: orderId,
@@ -50,10 +62,13 @@ async function ensureOrderApprovalState(orderId, userId, prevSnapshot) {
     requestedBy: userId,
     status: 'pending',
   });
-  await Order.findByIdAndUpdate(orderId, {
+  await Order.findOneAndUpdate(
+    { _id: orderId, tenantId },
+    {
     approvalStatus: 'pending',
     pendingApprovalId: ar._id,
-  });
+    }
+  );
 }
 
 async function attachProductionJobs(orders) {
@@ -64,7 +79,7 @@ async function attachProductionJobs(orders) {
       const pj = items[i].productionJob;
       if (pj) {
         const id = pj._id || pj;
-        const job = await ProductionJob.findById(id)
+        const job = await ProductionJob.findOne({ _id: id, tenantId: o.tenantId })
           .select('jobId status quantity dueDate materialsReserved')
           .lean();
         items[i].productionJob = job;
@@ -74,14 +89,40 @@ async function attachProductionJobs(orders) {
   return list;
 }
 
+async function assertOrderRefsBelongToTenant(req, payload) {
+  const clientId = payload.client;
+  if (!clientId) {
+    return 'Client is required';
+  }
+  const client = await Client.findOne(byTenant(req, { _id: clientId }));
+  if (!client) {
+    return 'Client not found for this company';
+  }
+  const items = payload.items;
+  if (items && items.length) {
+    const ids = items.map((i) => i.product).filter(Boolean);
+    if (ids.length !== items.length) {
+      return 'Each line item must reference a product';
+    }
+    const n = await Product.countDocuments(byTenant(req, { _id: { $in: ids } }));
+    if (n !== ids.length) {
+      return 'One or more products are invalid for this company';
+    }
+  }
+  return null;
+}
+
 exports.getOrders = asyncHandler(async (req, res, next) => {
-  const orders = await Order.find().populate('client').populate('items.product').lean();
+  const orders = await Order.find(byTenant(req)).populate('client').populate('items.product').lean();
   await attachProductionJobs(orders);
   res.status(200).json({ success: true, count: orders.length, data: orders });
 });
 
 exports.getOrder = asyncHandler(async (req, res, next) => {
-  const order = await Order.findById(req.params.id).populate('client').populate('items.product').lean();
+  const order = await Order.findOne(byTenant(req, { _id: req.params.id }))
+    .populate('client')
+    .populate('items.product')
+    .lean();
   if (!order) {
     return res.status(404).json({ success: false, message: 'Order not found' });
   }
@@ -90,12 +131,17 @@ exports.getOrder = asyncHandler(async (req, res, next) => {
 });
 
 exports.createOrder = asyncHandler(async (req, res, next) => {
-  let order = await Order.create(req.body);
-  if (orderNeedsApproval(order)) {
-    await ensureOrderApprovalState(order._id, req.user._id, false);
+  const msg = await assertOrderRefsBelongToTenant(req, req.body);
+  if (msg) {
+    return res.status(400).json({ success: false, message: msg });
   }
-  order = await Order.findById(order._id);
-  const populated = await Order.findById(order._id)
+  const body = { ...req.body };
+  delete body.tenantId;
+  let order = await Order.create({ ...body, tenantId: req.tenantId });
+  if (orderNeedsApproval(order)) {
+    await ensureOrderApprovalState(order._id, req.user._id, false, req.tenantId);
+  }
+  const populated = await Order.findOne(byTenant(req, { _id: order._id }))
     .populate('client')
     .populate('items.product')
     .lean();
@@ -104,11 +150,23 @@ exports.createOrder = asyncHandler(async (req, res, next) => {
 });
 
 exports.updateOrder = asyncHandler(async (req, res, next) => {
-  const prev = await Order.findById(req.params.id);
+  const prev = await Order.findOne(byTenant(req, { _id: req.params.id }));
   if (!prev) {
     return res.status(404).json({ success: false, message: 'Order not found' });
   }
-  const order = await Order.findByIdAndUpdate(req.params.id, req.body, {
+  const patch = { ...req.body };
+  delete patch.tenantId;
+  const merged = {
+    ...prev.toObject(),
+    ...patch,
+    client: patch.client != null ? patch.client : prev.client,
+    items: patch.items != null ? patch.items : prev.items,
+  };
+  const msg = await assertOrderRefsBelongToTenant(req, merged);
+  if (msg) {
+    return res.status(400).json({ success: false, message: msg });
+  }
+  const order = await Order.findOneAndUpdate(byTenant(req, { _id: req.params.id }), patch, {
     new: true,
     runValidators: true,
   })
@@ -116,9 +174,9 @@ exports.updateOrder = asyncHandler(async (req, res, next) => {
     .populate('items.product')
     .lean();
 
-  await ensureOrderApprovalState(req.params.id, req.user._id, prev);
+  await ensureOrderApprovalState(req.params.id, req.user._id, prev, req.tenantId);
 
-  const orderAfter = await Order.findById(req.params.id)
+  const orderAfter = await Order.findOne(byTenant(req, { _id: req.params.id }))
     .populate('client')
     .populate('items.product')
     .lean();
@@ -128,7 +186,7 @@ exports.updateOrder = asyncHandler(async (req, res, next) => {
     (newStatus === 'delivered' || newStatus === 'cancelled') &&
     prev.status !== newStatus
   ) {
-    await releaseOrderReservations(orderAfter._id);
+    await releaseOrderReservations(orderAfter._id, req.tenantId);
   }
 
   await attachProductionJobs(orderAfter);
@@ -136,8 +194,8 @@ exports.updateOrder = asyncHandler(async (req, res, next) => {
 });
 
 exports.deleteOrder = asyncHandler(async (req, res, next) => {
-  await releaseOrderReservations(req.params.id);
-  const order = await Order.findByIdAndDelete(req.params.id);
+  await releaseOrderReservations(req.params.id, req.tenantId);
+  const order = await Order.findOneAndDelete(byTenant(req, { _id: req.params.id }));
   if (!order) {
     return res.status(404).json({ success: false, message: 'Order not found' });
   }

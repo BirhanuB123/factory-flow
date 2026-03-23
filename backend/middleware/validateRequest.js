@@ -40,9 +40,27 @@ const mongoIdParam = (paramName = 'id') => [
   param(paramName).isMongoId().withMessage('invalid id'),
 ];
 
+const completeInviteRules = [
+  body('token').trim().notEmpty().isLength({ min: 8, max: 512 }).withMessage('token required'),
+  body('newPassword')
+    .trim()
+    .isLength({ min: 8, max: 128 })
+    .withMessage('Password must be 8–128 characters'),
+];
+
+const changePasswordRules = [
+  body('currentPassword').trim().notEmpty().isLength({ max: 256 }),
+  body('newPassword')
+    .trim()
+    .isLength({ min: 8, max: 128 })
+    .withMessage('New password must be 8–128 characters'),
+];
+
 module.exports = {
   handleValidation,
   loginRules,
+  completeInviteRules,
+  changePasswordRules,
   movementRules,
   mongoIdParam,
 };

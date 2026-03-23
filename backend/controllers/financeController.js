@@ -11,12 +11,13 @@ const {
   getTaxSettings,
   computeSalesInvoiceTax,
 } = require('../services/ethiopiaTaxService');
+const { byTenant } = require('../utils/tenantQuery');
 
 // @desc    Get all transactions (combined invoices and expenses)
 // @route   GET /api/finance/transactions
 exports.getTransactions = asyncHandler(async (req, res, next) => {
-  const invoices = await Invoice.find().populate('client', 'name');
-  const expenses = await Expense.find();
+  const invoices = await Invoice.find(byTenant(req)).populate('client', 'name');
+  const expenses = await Expense.find(byTenant(req));
 
   const formattedInvoices = invoices.map(inv => ({
     id: inv.invoiceId,
@@ -57,8 +58,8 @@ exports.createInvoice = asyncHandler(async (req, res, next) => {
     body.amount != null &&
     body.amountTaxable == null
   ) {
-    const client = await Client.findById(body.client);
-    const settings = await getTaxSettings();
+    const client = await Client.findOne(byTenant(req, { _id: body.client }));
+    const settings = await getTaxSettings(req.tenantId);
     const tax = computeSalesInvoiceTax(Number(body.amount), client, settings);
     body.amountTaxable = tax.taxableAmount;
     body.vatRate = tax.vatRate;
@@ -71,29 +72,32 @@ exports.createInvoice = asyncHandler(async (req, res, next) => {
     body.buyerTinSnapshot = client?.tin || '';
     delete body.applyEthiopiaSalesTax;
   }
-  const invoice = await Invoice.create(body);
+  delete body.tenantId;
+  const invoice = await Invoice.create({ ...body, tenantId: req.tenantId });
   res.status(201).json({ success: true, data: invoice });
 });
 
 // @desc    Create new expense
 // @route   POST /api/finance/expenses
 exports.createExpense = asyncHandler(async (req, res, next) => {
-  const expense = await Expense.create(req.body);
+  const body = { ...req.body };
+  delete body.tenantId;
+  const expense = await Expense.create({ ...body, tenantId: req.tenantId });
   res.status(201).json({ success: true, data: expense });
 });
 
 // @desc    Get finance stats
 // @route   GET /api/finance/stats
 exports.getFinanceStats = asyncHandler(async (req, res, next) => {
-  const invoices = await Invoice.find({ status: 'Paid' });
-  const expenses = await Expense.find();
+  const invoices = await Invoice.find(byTenant(req, { status: 'Paid' }));
+  const expenses = await Expense.find(byTenant(req));
 
   const revenue = invoices.reduce(
     (acc, inv) => acc + (inv.grossBeforeWht != null ? inv.grossBeforeWht : inv.amount),
     0
   );
   const totalExpenses = expenses.reduce((acc, exp) => acc + exp.amount, 0);
-  const pendingInvoices = await Invoice.find({ status: 'Pending' });
+  const pendingInvoices = await Invoice.find(byTenant(req, { status: 'Pending' }));
   const pendingAmount = pendingInvoices.reduce((acc, inv) => acc + inv.amount, 0);
 
   res.status(200).json({
@@ -109,7 +113,7 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
   if (!orderId) {
     return res.status(400).json({ success: false, message: 'orderId required' });
   }
-  const order = await Order.findById(orderId).populate('items.product');
+  const order = await Order.findOne(byTenant(req, { _id: orderId })).populate('items.product');
   if (!order) {
     return res.status(404).json({ success: false, message: 'Order not found' });
   }
@@ -132,7 +136,7 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
   const discountFactor = disc > 0 ? 1 - disc / 100 : 1;
 
   if (shipmentId) {
-    shipment = await Shipment.findById(shipmentId);
+    shipment = await Shipment.findOne(byTenant(req, { _id: shipmentId }));
     if (!shipment || String(shipment.order) !== String(orderId)) {
       return res.status(400).json({
         success: false,
@@ -145,10 +149,12 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
         message: 'Shipment must be in shipped status before invoicing',
       });
     }
-    const dupShip = await Invoice.findOne({
-      order: orderId,
-      shipment: shipment._id,
-    });
+    const dupShip = await Invoice.findOne(
+      byTenant(req, {
+        order: orderId,
+        shipment: shipment._id,
+      })
+    );
     if (dupShip) {
       return res.status(400).json({
         success: false,
@@ -169,10 +175,12 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
     }
     invoiceAmount = Math.round(invoiceAmount * discountFactor * 100) / 100;
   } else {
-    const shippedShipments = await Shipment.countDocuments({
-      order: orderId,
-      status: 'shipped',
-    });
+    const shippedShipments = await Shipment.countDocuments(
+      byTenant(req, {
+        order: orderId,
+        status: 'shipped',
+      })
+    );
     if (shippedShipments > 0) {
       return res.status(400).json({
         success: false,
@@ -180,10 +188,12 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
           'This order has shipped packages. Create invoices per shipment (pass shipmentId).',
       });
     }
-    const dupFull = await Invoice.findOne({
-      order: orderId,
-      $or: [{ shipment: null }, { shipment: { $exists: false } }],
-    });
+    const dupFull = await Invoice.findOne(
+      byTenant(req, {
+        order: orderId,
+        $or: [{ shipment: null }, { shipment: { $exists: false } }],
+      })
+    );
     if (dupFull) {
       return res.status(400).json({
         success: false,
@@ -204,11 +214,12 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
     ? new Date(shippedAt)
     : shipment?.shippedAt || null;
 
-  const client = await Client.findById(order.client);
-  const settings = await getTaxSettings();
+  const client = await Client.findOne(byTenant(req, { _id: order.client }));
+  const settings = await getTaxSettings(req.tenantId);
   const tax = computeSalesInvoiceTax(invoiceAmount, client, settings);
 
   const invoice = await Invoice.create({
+    tenantId: req.tenantId,
     client: order.client,
     invoiceId: invId,
     amount: tax.netPayable,
@@ -240,7 +251,7 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
       const pdoc =
         prod && typeof prod === 'object' && prod._id
           ? prod
-          : await Product.findById(item.product);
+          : await Product.findOne(byTenant(req, { _id: item.product }));
       const uc = unitCostForSale(pdoc);
       const q = Number(ln.quantity);
       const ext = Math.round(uc * q * 10000) / 10000;
@@ -259,7 +270,7 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
       const pdoc =
         prod && typeof prod === 'object' && prod._id
           ? prod
-          : await Product.findById(item.product);
+          : await Product.findOne(byTenant(req, { _id: item.product }));
       const uc = unitCostForSale(pdoc);
       const q = Number(item.quantity);
       const ext = Math.round(uc * q * discountFactor * 10000) / 10000;
@@ -275,13 +286,14 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
   }
   totalCogs = Math.round(totalCogs * 100) / 100;
   await CogsEntry.create({
+    tenantId: req.tenantId,
     invoice: invoice._id,
     order: order._id,
     lines: cogsLines,
     totalCogs,
   });
 
-  const populated = await Invoice.findById(invoice._id)
+  const populated = await Invoice.findOne(byTenant(req, { _id: invoice._id }))
     .populate('client', 'name')
     .populate('order')
     .populate('shipment');
@@ -289,7 +301,9 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
 });
 
 exports.getCogsForInvoice = asyncHandler(async (req, res) => {
-  const entry = await CogsEntry.findOne({ invoice: req.params.invoiceId })
+  const entry = await CogsEntry.findOne(
+    byTenant(req, { invoice: req.params.invoiceId })
+  )
     .populate('invoice', 'invoiceId amount')
     .lean();
   if (!entry) {
@@ -301,11 +315,13 @@ exports.getCogsForInvoice = asyncHandler(async (req, res) => {
 exports.getARAging = asyncHandler(async (req, res) => {
   const now = new Date();
   await Invoice.updateMany(
-    { status: 'Pending', dueDate: { $lt: now } },
+    byTenant(req, { status: 'Pending', dueDate: { $lt: now } }),
     { $set: { status: 'Overdue' } }
   );
 
-  const open = await Invoice.find({ status: { $in: ['Pending', 'Overdue'] } })
+  const open = await Invoice.find(
+    byTenant(req, { status: { $in: ['Pending', 'Overdue'] } })
+  )
     .populate('client', 'name')
     .sort({ dueDate: 1 })
     .lean();

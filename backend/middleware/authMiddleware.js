@@ -39,10 +39,17 @@ const protect = asyncHandler(async (req, res, next) => {
 
       const decoded = verifyBearerToken(token);
 
+      // Exclude only password; keep tenantId + platformRole for withTenant / super-admin.
       req.user = await Employee.findById(decoded.id).select('-password');
       if (!req.user) {
         throw auth401(
           'Your session is no longer valid (e.g. after a database reset). Please log in again.'
+        );
+      }
+
+      if (req.user.platformRole !== 'super_admin' && !req.user.tenantId) {
+        throw auth401(
+          'Your account is not linked to a company. Run: npm run migrate:tenant (or ask an administrator).'
         );
       }
 
@@ -74,4 +81,22 @@ const authorize = (...roles) => {
 
 const { authorizePerm, can, rolePermissions, getMatrixDoc, P } = require('../config/permissions');
 
-module.exports = { protect, authorize, authorizePerm, can, rolePermissions, getMatrixDoc, P };
+const requireSuperAdmin = (req, res, next) => {
+  if (!req.user || req.user.platformRole !== 'super_admin') {
+    const err = new Error('Super admin only');
+    err.statusCode = 403;
+    throw err;
+  }
+  next();
+};
+
+module.exports = {
+  protect,
+  authorize,
+  authorizePerm,
+  can,
+  rolePermissions,
+  getMatrixDoc,
+  P,
+  requireSuperAdmin,
+};

@@ -1,7 +1,13 @@
 const mongoose = require('mongoose');
 
 const AssetSchema = new mongoose.Schema({
-  code: { type: String, required: true, unique: true, trim: true },
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
+  },
+  code: { type: String, required: true, trim: true },
   name: { type: String, required: true },
   workCenter: { type: mongoose.Schema.Types.ObjectId, ref: 'WorkCenter', default: null },
   manufacturer: String,
@@ -11,5 +17,7 @@ const AssetSchema = new mongoose.Schema({
   notes: String,
   createdAt: { type: Date, default: Date.now },
 });
+
+AssetSchema.index({ tenantId: 1, code: 1 }, { unique: true });
 
 module.exports = mongoose.model('Asset', AssetSchema);

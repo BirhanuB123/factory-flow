@@ -5,6 +5,7 @@ const ProductionJob = require('../models/ProductionJob');
 const Invoice = require('../models/Invoice');
 const VendorBill = require('../models/VendorBill');
 const { sendManagerDigest } = require('../services/mailService');
+const { byTenant } = require('../utils/tenantQuery');
 
 function csvEscape(s) {
   if (s == null) return '';
@@ -27,7 +28,7 @@ function sendCsv(res, filename, rows) {
 }
 
 exports.exportOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find()
+  const orders = await Order.find(byTenant(req))
     .populate('client', 'name')
     .sort({ orderDate: -1 })
     .limit(5000)
@@ -45,7 +46,7 @@ exports.exportOrders = asyncHandler(async (req, res) => {
 });
 
 exports.exportInventory = asyncHandler(async (req, res) => {
-  const products = await Product.find().sort({ sku: 1 }).lean();
+  const products = await Product.find(byTenant(req)).sort({ sku: 1 }).lean();
   const rows = products.map((p) => ({
     sku: p.sku,
     name: p.name,
@@ -58,7 +59,7 @@ exports.exportInventory = asyncHandler(async (req, res) => {
 });
 
 exports.exportProduction = asyncHandler(async (req, res) => {
-  const jobs = await ProductionJob.find().sort({ createdAt: -1 }).limit(5000).lean();
+  const jobs = await ProductionJob.find(byTenant(req)).sort({ createdAt: -1 }).limit(5000).lean();
   const rows = jobs.map((j) => ({
     jobId: j.jobId,
     status: j.status,
@@ -69,7 +70,7 @@ exports.exportProduction = asyncHandler(async (req, res) => {
 });
 
 exports.exportAR = asyncHandler(async (req, res) => {
-  const inv = await Invoice.find({ status: { $in: ['Pending', 'Overdue'] } })
+  const inv = await Invoice.find(byTenant(req, { status: { $in: ['Pending', 'Overdue'] } }))
     .populate('client', 'name')
     .lean();
   const rows = inv.map((i) => ({
@@ -83,9 +84,11 @@ exports.exportAR = asyncHandler(async (req, res) => {
 });
 
 exports.exportAP = asyncHandler(async (req, res) => {
-  const bills = await VendorBill.find({
-    status: { $in: ['Open', 'Partial', 'Overdue'] },
-  })
+  const bills = await VendorBill.find(
+    byTenant(req, {
+      status: { $in: ['Open', 'Partial', 'Overdue'] },
+    })
+  )
     .populate('vendor', 'name code')
     .lean();
   const rows = bills.map((b) => ({

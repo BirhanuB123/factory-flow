@@ -1,8 +1,85 @@
 import axios from 'axios';
+import { getEffectiveTenantIdForRequest } from '@/lib/tenantContext';
+import { getApiBaseUrl } from '@/lib/apiBase';
 
-const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ||
-  'http://localhost:5000/api';
+const API_BASE_URL = getApiBaseUrl();
+let nextPlatformStepUpPassword: string | null = null;
+let cachedPlatformStepUpPassword: string | null = null;
+let cachedPlatformStepUpUntilMs = 0;
+const PLATFORM_STEP_UP_CACHE_KEY = 'erp_platform_step_up_cache_v1';
+const PLATFORM_STEP_UP_CACHE_TTL_MS = 5 * 60 * 1000;
+
+export function setNextPlatformStepUpPassword(password: string | null) {
+  nextPlatformStepUpPassword = password && password.trim() ? password : null;
+}
+
+type PlatformStepUpCachePayload = {
+  password: string;
+  expiresAt: number;
+};
+
+function readStepUpCacheFromSession(): PlatformStepUpCachePayload | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(PLATFORM_STEP_UP_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PlatformStepUpCachePayload>;
+    if (!parsed || typeof parsed.password !== 'string' || typeof parsed.expiresAt !== 'number') {
+      return null;
+    }
+    if (!parsed.password.trim() || parsed.expiresAt <= Date.now()) {
+      sessionStorage.removeItem(PLATFORM_STEP_UP_CACHE_KEY);
+      return null;
+    }
+    return { password: parsed.password, expiresAt: parsed.expiresAt };
+  } catch {
+    return null;
+  }
+}
+
+function getCachedPlatformStepUpPassword(): string | null {
+  if (cachedPlatformStepUpPassword && cachedPlatformStepUpUntilMs > Date.now()) {
+    return cachedPlatformStepUpPassword;
+  }
+  const persisted = readStepUpCacheFromSession();
+  if (!persisted) {
+    cachedPlatformStepUpPassword = null;
+    cachedPlatformStepUpUntilMs = 0;
+    return null;
+  }
+  cachedPlatformStepUpPassword = persisted.password;
+  cachedPlatformStepUpUntilMs = persisted.expiresAt;
+  return persisted.password;
+}
+
+export function clearPlatformStepUpCache() {
+  cachedPlatformStepUpPassword = null;
+  cachedPlatformStepUpUntilMs = 0;
+  nextPlatformStepUpPassword = null;
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.removeItem(PLATFORM_STEP_UP_CACHE_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+export function rememberPlatformStepUpPassword(password: string, ttlMs = PLATFORM_STEP_UP_CACHE_TTL_MS) {
+  const clean = String(password || '').trim();
+  if (!clean) return;
+  const expiresAt = Date.now() + Math.max(5_000, ttlMs);
+  cachedPlatformStepUpPassword = clean;
+  cachedPlatformStepUpUntilMs = expiresAt;
+  if (typeof window !== 'undefined') {
+    try {
+      const payload: PlatformStepUpCachePayload = { password: clean, expiresAt };
+      sessionStorage.setItem(PLATFORM_STEP_UP_CACHE_KEY, JSON.stringify(payload));
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -18,6 +95,31 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    try {
+      const tid = getEffectiveTenantIdForRequest();
+      if (tid) {
+        (config.headers as Record<string, string>)['x-tenant-id'] = tid;
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      const method = String(config.method || 'get').toUpperCase();
+      const path = String(config.url || '');
+      const isPlatformMutation =
+        path.includes('/platform/') &&
+        ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method);
+      if (isPlatformMutation) {
+        const stepUp = nextPlatformStepUpPassword || getCachedPlatformStepUpPassword();
+        if (stepUp) {
+          (config.headers as Record<string, string>)['x-step-up-password'] = stepUp;
+        }
+        // One-time use override; cache (if any) is separate.
+        nextPlatformStepUpPassword = null;
+      }
+    } catch {
+      /* ignore */
+    }
     return config;
   },
   (error) => {
@@ -30,7 +132,12 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const url = String(error.config?.url ?? '');
-    if (status === 401 && !url.includes('/auth/login')) {
+    const message = String(error.response?.data?.message || '');
+    const isStepUp401 = status === 401 && message.toLowerCase().includes('step-up');
+    if (isStepUp401) {
+      clearPlatformStepUpCache();
+    }
+    if (status === 401 && !url.includes('/auth/login') && !isStepUp401) {
       localStorage.removeItem('erp_token');
       localStorage.removeItem('erp_user');
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
@@ -708,5 +815,282 @@ export async function openPayrollPayslipHtml(payrollId: string) {
   }
   setTimeout(() => URL.revokeObjectURL(url), 120_000);
 }
+
+export const TENANT_MODULE_KEYS = [
+  'manufacturing',
+  'inventory',
+  'sales',
+  'procurement',
+  'finance',
+  'hr',
+] as const;
+
+export type TenantModuleKey = (typeof TENANT_MODULE_KEYS)[number];
+
+export type TenantModuleFlags = Record<TenantModuleKey, boolean>;
+
+export type PlatformTenant = {
+  _id: string;
+  key: string;
+  legalName: string;
+  displayName: string;
+  status: string;
+  statusReason?: string;
+  lastApiActivityAt?: string;
+  trialEndDate?: string | null;
+  plan?: string;
+  billingProvider?: 'none' | 'manual' | 'stripe' | 'other';
+  billingCustomerId?: string;
+  announcement?: {
+    enabled: boolean;
+    level: "info" | "warning" | "maintenance";
+    message: string;
+    updatedAt?: string | null;
+    updatedByEmployeeId?: string;
+  };
+  industry?: string;
+  timezone?: string;
+  currency?: string;
+  moduleFlags?: Partial<TenantModuleFlags>;
+  health?: {
+    lastApiActivityAt?: string | null;
+    statusReason?: string;
+    trialEndDate?: string | null;
+    trialExpired?: boolean;
+    trialDaysLeft?: number | null;
+    adminCount?: number;
+    zeroAdmins?: boolean;
+    totalDocuments?: number;
+    documentCounts?: {
+      employees?: number;
+      products?: number;
+      orders?: number;
+      clients?: number;
+      invoices?: number;
+      purchaseOrders?: number;
+    };
+  };
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type PlatformTenantUserRow = {
+  _id?: string;
+  name: string;
+  employeeId: string;
+  role: string;
+  email?: string;
+  status: string;
+  department?: string;
+};
+
+export type PlatformTenantDetailPayload = {
+  tenant: PlatformTenant;
+  counts: {
+    employees: number;
+    products: number;
+    orders: number;
+    clients: number;
+    invoices: number;
+    purchaseOrders: number;
+    admins?: number;
+  };
+  users: PlatformTenantUserRow[];
+};
+
+export const platformApi = {
+  listTenants: async (params?: { q?: string }) => {
+    const response = await api.get<{
+      success: boolean;
+      data: PlatformTenant[];
+      count: number;
+      query?: string;
+    }>('/platform/tenants', { params });
+    return response.data;
+  },
+  getTenantDetail: async (tenantId: string) => {
+    const response = await api.get<{ success: boolean; data: PlatformTenantDetailPayload }>(
+      `/platform/tenants/${tenantId}`
+    );
+    return response.data;
+  },
+  createTenant: async (body: {
+    key: string;
+    legalName: string;
+    displayName?: string;
+    industry?: string;
+    status?: string;
+    plan?: string;
+    timezone?: string;
+    currency?: string;
+  }) => {
+    const response = await api.post<{ success: boolean; data: PlatformTenant }>('/platform/tenants', body);
+    return response.data;
+  },
+  updateTenantStatus: async (tenantId: string, status: string, statusReason?: string) => {
+    const response = await api.patch<{ success: boolean; data: PlatformTenant }>(
+      `/platform/tenants/${tenantId}/status`,
+      { status, statusReason }
+    );
+    return response.data;
+  },
+  extendTenantTrial: async (
+    tenantId: string,
+    body?: { extendDays?: number; trialEndDate?: string }
+  ) => {
+    const response = await api.patch<{ success: boolean; data: PlatformTenant }>(
+      `/platform/tenants/${tenantId}/trial`,
+      body || { extendDays: 7 }
+    );
+    return response.data;
+  },
+  patchTenant: async (
+    tenantId: string,
+    body: {
+      displayName?: string;
+      legalName?: string;
+      plan?: string;
+      billingProvider?: 'none' | 'manual' | 'stripe' | 'other';
+      billingCustomerId?: string;
+      timezone?: string;
+      currency?: string;
+      industry?: string;
+      moduleFlags?: Partial<TenantModuleFlags>;
+      statusReason?: string;
+      trialEndDate?: string;
+      announcement?: {
+        enabled?: boolean;
+        level?: "info" | "warning" | "maintenance";
+        message?: string;
+      };
+    }
+  ) => {
+    const response = await api.patch<{ success: boolean; data: PlatformTenant }>(
+      `/platform/tenants/${tenantId}`,
+      body
+    );
+    return response.data;
+  },
+  getGlobalAnnouncement: async () => {
+    const response = await api.get<{
+      success: boolean;
+      data: {
+        enabled: boolean;
+        level: "info" | "warning" | "maintenance";
+        message: string;
+        updatedAt?: string | null;
+        updatedByEmployeeId?: string;
+      };
+    }>('/platform/announcement');
+    return response.data;
+  },
+  updateGlobalAnnouncement: async (body: {
+    enabled?: boolean;
+    level?: "info" | "warning" | "maintenance";
+    message?: string;
+  }) => {
+    const response = await api.patch<{
+      success: boolean;
+      data: {
+        enabled: boolean;
+        level: "info" | "warning" | "maintenance";
+        message: string;
+        updatedAt?: string | null;
+        updatedByEmployeeId?: string;
+      };
+    }>('/platform/announcement', body);
+    return response.data;
+  },
+  createTenantAdmin: async (
+    tenantId: string,
+    body: {
+      employeeId: string;
+      name: string;
+      password?: string;
+      role?: string;
+      department?: string;
+      email?: string;
+      onboardingMode?: 'manual' | 'temp_password' | 'invite_link';
+    }
+  ) => {
+    const response = await api.post<{
+      success: boolean;
+      data: Record<string, unknown>;
+      temporaryPassword?: string;
+      invite?: { url: string; emailed: boolean; emailError?: string; expiresAt?: string };
+    }>(`/platform/tenants/${tenantId}/admin`, body);
+    return response.data;
+  },
+  getMetrics: async () => {
+    const response = await api.get<{
+      success: boolean;
+      data: {
+        tenants: { total: number; byStatus: Record<string, number> };
+        employees: number;
+        products: number;
+        orders: number;
+        invoices: number;
+      };
+    }>('/platform/metrics');
+    return response.data;
+  },
+  listPlatformAuditLogs: async (params?: {
+    limit?: number;
+    skip?: number;
+    action?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }) => {
+    const response = await api.get<{
+      success: boolean;
+      data: Array<{
+        _id: string;
+        action: string;
+        resourceType?: string;
+        resourceId?: string;
+        actorName?: string;
+        actorEmployeeId?: string;
+        details?: Record<string, unknown>;
+        ip?: string;
+        createdAt: string;
+      }>;
+      total: number;
+      actions?: string[];
+    }>('/platform/audit-logs', { params });
+    return response.data;
+  },
+  /** Filter params match list; downloads CSV (max 5000 rows by default). */
+  exportPlatformAuditLogsCsv: async (params?: {
+    action?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    maxRows?: number;
+  }) => {
+    const response = await api.get<Blob>('/platform/audit-logs/export', {
+      params: { ...params, maxRows: params?.maxRows ?? 5000 },
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+};
+
+export const announcementApi = {
+  getCurrent: async () => {
+    const response = await api.get<{
+      success: boolean;
+      data:
+        | null
+        | {
+            source: "tenant" | "global";
+            enabled: boolean;
+            level: "info" | "warning" | "maintenance";
+            message: string;
+            updatedAt?: string | null;
+            updatedByEmployeeId?: string;
+          };
+    }>('/announcements/current');
+    return response.data;
+  },
+};
 
 export default api;

@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 
 const payrollSchema = new mongoose.Schema(
   {
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+      index: true,
+    },
     employee: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
@@ -43,6 +49,6 @@ const payrollSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-payrollSchema.index({ employee: 1, month: 1 }, { unique: true });
+payrollSchema.index({ tenantId: 1, employee: 1, month: 1 }, { unique: true });
 
 module.exports = mongoose.model('Payroll', payrollSchema);

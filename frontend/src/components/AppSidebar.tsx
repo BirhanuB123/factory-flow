@@ -12,6 +12,7 @@ import {
   Truck,
   PackageCheck,
   Layers,
+  Shield,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -55,6 +56,12 @@ const allNavItems = [
     roles: ["Admin", "finance_head", "finance_viewer"],
   },
   { titleKey: "nav.smeBundle", url: "/sme-bundle", icon: Layers },
+  {
+    titleKey: "nav.platform",
+    url: "/platform",
+    icon: Shield,
+    platformSuperAdmin: true,
+  },
   { titleKey: "nav.settings", url: "/settings", icon: Settings },
 ] as const;
 
@@ -67,6 +74,9 @@ export function AppSidebar() {
   const { t } = useLocale();
 
   const navItems = allNavItems.filter((item) => {
+    if ("platformSuperAdmin" in item && item.platformSuperAdmin) {
+      return user?.platformRole === "super_admin";
+    }
     if (!("roles" in item)) return true;
     const allowed = item.roles as readonly string[];
     if (user && allowed.includes(user.role)) return true;

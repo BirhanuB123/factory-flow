@@ -1,17 +1,16 @@
 const Notification = require('../models/Notification');
+const { byTenant } = require('../utils/tenantQuery');
 
 // @desc    Get all notifications
 // @route   GET /api/notifications
 // @access  Private
 const getNotifications = async (req, res) => {
   try {
-    // Optionally filter by isRead status if provided in query
-    const match = {};
+    const match = byTenant(req);
     if (req.query.isRead !== undefined) {
       match.isRead = req.query.isRead === 'true';
     }
 
-    // Fetch all notifications, sorting by newest first
     const notifications = await Notification.find(match).sort({ createdAt: -1 });
 
     res.json({ success: true, count: notifications.length, data: notifications });
@@ -25,7 +24,7 @@ const getNotifications = async (req, res) => {
 // @access  Private
 const markAsRead = async (req, res) => {
   try {
-    const notification = await Notification.findById(req.params.id);
+    const notification = await Notification.findOne(byTenant(req, { _id: req.params.id }));
 
     if (!notification) {
       return res.status(404).json({ success: false, message: 'Notification not found' });
@@ -45,7 +44,7 @@ const markAsRead = async (req, res) => {
 // @access  Private
 const markAllAsRead = async (req, res) => {
   try {
-    await Notification.updateMany({ isRead: false }, { isRead: true });
+    await Notification.updateMany(byTenant(req, { isRead: false }), { isRead: true });
 
     res.json({ success: true, message: 'All notifications marked as read' });
   } catch (error) {
@@ -61,10 +60,11 @@ const createNotification = async (req, res) => {
     const { title, description, type, userId } = req.body;
 
     const notification = await Notification.create({
+      tenantId: req.tenantId,
       title,
       description,
       type,
-      userId
+      userId,
     });
 
     res.status(201).json({ success: true, data: notification });
@@ -77,5 +77,5 @@ module.exports = {
   getNotifications,
   markAsRead,
   markAllAsRead,
-  createNotification
+  createNotification,
 };

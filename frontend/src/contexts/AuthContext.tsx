@@ -1,4 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import {
+  ERP_ACT_AS_TENANT_KEY,
+  getEffectiveTenantIdForRequest,
+  isLikelyMongoObjectId,
+} from "@/lib/tenantContext";
+import { getApiBaseUrl } from "@/lib/apiBase";
 
 export type Role =
   | "employee"
@@ -16,25 +22,59 @@ export interface User {
   email: string;
   role: Role;
   department: string;
+  /** Company (tenant) scope — use x-tenant-id on API for super_admin switching */
+  tenantId?: string;
+  platformRole?: "none" | "super_admin";
+  /** After temp-password onboarding; must use change-password flow */
+  mustChangePassword?: boolean;
   permissions?: string[];
+  tenantSubscription?: {
+    status: "active" | "trial" | "suspended" | "archived" | string;
+    plan?: string;
+    trialEndDate?: string | null;
+    statusReason?: string;
+    displayName?: string;
+  } | null;
+}
+
+/** Normalize login + /auth/me JSON (handles string ids, platformRole). */
+export function userFromApiPayload(data: Record<string, unknown>): User {
+  return {
+    _id: String(data._id),
+    employeeId: String(data.employeeId ?? ""),
+    name: String(data.name ?? ""),
+    email: String(data.email ?? ""),
+    role: data.role as Role,
+    department: String(data.department ?? ""),
+    tenantId: data.tenantId != null ? String(data.tenantId) : undefined,
+    platformRole: data.platformRole === "super_admin" ? "super_admin" : "none",
+    mustChangePassword: data.mustChangePassword === true,
+    permissions: data.permissions as string[] | undefined,
+    tenantSubscription:
+      data.tenantSubscription && typeof data.tenantSubscription === "object"
+        ? (data.tenantSubscription as User["tenantSubscription"])
+        : null,
+  };
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (userData: User & { token?: string }, token: string) => void;
+  /** Pass raw JSON from POST /auth/login (same shape as /auth/me, may include `token`). */
+  login: (apiUserPayload: Record<string, unknown>, token: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
   can: (permission: string) => boolean;
   refreshPermissions: () => Promise<void>;
+  /** Merge into current user and persist `erp_user` (e.g. clear mustChangePassword before navigate). */
+  patchUser: (patch: Partial<User>) => void;
+  /** Super admin only: optional override for `x-tenant-id` (persisted in localStorage). */
+  actAsTenantId: string | null;
+  setActAsTenantId: (tenantId: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const API_BASE =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ||
-  "http://localhost:5000/api";
 
 export function useCan(permission: string): boolean {
   const { can } = useAuth();
@@ -45,6 +85,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [actAsTenantId, setActAsTenantIdState] = useState<string | null>(null);
+
+  const setActAsTenantId = useCallback((id: string | null) => {
+    if (id && isLikelyMongoObjectId(id)) {
+      localStorage.setItem(ERP_ACT_AS_TENANT_KEY, id);
+      setActAsTenantIdState(id);
+    } else {
+      localStorage.removeItem(ERP_ACT_AS_TENANT_KEY);
+      setActAsTenantIdState(null);
+    }
+  }, []);
 
   const can = useCallback(
     (permission: string) => {
@@ -61,25 +112,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const t = localStorage.getItem("erp_token");
     if (!t) return;
     try {
-      const res = await fetch(`${API_BASE}/auth/me`, {
-        headers: { Authorization: `Bearer ${t}` },
-      });
+      const headers: Record<string, string> = { Authorization: `Bearer ${t}` };
+      try {
+        const tid = getEffectiveTenantIdForRequest();
+        if (tid) headers["x-tenant-id"] = tid;
+      } catch {
+        /* ignore */
+      }
+      const res = await fetch(`${getApiBaseUrl()}/auth/me`, { headers });
       if (!res.ok) return;
       const data = await res.json();
-      const u: User = {
-        _id: data._id,
-        employeeId: data.employeeId,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-        department: data.department,
-        permissions: data.permissions,
-      };
+      const u = userFromApiPayload(data);
       setUser(u);
       localStorage.setItem("erp_user", JSON.stringify(u));
     } catch {
       /* ignore */
     }
+  }, []);
+
+  const patchUser = useCallback((patch: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      localStorage.setItem("erp_user", JSON.stringify(next));
+      return next;
+    });
   }, []);
 
   /** Must validate token with API — stale localStorage alone caused 401 spam on every route */
@@ -94,9 +151,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       try {
-        const res = await fetch(`${API_BASE}/auth/me`, {
-          headers: { Authorization: `Bearer ${storedToken}` },
-        });
+        const headers: Record<string, string> = { Authorization: `Bearer ${storedToken}` };
+        try {
+          const tid = getEffectiveTenantIdForRequest();
+          if (tid) headers["x-tenant-id"] = tid;
+        } catch {
+          /* ignore */
+        }
+        const res = await fetch(`${getApiBaseUrl()}/auth/me`, { headers });
         if (!res.ok) {
           localStorage.removeItem("erp_token");
           localStorage.removeItem("erp_user");
@@ -106,15 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } else {
           const data = await res.json();
-          const u: User = {
-            _id: data._id,
-            employeeId: data.employeeId,
-            name: data.name,
-            email: data.email,
-            role: data.role,
-            department: data.department,
-            permissions: data.permissions,
-          };
+          const u = userFromApiPayload(data);
           if (!cancelled) {
             setToken(storedToken);
             setUser(u);
@@ -139,20 +193,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const login = (userData: User & { token?: string }, t: string) => {
-    const u: User = {
-      _id: userData._id,
-      employeeId: userData.employeeId,
-      name: userData.name,
-      email: userData.email,
-      role: userData.role,
-      department: userData.department,
-      permissions: userData.permissions,
-    };
+  useEffect(() => {
+    if (!user) {
+      setActAsTenantIdState(null);
+      return;
+    }
+    if (user.platformRole !== "super_admin") {
+      localStorage.removeItem(ERP_ACT_AS_TENANT_KEY);
+      setActAsTenantIdState(null);
+      return;
+    }
+    const stored = localStorage.getItem(ERP_ACT_AS_TENANT_KEY);
+    setActAsTenantIdState(stored && isLikelyMongoObjectId(stored) ? stored : null);
+  }, [user]);
+
+  const login = (apiUserPayload: Record<string, unknown>, t: string) => {
+    const u = userFromApiPayload(apiUserPayload);
     setUser(u);
     setToken(t);
     localStorage.setItem("erp_user", JSON.stringify(u));
     localStorage.setItem("erp_token", t);
+    if (u.platformRole !== "super_admin") {
+      localStorage.removeItem(ERP_ACT_AS_TENANT_KEY);
+      setActAsTenantIdState(null);
+    }
   };
 
   const logout = () => {
@@ -160,6 +224,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(null);
     localStorage.removeItem("erp_user");
     localStorage.removeItem("erp_token");
+    localStorage.removeItem(ERP_ACT_AS_TENANT_KEY);
+    setActAsTenantIdState(null);
   };
 
   return (
@@ -173,6 +239,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         can,
         refreshPermissions,
+        patchUser,
+        actAsTenantId,
+        setActAsTenantId,
       }}
     >
       {children}

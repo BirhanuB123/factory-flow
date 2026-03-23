@@ -5,9 +5,10 @@ const PmSchedule = require('../models/PmSchedule');
 const DowntimeEvent = require('../models/DowntimeEvent');
 const QualityInspection = require('../models/QualityInspection');
 const NonConformance = require('../models/NonConformance');
+const { byTenant } = require('../utils/tenantQuery');
 
 exports.listWorkCenters = asyncHandler(async (req, res) => {
-  const list = await WorkCenter.find().sort({ code: 1 }).lean();
+  const list = await WorkCenter.find(byTenant(req)).sort({ code: 1 }).lean();
   res.json({ success: true, data: list });
 });
 
@@ -17,6 +18,7 @@ exports.createWorkCenter = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'code and name required' });
   }
   const wc = await WorkCenter.create({
+    tenantId: req.tenantId,
     code: String(code).toUpperCase().trim(),
     name: String(name).trim(),
     hoursPerDay: hoursPerDay != null ? Number(hoursPerDay) : 8,
@@ -26,7 +28,10 @@ exports.createWorkCenter = asyncHandler(async (req, res) => {
 });
 
 exports.listAssets = asyncHandler(async (req, res) => {
-  const list = await Asset.find().populate('workCenter', 'code name').sort({ code: 1 }).lean();
+  const list = await Asset.find(byTenant(req))
+    .populate('workCenter', 'code name')
+    .sort({ code: 1 })
+    .lean();
   res.json({ success: true, data: list });
 });
 
@@ -36,6 +41,7 @@ exports.createAsset = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'code and name required' });
   }
   const a = await Asset.create({
+    tenantId: req.tenantId,
     code: String(code).trim(),
     name: String(name).trim(),
     workCenter: workCenter || null,
@@ -47,7 +53,7 @@ exports.createAsset = asyncHandler(async (req, res) => {
 });
 
 exports.listPmSchedules = asyncHandler(async (req, res) => {
-  const list = await PmSchedule.find({ active: true })
+  const list = await PmSchedule.find(byTenant(req, { active: true }))
     .populate('asset', 'code name')
     .sort({ nextDueDate: 1 })
     .lean();
@@ -63,6 +69,7 @@ exports.createPmSchedule = asyncHandler(async (req, res) => {
     });
   }
   const pm = await PmSchedule.create({
+    tenantId: req.tenantId,
     asset,
     title,
     frequencyDays: Number(frequencyDays),
@@ -73,7 +80,7 @@ exports.createPmSchedule = asyncHandler(async (req, res) => {
 });
 
 exports.completePm = asyncHandler(async (req, res) => {
-  const pm = await PmSchedule.findById(req.params.id);
+  const pm = await PmSchedule.findOne(byTenant(req, { _id: req.params.id }));
   if (!pm) return res.status(404).json({ success: false, message: 'PM schedule not found' });
   pm.lastCompletedAt = new Date();
   const next = new Date(pm.lastCompletedAt);
@@ -85,7 +92,7 @@ exports.completePm = asyncHandler(async (req, res) => {
 
 exports.listDowntime = asyncHandler(async (req, res) => {
   const { assetId, limit = '50' } = req.query;
-  const q = {};
+  const q = byTenant(req);
   if (assetId) q.asset = assetId;
   const list = await DowntimeEvent.find(q)
     .populate('asset', 'code name')
@@ -101,6 +108,7 @@ exports.createDowntime = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'asset required' });
   }
   const d = await DowntimeEvent.create({
+    tenantId: req.tenantId,
     asset,
     startedAt: startedAt ? new Date(startedAt) : new Date(),
     reasonCode: reasonCode || 'other',
@@ -111,7 +119,7 @@ exports.createDowntime = asyncHandler(async (req, res) => {
 });
 
 exports.endDowntime = asyncHandler(async (req, res) => {
-  const d = await DowntimeEvent.findById(req.params.id);
+  const d = await DowntimeEvent.findOne(byTenant(req, { _id: req.params.id }));
   if (!d) return res.status(404).json({ success: false, message: 'Not found' });
   d.endedAt = new Date();
   await d.save();
@@ -119,7 +127,7 @@ exports.endDowntime = asyncHandler(async (req, res) => {
 });
 
 exports.listInspections = asyncHandler(async (req, res) => {
-  const list = await QualityInspection.find()
+  const list = await QualityInspection.find(byTenant(req))
     .sort({ createdAt: -1 })
     .limit(100)
     .populate('product', 'sku name')
@@ -129,24 +137,31 @@ exports.listInspections = asyncHandler(async (req, res) => {
 
 exports.createInspection = asyncHandler(async (req, res) => {
   const body = { ...req.body };
+  delete body.tenantId;
   if (!body.inspectionType) {
     return res.status(400).json({ success: false, message: 'inspectionType required' });
   }
-  const doc = await QualityInspection.create(body);
+  const doc = await QualityInspection.create({ ...body, tenantId: req.tenantId });
   res.status(201).json({ success: true, data: doc });
 });
 
 exports.updateInspection = asyncHandler(async (req, res) => {
-  const doc = await QualityInspection.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
+  const patch = { ...req.body };
+  delete patch.tenantId;
+  const doc = await QualityInspection.findOneAndUpdate(
+    byTenant(req, { _id: req.params.id }),
+    patch,
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
   if (!doc) return res.status(404).json({ success: false, message: 'Not found' });
   res.json({ success: true, data: doc });
 });
 
 exports.listNonConformances = asyncHandler(async (req, res) => {
-  const list = await NonConformance.find()
+  const list = await NonConformance.find(byTenant(req))
     .sort({ createdAt: -1 })
     .limit(100)
     .populate('product', 'sku name')
@@ -159,9 +174,10 @@ exports.createNonConformance = asyncHandler(async (req, res) => {
   if (!title) {
     return res.status(400).json({ success: false, message: 'title required' });
   }
-  const n = await NonConformance.countDocuments();
+  const n = await NonConformance.countDocuments(byTenant(req));
   const ncNumber = `NC-${Date.now()}-${(n % 1000).toString().padStart(3, '0')}`;
   const doc = await NonConformance.create({
+    tenantId: req.tenantId,
     ncNumber,
     title,
     description: description || '',
@@ -175,10 +191,16 @@ exports.createNonConformance = asyncHandler(async (req, res) => {
 });
 
 exports.updateNonConformance = asyncHandler(async (req, res) => {
-  const doc = await NonConformance.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
+  const patch = { ...req.body };
+  delete patch.tenantId;
+  const doc = await NonConformance.findOneAndUpdate(
+    byTenant(req, { _id: req.params.id }),
+    patch,
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
   if (!doc) return res.status(404).json({ success: false, message: 'Not found' });
   res.json({ success: true, data: doc });
 });

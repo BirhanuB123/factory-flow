@@ -11,7 +11,13 @@ const ShipmentLineSchema = new mongoose.Schema(
 
 const ShipmentSchema = new mongoose.Schema(
   {
-    shipmentNumber: { type: String, required: true, unique: true, trim: true },
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+      index: true,
+    },
+    shipmentNumber: { type: String, required: true, trim: true },
     order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
     lines: [ShipmentLineSchema],
     status: {
@@ -27,5 +33,7 @@ const ShipmentSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+ShipmentSchema.index({ tenantId: 1, shipmentNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('Shipment', ShipmentSchema);

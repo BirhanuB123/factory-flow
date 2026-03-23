@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const StockReservationSchema = new mongoose.Schema({
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
+  },
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
@@ -40,7 +46,7 @@ const StockReservationSchema = new mongoose.Schema({
   },
 });
 
-StockReservationSchema.index({ refType: 1, refId: 1, status: 1 });
-StockReservationSchema.index({ product: 1, status: 1 });
+StockReservationSchema.index({ tenantId: 1, refType: 1, refId: 1, status: 1 });
+StockReservationSchema.index({ tenantId: 1, product: 1, status: 1 });
 
 module.exports = mongoose.model('StockReservation', StockReservationSchema);

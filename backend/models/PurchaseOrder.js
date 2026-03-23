@@ -16,7 +16,13 @@ const LineSchema = new mongoose.Schema(
 
 const PurchaseOrderSchema = new mongoose.Schema(
   {
-    poNumber: { type: String, required: true, unique: true, trim: true },
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+      index: true,
+    },
+    poNumber: { type: String, required: true, trim: true },
     supplierName: { type: String, required: true, trim: true },
     vendor: {
       type: mongoose.Schema.Types.ObjectId,
@@ -64,5 +70,7 @@ const PurchaseOrderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+PurchaseOrderSchema.index({ tenantId: 1, poNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('PurchaseOrder', PurchaseOrderSchema);

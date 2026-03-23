@@ -2,20 +2,21 @@ const asyncHandler = require('../middleware/asyncHandler');
 const Shipment = require('../models/Shipment');
 const Order = require('../models/Order');
 const { formatEthiopianLong, formatEthiopianNumeric } = require('../utils/ethiopianDate');
+const { byTenant } = require('../utils/tenantQuery');
 
 function nextShipmentNumber() {
   return `SH-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
 
 exports.listShipmentsForOrder = asyncHandler(async (req, res) => {
-  const list = await Shipment.find({ order: req.params.orderId })
+  const list = await Shipment.find(byTenant(req, { order: req.params.orderId }))
     .sort({ createdAt: -1 })
     .lean();
   res.json({ success: true, data: list });
 });
 
 exports.listShipments = asyncHandler(async (req, res) => {
-  const list = await Shipment.find()
+  const list = await Shipment.find(byTenant(req))
     .populate('order', 'status totalAmount')
     .sort({ createdAt: -1 })
     .limit(200)
@@ -24,7 +25,7 @@ exports.listShipments = asyncHandler(async (req, res) => {
 });
 
 exports.getShipment = asyncHandler(async (req, res) => {
-  const s = await Shipment.findById(req.params.id).populate('order');
+  const s = await Shipment.findOne(byTenant(req, { _id: req.params.id })).populate('order');
   if (!s) return res.status(404).json({ success: false, message: 'Shipment not found' });
   res.json({ success: true, data: s });
 });
@@ -37,7 +38,7 @@ exports.createShipment = asyncHandler(async (req, res) => {
       message: 'orderId and lines[{ lineIndex, quantity }] required',
     });
   }
-  const order = await Order.findById(orderId);
+  const order = await Order.findOne(byTenant(req, { _id: orderId }));
   if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
   if (order.status === 'cancelled') {
     return res.status(400).json({ success: false, message: 'Cannot ship cancelled order' });
@@ -73,6 +74,7 @@ exports.createShipment = asyncHandler(async (req, res) => {
   }
 
   const s = await Shipment.create({
+    tenantId: req.tenantId,
     shipmentNumber: nextShipmentNumber(),
     order: orderId,
     lines: lines.map((l) => ({
@@ -93,7 +95,7 @@ exports.updateShipmentStatus = asyncHandler(async (req, res) => {
   if (!allowed.includes(status)) {
     return res.status(400).json({ success: false, message: 'Invalid status' });
   }
-  const s = await Shipment.findById(req.params.id);
+  const s = await Shipment.findOne(byTenant(req, { _id: req.params.id }));
   if (!s) return res.status(404).json({ success: false, message: 'Shipment not found' });
   if (s.status === 'shipped' && status !== 'shipped') {
     return res.status(400).json({ success: false, message: 'Cannot change shipped shipment' });
@@ -105,12 +107,12 @@ exports.updateShipmentStatus = asyncHandler(async (req, res) => {
 
 exports.shipShipment = asyncHandler(async (req, res) => {
   const { carrier, trackingNumber, shippedAt } = req.body;
-  const s = await Shipment.findById(req.params.id);
+  const s = await Shipment.findOne(byTenant(req, { _id: req.params.id }));
   if (!s) return res.status(404).json({ success: false, message: 'Shipment not found' });
   if (s.status === 'shipped') {
     return res.status(400).json({ success: false, message: 'Already shipped' });
   }
-  const order = await Order.findById(s.order);
+  const order = await Order.findOne(byTenant(req, { _id: s.order }));
   if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
   if (order.approvalStatus === 'pending' || order.approvalStatus === 'rejected') {
     return res.status(400).json({
@@ -150,7 +152,7 @@ exports.shipShipment = asyncHandler(async (req, res) => {
   s.shippedAt = shippedAt ? new Date(shippedAt) : new Date();
   await s.save();
 
-  const populated = await Shipment.findById(s._id).populate('order');
+  const populated = await Shipment.findOne(byTenant(req, { _id: s._id })).populate('order');
   res.json({ success: true, data: populated });
 });
 
@@ -163,7 +165,7 @@ function esc(x) {
 
 /** Printable delivery note — EN + Amharic labels for warehouse / carrier. */
 exports.getDeliveryNoteHtml = asyncHandler(async (req, res) => {
-  const s = await Shipment.findById(req.params.id)
+  const s = await Shipment.findOne(byTenant(req, { _id: req.params.id }))
     .populate({
       path: 'order',
       populate: [

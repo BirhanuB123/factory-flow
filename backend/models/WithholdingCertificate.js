@@ -2,7 +2,13 @@ const mongoose = require('mongoose');
 
 const WithholdingCertificateSchema = new mongoose.Schema(
   {
-    certificateNumber: { type: String, required: true, unique: true, trim: true },
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+      index: true,
+    },
+    certificateNumber: { type: String, required: true, trim: true },
     type: {
       type: String,
       enum: ['on_sales', 'on_purchase'],
@@ -24,5 +30,7 @@ const WithholdingCertificateSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+WithholdingCertificateSchema.index({ tenantId: 1, certificateNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('WithholdingCertificate', WithholdingCertificateSchema);

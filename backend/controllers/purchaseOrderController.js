@@ -1,6 +1,7 @@
 const asyncHandler = require('../middleware/asyncHandler');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const Product = require('../models/Product');
+const { byTenant } = require('../utils/tenantQuery');
 const { applyMovement } = require('../services/stockService');
 const { applyReceiptToAverageCost } = require('../services/costingService');
 const { computeLineInventoryUnitCosts } = require('../services/landedCostService');
@@ -77,7 +78,7 @@ function patchSourcingOntoDocument(po, body) {
 }
 
 exports.listPurchaseOrders = asyncHandler(async (req, res) => {
-  const list = await PurchaseOrder.find()
+  const list = await PurchaseOrder.find(byTenant(req))
     .populate('lines.product', 'name sku unit')
     .populate('vendor', 'code name')
     .populate('approvedBy', 'name employeeId')
@@ -90,7 +91,7 @@ exports.listPurchaseOrders = asyncHandler(async (req, res) => {
 });
 
 exports.getPurchaseOrder = asyncHandler(async (req, res) => {
-  const po = await PurchaseOrder.findById(req.params.id)
+  const po = await PurchaseOrder.findOne(byTenant(req, { _id: req.params.id }))
     .populate('lines.product', 'name sku unit stock')
     .populate('vendor', 'code name email')
     .populate('approvedBy', 'name employeeId');
@@ -122,6 +123,7 @@ exports.createPurchaseOrder = asyncHandler(async (req, res) => {
   }
   const poNumber = `PO-${Date.now()}`;
   const po = await PurchaseOrder.create({
+    tenantId: req.tenantId,
     poNumber,
     supplierName: supplierName.trim(),
     vendor: vendor || null,
@@ -131,7 +133,7 @@ exports.createPurchaseOrder = asyncHandler(async (req, res) => {
     notes: notes || '',
     ...buildSourcingForCreate(req.body),
   });
-  const populated = await PurchaseOrder.findById(po._id).populate(
+  const populated = await PurchaseOrder.findOne(byTenant(req, { _id: po._id })).populate(
     'lines.product',
     'name sku'
   );
@@ -139,7 +141,7 @@ exports.createPurchaseOrder = asyncHandler(async (req, res) => {
 });
 
 exports.updatePurchaseOrder = asyncHandler(async (req, res) => {
-  const po = await PurchaseOrder.findById(req.params.id);
+  const po = await PurchaseOrder.findOne(byTenant(req, { _id: req.params.id }));
   if (!po) {
     return res.status(404).json({ success: false, message: 'PO not found' });
   }
@@ -164,7 +166,7 @@ exports.updatePurchaseOrder = asyncHandler(async (req, res) => {
   patchSourcingOntoDocument(po, req.body);
   po.updatedAt = new Date();
   await po.save();
-  const populated = await PurchaseOrder.findById(po._id).populate(
+  const populated = await PurchaseOrder.findOne(byTenant(req, { _id: po._id })).populate(
     'lines.product',
     'name sku'
   );
@@ -173,7 +175,7 @@ exports.updatePurchaseOrder = asyncHandler(async (req, res) => {
 
 /** Update landed cost / FX / LC while PO is open (draft, approved, or partial received). */
 exports.patchPurchaseOrderSourcing = asyncHandler(async (req, res) => {
-  const po = await PurchaseOrder.findById(req.params.id);
+  const po = await PurchaseOrder.findOne(byTenant(req, { _id: req.params.id }));
   if (!po) {
     return res.status(404).json({ success: false, message: 'PO not found' });
   }
@@ -186,14 +188,14 @@ exports.patchPurchaseOrderSourcing = asyncHandler(async (req, res) => {
   patchSourcingOntoDocument(po, req.body);
   po.updatedAt = new Date();
   await po.save();
-  const populated = await PurchaseOrder.findById(po._id)
+  const populated = await PurchaseOrder.findOne(byTenant(req, { _id: po._id }))
     .populate('lines.product', 'name sku unit stock')
     .populate('vendor', 'code name');
   res.json({ success: true, data: attachCostPreview(populated) });
 });
 
 exports.approvePurchaseOrder = asyncHandler(async (req, res) => {
-  const po = await PurchaseOrder.findById(req.params.id);
+  const po = await PurchaseOrder.findOne(byTenant(req, { _id: req.params.id }));
   if (!po) {
     return res.status(404).json({ success: false, message: 'PO not found' });
   }
@@ -207,14 +209,14 @@ exports.approvePurchaseOrder = asyncHandler(async (req, res) => {
   po.approvedBy = req.user._id;
   po.approvedAt = new Date();
   await po.save();
-  const populated = await PurchaseOrder.findById(po._id)
+  const populated = await PurchaseOrder.findOne(byTenant(req, { _id: po._id }))
     .populate('lines.product', 'name sku')
     .populate('approvedBy', 'name');
   res.json({ success: true, data: attachCostPreview(populated) });
 });
 
 exports.cancelPurchaseOrder = asyncHandler(async (req, res) => {
-  const po = await PurchaseOrder.findById(req.params.id);
+  const po = await PurchaseOrder.findOne(byTenant(req, { _id: req.params.id }));
   if (!po) {
     return res.status(404).json({ success: false, message: 'PO not found' });
   }
@@ -243,7 +245,7 @@ exports.receivePurchaseOrder = asyncHandler(async (req, res) => {
       message: 'receipts[] required, e.g. [{ lineIndex: 0, quantity: 10 }]',
     });
   }
-  const po = await PurchaseOrder.findById(req.params.id);
+  const po = await PurchaseOrder.findOne(byTenant(req, { _id: req.params.id }));
   if (!po) {
     return res.status(404).json({ success: false, message: 'PO not found' });
   }
@@ -272,6 +274,7 @@ exports.receivePurchaseOrder = asyncHandler(async (req, res) => {
     if (take <= 0) continue;
 
     await applyMovement(null, {
+      tenantId: req.tenantId,
       productId: line.product,
       delta: take,
       movementType: 'receipt',
@@ -287,18 +290,20 @@ exports.receivePurchaseOrder = asyncHandler(async (req, res) => {
       unitCosts[idx] && unitCosts[idx].inventoryUnitCost > 0
         ? unitCosts[idx].inventoryUnitCost
         : Number(line.unitCost) || 0;
-    const prod = await Product.findById(line.product);
+    const prod = await Product.findOne(byTenant(req, { _id: line.product }));
     if (prod && effectiveUnit > 0) {
       if (prod.costingMethod === 'average') {
-        await applyReceiptToAverageCost(line.product, take, effectiveUnit);
+        await applyReceiptToAverageCost(line.product, take, effectiveUnit, req.tenantId);
       } else {
-        await Product.findByIdAndUpdate(line.product, {
+        await Product.findOneAndUpdate(byTenant(req, { _id: line.product }), {
           unitCost: effectiveUnit,
           lastReceived: new Date(),
         });
       }
     } else if (prod) {
-      await Product.findByIdAndUpdate(line.product, { lastReceived: new Date() });
+      await Product.findOneAndUpdate(byTenant(req, { _id: line.product }), {
+        lastReceived: new Date(),
+      });
     }
   }
 
@@ -309,7 +314,7 @@ exports.receivePurchaseOrder = asyncHandler(async (req, res) => {
   po.updatedAt = new Date();
   await po.save();
 
-  const populated = await PurchaseOrder.findById(po._id).populate(
+  const populated = await PurchaseOrder.findOne(byTenant(req, { _id: po._id })).populate(
     'lines.product',
     'name sku stock'
   );

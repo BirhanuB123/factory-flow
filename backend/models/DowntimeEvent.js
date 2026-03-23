@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const DowntimeEventSchema = new mongoose.Schema({
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
+  },
   asset: { type: mongoose.Schema.Types.ObjectId, ref: 'Asset', required: true },
   startedAt: { type: Date, required: true },
   endedAt: Date,

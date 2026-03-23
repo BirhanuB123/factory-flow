@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const InvoiceSchema = new mongoose.Schema({
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
+  },
   client: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',
@@ -9,7 +15,6 @@ const InvoiceSchema = new mongoose.Schema({
   invoiceId: {
     type: String,
     required: true,
-    unique: true
   },
   amount: {
     type: Number,
@@ -59,5 +64,7 @@ const InvoiceSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+InvoiceSchema.index({ tenantId: 1, invoiceId: 1 }, { unique: true });
 
 module.exports = mongoose.model('Invoice', InvoiceSchema);

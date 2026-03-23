@@ -1,12 +1,15 @@
 const mongoose = require('mongoose');
 
-/**
- * Singleton tax profile for Ethiopia-oriented statutory reporting.
- * One document with key 'default'.
- */
+/** Ethiopia-oriented tax profile — one `key: 'default'` row per tenant. */
 const TaxSettingsSchema = new mongoose.Schema(
   {
-    key: { type: String, default: 'default', unique: true },
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+      index: true,
+    },
+    key: { type: String, default: 'default' },
     companyLegalName: { type: String, default: '' },
     companyTIN: { type: String, default: '' },
     companyAddress: { type: String, default: '' },
@@ -36,5 +39,7 @@ const TaxSettingsSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+TaxSettingsSchema.index({ tenantId: 1, key: 1 }, { unique: true });
 
 module.exports = mongoose.model('TaxSettings', TaxSettingsSchema);

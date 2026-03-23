@@ -1,7 +1,13 @@
 const mongoose = require('mongoose');
 
 const NonConformanceSchema = new mongoose.Schema({
-  ncNumber: { type: String, required: true, unique: true },
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
+  },
+  ncNumber: { type: String, required: true },
   title: { type: String, required: true },
   description: String,
   source: {
@@ -27,5 +33,7 @@ const NonConformanceSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   closedAt: Date,
 });
+
+NonConformanceSchema.index({ tenantId: 1, ncNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('NonConformance', NonConformanceSchema);

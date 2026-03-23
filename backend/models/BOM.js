@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const BOMSchema = new mongoose.Schema({
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
+  },
   name: {
     type: String,
     required: [true, 'Please add a BOM name'],
@@ -9,7 +15,6 @@ const BOMSchema = new mongoose.Schema({
   partNumber: {
     type: String,
     required: [true, 'Please add a part number'],
-    unique: true
   },
   revision: {
     type: String,
@@ -76,5 +81,7 @@ const BOMSchema = new mongoose.Schema({
 BOMSchema.pre('save', function () {
   this.updatedAt = Date.now();
 });
+
+BOMSchema.index({ tenantId: 1, partNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('BOM', BOMSchema);

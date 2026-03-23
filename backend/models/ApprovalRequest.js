@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 
 const ApprovalRequestSchema = new mongoose.Schema(
   {
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+      index: true,
+    },
     type: {
       type: String,
       enum: ['order_discount', 'order_large'],

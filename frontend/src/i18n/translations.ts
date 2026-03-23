@@ -14,6 +14,7 @@ const navEn = {
   finance: "Finance",
   smeBundle: "SME package",
   settings: "Settings",
+  platform: "Platform",
   navigation: "Navigation",
   erpSubtitle: "ERP System",
 };
@@ -32,6 +33,7 @@ const navAm: Record<keyof typeof navEn, string> = {
   finance: "ፋይናንስ",
   smeBundle: "SME ፓኬጅ",
   settings: "ቅንብሮች",
+  platform: "መድረክ",
   navigation: "አሻራ",
   erpSubtitle: "የኢንተግራ ስርዓት",
 };
@@ -50,6 +52,7 @@ const navOm: Record<keyof typeof navEn, string> = {
   finance: "Maallaqa",
   smeBundle: "Paakeejii SME",
   settings: "Qindaa'ina",
+  platform: "Platfoormii",
   navigation: "Daandii",
   erpSubtitle: "Sirna Integra",
 };

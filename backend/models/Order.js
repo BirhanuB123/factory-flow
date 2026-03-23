@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const OrderSchema = new mongoose.Schema({
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
+  },
   client: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',

@@ -1,10 +1,13 @@
+const mongoose = require('mongoose');
 const Product = require('../models/Product');
 
 /**
  * Weighted average cost after PO receipt (qty added at unitCost).
  */
-async function applyReceiptToAverageCost(productId, receivedQty, receiptUnitCost) {
-  const p = await Product.findById(productId);
+async function applyReceiptToAverageCost(productId, receivedQty, receiptUnitCost, tenantId) {
+  if (!tenantId) throw new Error('applyReceiptToAverageCost: tenantId required');
+  const tid = new mongoose.Types.ObjectId(tenantId);
+  const p = await Product.findOne({ _id: productId, tenantId: tid });
   if (!p || p.costingMethod !== 'average') return p;
   const q = Number(receivedQty);
   const cost = Number(receiptUnitCost) || 0;

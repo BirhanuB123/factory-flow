@@ -2,20 +2,26 @@ const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const StockReservation = require('../models/StockReservation');
 
-async function sumActiveReservedForProduct(productId) {
+function tid(tenantId) {
+  return new mongoose.Types.ObjectId(tenantId);
+}
+
+async function sumActiveReservedForProduct(productId, tenantId) {
+  if (!tenantId) throw new Error('sumActiveReservedForProduct: tenantId required');
   const id = new mongoose.Types.ObjectId(productId);
   const agg = await StockReservation.aggregate([
-    { $match: { product: id, status: 'active' } },
+    { $match: { product: id, tenantId: tid(tenantId), status: 'active' } },
     { $group: { _id: null, total: { $sum: '$quantity' } } },
   ]);
   return agg[0]?.total || 0;
 }
 
 /** Physical on-hand minus all active reservations */
-async function getAvailableToReserve(productId) {
-  const p = await Product.findById(productId);
+async function getAvailableToReserve(productId, tenantId) {
+  if (!tenantId) throw new Error('getAvailableToReserve: tenantId required');
+  const p = await Product.findOne({ _id: productId, tenantId: tid(tenantId) });
   if (!p) return { available: 0, stock: 0, reserved: 0 };
-  const reserved = await sumActiveReservedForProduct(productId);
+  const reserved = await sumActiveReservedForProduct(productId, tenantId);
   return {
     stock: p.stock,
     reserved,
@@ -24,6 +30,7 @@ async function getAvailableToReserve(productId) {
 }
 
 async function createReservation({
+  tenantId,
   productId,
   quantity,
   refType,
@@ -31,16 +38,18 @@ async function createReservation({
   lineIndex = null,
   note = '',
 }) {
+  if (!tenantId) throw new Error('createReservation: tenantId required');
   const q = Number(quantity);
   if (q <= 0) throw new Error('Reservation quantity must be positive');
-  const { available } = await getAvailableToReserve(productId);
+  const { available } = await getAvailableToReserve(productId, tenantId);
   if (available < q) {
-    const p = await Product.findById(productId);
+    const p = await Product.findOne({ _id: productId, tenantId: tid(tenantId) });
     throw new Error(
       `Cannot reserve ${q} of ${p?.sku || productId}: only ${available} available (${p?.stock || 0} on hand, others reserved)`
     );
   }
   return StockReservation.create({
+    tenantId: tid(tenantId),
     product: productId,
     quantity: q,
     refType,
@@ -51,8 +60,10 @@ async function createReservation({
   });
 }
 
-async function sumReservedForOrderLine(orderId, lineIndex, productId) {
+async function sumReservedForOrderLine(orderId, lineIndex, productId, tenantId) {
+  if (!tenantId) throw new Error('sumReservedForOrderLine: tenantId required');
   const match = {
+    tenantId: tid(tenantId),
     refType: 'Order',
     refId: new mongoose.Types.ObjectId(orderId),
     lineIndex,
@@ -66,39 +77,57 @@ async function sumReservedForOrderLine(orderId, lineIndex, productId) {
   return agg[0]?.total || 0;
 }
 
-async function releaseOrderReservations(orderId) {
+async function releaseOrderReservations(orderId, tenantId) {
+  if (!tenantId) throw new Error('releaseOrderReservations: tenantId required');
   await StockReservation.updateMany(
-    { refType: 'Order', refId: orderId, status: 'active' },
+    {
+      tenantId: tid(tenantId),
+      refType: 'Order',
+      refId: orderId,
+      status: 'active',
+    },
     { $set: { status: 'released' } }
   );
 }
 
-async function releaseJobReservations(jobId) {
+async function releaseJobReservations(jobId, tenantId) {
+  if (!tenantId) throw new Error('releaseJobReservations: tenantId required');
   await StockReservation.updateMany(
-    { refType: 'ProductionJob', refId: jobId, status: 'active' },
+    {
+      tenantId: tid(tenantId),
+      refType: 'ProductionJob',
+      refId: jobId,
+      status: 'active',
+    },
     { $set: { status: 'released' } }
   );
 }
 
 /** Before consuming components on job completion, drop active material holds */
-async function consumeJobMaterialReservations(jobId) {
+async function consumeJobMaterialReservations(jobId, tenantId) {
+  if (!tenantId) throw new Error('consumeJobMaterialReservations: tenantId required');
   await StockReservation.deleteMany({
+    tenantId: tid(tenantId),
     refType: 'ProductionJob',
     refId: jobId,
     status: 'active',
   });
 }
 
-async function listActiveForOrder(orderId) {
+async function listActiveForOrder(orderId, tenantId) {
+  if (!tenantId) throw new Error('listActiveForOrder: tenantId required');
   return StockReservation.find({
+    tenantId: tid(tenantId),
     refType: 'Order',
     refId: orderId,
     status: 'active',
   }).populate('product', 'name sku');
 }
 
-async function listActiveForJob(jobId) {
+async function listActiveForJob(jobId, tenantId) {
+  if (!tenantId) throw new Error('listActiveForJob: tenantId required');
   return StockReservation.find({
+    tenantId: tid(tenantId),
     refType: 'ProductionJob',
     refId: jobId,
     status: 'active',

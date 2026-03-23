@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Building2, Loader2, Shield } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+import { getApiBaseUrl } from '@/lib/apiBase';
 
 export default function Login() {
   const [emailOrId, setEmailOrId] = useState('');
@@ -29,7 +29,7 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${getApiBaseUrl()}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,8 +45,12 @@ export default function Login() {
 
       if (response.ok) {
         toast.success('Logged in successfully');
-        login(data, data.token);
-        navigate(from, { replace: true });
+        login(data as Record<string, unknown>, data.token);
+        if ((data as { mustChangePassword?: boolean }).mustChangePassword) {
+          navigate('/account/change-password', { replace: true });
+        } else {
+          navigate(from, { replace: true });
+        }
       } else {
         toast.error(data.message || 'Invalid credentials');
       }

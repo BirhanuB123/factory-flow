@@ -2,6 +2,7 @@ const Product = require('../models/Product');
 const ProductionJob = require('../models/ProductionJob');
 const Client = require('../models/Client');
 const asyncHandler = require('../middleware/asyncHandler');
+const { byTenant } = require('../utils/tenantQuery');
 
 // @desc    Global search across products, jobs, and clients
 // @route   GET /api/search
@@ -16,26 +17,23 @@ exports.globalSearch = asyncHandler(async (req, res, next) => {
   const regex = new RegExp(q, 'i');
 
   const [products, jobs, clients] = await Promise.all([
-    Product.find({
-      $or: [
-        { name: regex },
-        { sku: regex },
-        { category: regex }
-      ]
-    }).limit(5),
-    ProductionJob.find({
-      $or: [
-        { jobId: regex },
-        { status: regex }
-      ]
-    }).limit(5).populate('bom'),
-    Client.find({
-      $or: [
-        { name: regex },
-        { contactPerson: regex },
-        { email: regex }
-      ]
-    }).limit(5)
+    Product.find(
+      byTenant(req, {
+        $or: [{ name: regex }, { sku: regex }, { category: regex }],
+      })
+    ).limit(5),
+    ProductionJob.find(
+      byTenant(req, {
+        $or: [{ jobId: regex }, { status: regex }],
+      })
+    )
+      .limit(5)
+      .populate('bom'),
+    Client.find(
+      byTenant(req, {
+        $or: [{ name: regex }, { contactPerson: regex }, { email: regex }],
+      })
+    ).limit(5),
   ]);
 
   const results = [

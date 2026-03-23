@@ -2,13 +2,14 @@ const asyncHandler = require('../middleware/asyncHandler');
 const Invoice = require('../models/Invoice');
 const VendorBill = require('../models/VendorBill');
 const WithholdingCertificate = require('../models/WithholdingCertificate');
+const { byTenant } = require('../utils/tenantQuery');
 const {
   getTaxSettings,
 } = require('../services/ethiopiaTaxService');
 const { formatEthiopianLong, formatEthiopianNumeric } = require('../utils/ethiopianDate');
 
 exports.getEthiopiaTaxSettings = asyncHandler(async (req, res) => {
-  const data = await getTaxSettings();
+  const data = await getTaxSettings(req.tenantId);
   res.json({ success: true, data });
 });
 
@@ -26,7 +27,7 @@ exports.updateEthiopiaTaxSettings = asyncHandler(async (req, res) => {
     'salesPriceBasis',
     'eInvoicingNotes',
   ];
-  const s = await getTaxSettings();
+  const s = await getTaxSettings(req.tenantId);
   for (const k of allowed) {
     if (req.body[k] !== undefined) s[k] = req.body[k];
   }
@@ -43,12 +44,12 @@ function esc(x) {
 
 /** Printable tax invoice (browser print). */
 exports.getTaxInvoiceHtml = asyncHandler(async (req, res) => {
-  const inv = await Invoice.findById(req.params.id).populate('client');
+  const inv = await Invoice.findOne(byTenant(req, { _id: req.params.id })).populate('client');
   if (!inv) {
     res.status(404).setHeader('Content-Type', 'text/plain');
     return res.send('Invoice not found');
   }
-  const settings = await getTaxSettings();
+  const settings = await getTaxSettings(req.tenantId);
   const c = inv.client;
   const cur = settings.currency || 'ETB';
   const taxable = inv.amountTaxable != null ? inv.amountTaxable : inv.amount;
@@ -114,7 +115,7 @@ exports.getTaxInvoiceHtml = asyncHandler(async (req, res) => {
 });
 
 exports.issueSalesWithholdingCertificate = asyncHandler(async (req, res) => {
-  const inv = await Invoice.findById(req.params.id).populate('client');
+  const inv = await Invoice.findOne(byTenant(req, { _id: req.params.id })).populate('client');
   if (!inv) {
     return res.status(404).json({ success: false, message: 'Invoice not found' });
   }
@@ -125,18 +126,21 @@ exports.issueSalesWithholdingCertificate = asyncHandler(async (req, res) => {
       message: 'Invoice has no sales withholding amount; check tax settings and re-issue invoice from order if needed.',
     });
   }
-  const settings = await getTaxSettings();
+  const settings = await getTaxSettings(req.tenantId);
   const period = `${new Date(inv.invoiceDate).getFullYear()}-${String(new Date(inv.invoiceDate).getMonth() + 1).padStart(2, '0')}`;
   const prefix = `WHT-S-${period}-`;
-  const n = await WithholdingCertificate.countDocuments({
-    certificateNumber: new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
-  });
+  const n = await WithholdingCertificate.countDocuments(
+    byTenant(req, {
+      certificateNumber: new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
+    })
+  );
   const certNo = `${prefix}${String(n + 1).padStart(4, '0')}`;
   const base =
     inv.amountTaxable != null
       ? inv.amountTaxable
       : (inv.grossBeforeWht != null ? inv.grossBeforeWht - (inv.vatAmount || 0) : inv.amount);
   const cert = await WithholdingCertificate.create({
+    tenantId: req.tenantId,
     certificateNumber: certNo,
     type: 'on_sales',
     taxPeriod: period,
@@ -178,9 +182,11 @@ exports.reportVatSalesCsv = asyncHandler(async (req, res) => {
   const from = req.query.from ? new Date(req.query.from) : new Date(0);
   const to = req.query.to ? new Date(req.query.to) : new Date();
   to.setHours(23, 59, 59, 999);
-  const list = await Invoice.find({
-    invoiceDate: { $gte: from, $lte: to },
-  })
+  const list = await Invoice.find(
+    byTenant(req, {
+      invoiceDate: { $gte: from, $lte: to },
+    })
+  )
     .populate('client', 'name tin')
     .sort({ invoiceDate: 1 })
     .lean();
@@ -207,9 +213,11 @@ exports.reportVatPurchasesCsv = asyncHandler(async (req, res) => {
   const from = req.query.from ? new Date(req.query.from) : new Date(0);
   const to = req.query.to ? new Date(req.query.to) : new Date();
   to.setHours(23, 59, 59, 999);
-  const list = await VendorBill.find({
-    billDate: { $gte: from, $lte: to },
-  })
+  const list = await VendorBill.find(
+    byTenant(req, {
+      billDate: { $gte: from, $lte: to },
+    })
+  )
     .populate('vendor', 'name tin code')
     .sort({ billDate: 1 })
     .lean();
@@ -235,14 +243,16 @@ exports.reportWithholdingSalesCsv = asyncHandler(async (req, res) => {
   const from = req.query.from ? new Date(req.query.from) : new Date(0);
   const to = req.query.to ? new Date(req.query.to) : new Date();
   to.setHours(23, 59, 59, 999);
-  const list = await Invoice.find({
-    invoiceDate: { $gte: from, $lte: to },
-    salesWhtAmount: { $gt: 0 },
-  })
+  const list = await Invoice.find(
+    byTenant(req, {
+      invoiceDate: { $gte: from, $lte: to },
+      salesWhtAmount: { $gt: 0 },
+    })
+  )
     .populate('client', 'name tin')
     .sort({ invoiceDate: 1 })
     .lean();
-  const settings = await getTaxSettings();
+  const settings = await getTaxSettings(req.tenantId);
   const rows = list.map((inv) => ({
     invoiceId: inv.invoiceId,
     date: inv.invoiceDate ? new Date(inv.invoiceDate).toISOString().slice(0, 10) : '',
@@ -262,14 +272,16 @@ exports.reportWithholdingPurchasesCsv = asyncHandler(async (req, res) => {
   const from = req.query.from ? new Date(req.query.from) : new Date(0);
   const to = req.query.to ? new Date(req.query.to) : new Date();
   to.setHours(23, 59, 59, 999);
-  const list = await VendorBill.find({
-    billDate: { $gte: from, $lte: to },
-    purchaseWhtAmount: { $gt: 0 },
-  })
+  const list = await VendorBill.find(
+    byTenant(req, {
+      billDate: { $gte: from, $lte: to },
+      purchaseWhtAmount: { $gt: 0 },
+    })
+  )
     .populate('vendor', 'name tin')
     .sort({ billDate: 1 })
     .lean();
-  const settings = await getTaxSettings();
+  const settings = await getTaxSettings(req.tenantId);
   const rows = list.map((b) => ({
     billNumber: b.billNumber,
     date: b.billDate ? new Date(b.billDate).toISOString().slice(0, 10) : '',
@@ -286,7 +298,7 @@ exports.reportWithholdingPurchasesCsv = asyncHandler(async (req, res) => {
 });
 
 exports.listWithholdingCertificates = asyncHandler(async (req, res) => {
-  const list = await WithholdingCertificate.find()
+  const list = await WithholdingCertificate.find(byTenant(req))
     .sort({ issueDate: -1 })
     .limit(200)
     .populate('invoice', 'invoiceId')

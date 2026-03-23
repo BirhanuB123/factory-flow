@@ -14,11 +14,16 @@ const CogsLineSchema = new mongoose.Schema(
 /** COGS recognized when invoice is created (at selling price context: cost layer) */
 const CogsEntrySchema = new mongoose.Schema(
   {
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+      index: true,
+    },
     invoice: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Invoice',
       required: true,
-      unique: true,
     },
     order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', default: null },
     lines: [CogsLineSchema],
@@ -27,5 +32,7 @@ const CogsEntrySchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+CogsEntrySchema.index({ tenantId: 1, invoice: 1 }, { unique: true });
 
 module.exports = mongoose.model('CogsEntry', CogsEntrySchema);

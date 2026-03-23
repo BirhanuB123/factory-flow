@@ -33,10 +33,15 @@ const JobOperationSchema = new mongoose.Schema(
 );
 
 const ProductionJobSchema = new mongoose.Schema({
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
+  },
   jobId: {
     type: String,
     required: [true, 'Please add a Job ID'],
-    unique: true
   },
   bom: {
     type: mongoose.Schema.Types.ObjectId,
@@ -84,7 +89,8 @@ const ProductionJobSchema = new mongoose.Schema({
   },
   operations: [JobOperationSchema],
   /** Public token for barcode / traveler URL (no auth on traveler print) — optional protect in prod */
-  travelerToken: { type: String, unique: true, sparse: true, index: true },
+  /** Globally unique; sparse unique index on `travelerToken` is defined below (do not set path-level index/sparse). */
+  travelerToken: { type: String, default: null },
   createdAt: {
     type: Date,
     default: Date.now
@@ -98,5 +104,8 @@ const ProductionJobSchema = new mongoose.Schema({
 ProductionJobSchema.pre('save', function () {
   this.updatedAt = Date.now();
 });
+
+ProductionJobSchema.index({ tenantId: 1, jobId: 1 }, { unique: true });
+ProductionJobSchema.index({ travelerToken: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('ProductionJob', ProductionJobSchema);

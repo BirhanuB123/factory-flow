@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Bell, Settings as SettingsIcon, LogOut, User, Package, AlertTriangle, CheckCircle2, Loader2, Info } from "lucide-react";
+import { Search, Bell, Settings as SettingsIcon, LogOut, User, Shield, AlertTriangle, CheckCircle2, Loader2, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -20,12 +20,13 @@ import {
 import { useNavigate, Link } from "react-router-dom";
 import { useSettings } from "@/hooks/use-settings";
 import { useAuth } from "@/contexts/AuthContext";
+import { SuperTenantSwitcher, TenantContextSelect } from "@/components/SuperTenantSwitcher";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
-const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ||
-  "http://localhost:5000/api";
+import { getApiBaseUrl } from "@/lib/apiBase";
+
+const API_BASE_URL = getApiBaseUrl();
 
 interface NotificationData {
   _id: string;
@@ -315,6 +316,16 @@ export function DashboardHeader() {
                 <p className="text-xs leading-none text-muted-foreground">{user?.email || settings.shopEmail}</p>
               </div>
             </DropdownMenuLabel>
+            {user?.platformRole === "super_admin" ? (
+              <>
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground pt-2">
+                  Company context (API)
+                </DropdownMenuLabel>
+                <div className="px-2 pb-2">
+                  <TenantContextSelect variant="menu" />
+                </div>
+              </>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/profile")}>
               <User className="mr-2 h-4 w-4" />
@@ -324,6 +335,12 @@ export function DashboardHeader() {
               <SettingsIcon className="mr-2 h-4 w-4" />
               <span>Settings</span>
             </DropdownMenuItem>
+            {user?.platformRole === "super_admin" ? (
+              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/platform")}>
+                <Shield className="mr-2 h-4 w-4" />
+                <span>Platform admin</span>
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-destructive focus:bg-destructive/10 cursor-pointer"

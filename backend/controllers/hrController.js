@@ -2,12 +2,13 @@ const asyncHandler = require('express-async-handler');
 const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
 const Payroll = require('../models/Payroll');
+const { byTenant } = require('../utils/tenantQuery');
 
 // @desc    Get all employees
 // @route   GET /api/hr/employees
 // @access  Public
 const getEmployees = asyncHandler(async (req, res) => {
-  const employees = await Employee.find({});
+  const employees = await Employee.find(byTenant(req));
   res.json(employees);
 });
 
@@ -18,6 +19,7 @@ const APP_ROLES = [
   'Admin',
   'hr_head',
   'finance_head',
+  'finance_viewer',
   'employee',
   'purchasing_head',
   'warehouse_head',
@@ -40,7 +42,7 @@ const createEmployee = asyncHandler(async (req, res) => {
     pensionMemberId,
   } = req.body;
 
-  const employeeExists = await Employee.findOne({ employeeId });
+  const employeeExists = await Employee.findOne(byTenant(req, { employeeId }));
 
   if (employeeExists) {
     res.status(400);
@@ -62,6 +64,7 @@ const createEmployee = asyncHandler(async (req, res) => {
   }
 
   const employee = await Employee.create({
+    tenantId: req.tenantId,
     employeeId,
     name,
     role: appRole,
@@ -116,8 +119,8 @@ const updateEmployee = asyncHandler(async (req, res) => {
   if (tinNumber !== undefined) set.tinNumber = String(tinNumber).trim();
   if (pensionMemberId !== undefined) set.pensionMemberId = String(pensionMemberId).trim();
 
-  const updatedEmployee = await Employee.findByIdAndUpdate(
-    req.params.id,
+  const updatedEmployee = await Employee.findOneAndUpdate(
+    byTenant(req, { _id: req.params.id }),
     { $set: set },
     { new: true }
   );
@@ -147,7 +150,7 @@ const updateEmployee = asyncHandler(async (req, res) => {
 // @route   GET /api/hr/attendance
 // @access  Public
 const getAttendance = asyncHandler(async (req, res) => {
-  const attendance = await Attendance.find({}).populate('employee', 'name role');
+  const attendance = await Attendance.find(byTenant(req)).populate('employee', 'name role');
   res.json(attendance);
 });
 
@@ -157,13 +160,20 @@ const getAttendance = asyncHandler(async (req, res) => {
 const logAttendance = asyncHandler(async (req, res) => {
   const { employee, date, status, checkIn, checkOut, notes } = req.body;
 
+  const empOk = await Employee.exists(byTenant(req, { _id: employee }));
+  if (!empOk) {
+    res.status(400);
+    throw new Error('Employee not found for this company');
+  }
+
   const attendance = await Attendance.create({
+    tenantId: req.tenantId,
     employee,
     date,
     status,
     checkIn,
     checkOut,
-    notes
+    notes,
   });
 
   if (attendance) {
@@ -178,7 +188,7 @@ const logAttendance = asyncHandler(async (req, res) => {
 // @route   GET /api/hr/payroll
 // @access  Public
 const getPayroll = asyncHandler(async (req, res) => {
-  const q = {};
+  const q = byTenant(req);
   if (req.query.month && /^\d{4}-\d{2}$/.test(String(req.query.month))) {
     q.month = String(req.query.month).trim();
   }
@@ -194,7 +204,14 @@ const getPayroll = asyncHandler(async (req, res) => {
 const createPayroll = asyncHandler(async (req, res) => {
   const { employee, month, basicSalary, bonuses, deductions, netSalary, paymentStatus, paymentDate } = req.body;
 
+  const empOk = await Employee.exists(byTenant(req, { _id: employee }));
+  if (!empOk) {
+    res.status(400);
+    throw new Error('Employee not found for this company');
+  }
+
   const payroll = await Payroll.create({
+    tenantId: req.tenantId,
     employee,
     month,
     basicSalary,
@@ -202,7 +219,7 @@ const createPayroll = asyncHandler(async (req, res) => {
     deductions,
     netSalary,
     paymentStatus,
-    paymentDate
+    paymentDate,
   });
 
   if (payroll) {

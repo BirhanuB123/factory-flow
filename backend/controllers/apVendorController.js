@@ -7,22 +7,20 @@ const {
   getTaxSettings,
   computePurchaseBillTax,
 } = require('../services/ethiopiaTaxService');
+const { byTenant } = require('../utils/tenantQuery');
 
 exports.listVendors = asyncHandler(async (req, res) => {
   const q = (req.query.q || '').trim();
-  const filter = { active: true };
+  const filter = byTenant(req, { active: true });
   if (q) {
-    filter.$or = [
-      { name: new RegExp(q, 'i') },
-      { code: new RegExp(q, 'i') },
-    ];
+    filter.$or = [{ name: new RegExp(q, 'i') }, { code: new RegExp(q, 'i') }];
   }
   const list = await Vendor.find(filter).sort({ name: 1 });
   res.json({ success: true, data: list });
 });
 
 exports.allVendors = asyncHandler(async (req, res) => {
-  const list = await Vendor.find().sort({ name: 1 });
+  const list = await Vendor.find(byTenant(req)).sort({ name: 1 });
   res.json({ success: true, data: list });
 });
 
@@ -43,6 +41,7 @@ exports.createVendor = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'code and name required' });
   }
   const v = await Vendor.create({
+    tenantId: req.tenantId,
     code: String(code).trim().toUpperCase(),
     name: String(name).trim(),
     email: email || '',
@@ -58,7 +57,9 @@ exports.createVendor = asyncHandler(async (req, res) => {
 });
 
 exports.updateVendor = asyncHandler(async (req, res) => {
-  const v = await Vendor.findByIdAndUpdate(req.params.id, req.body, {
+  const patch = { ...req.body };
+  delete patch.tenantId;
+  const v = await Vendor.findOneAndUpdate(byTenant(req, { _id: req.params.id }), patch, {
     new: true,
     runValidators: true,
   });
@@ -67,7 +68,7 @@ exports.updateVendor = asyncHandler(async (req, res) => {
 });
 
 exports.listVendorBills = asyncHandler(async (req, res) => {
-  const list = await VendorBill.find()
+  const list = await VendorBill.find(byTenant(req))
     .populate('vendor', 'code name')
     .populate('purchaseOrder', 'poNumber')
     .sort({ dueDate: -1 });
@@ -103,7 +104,7 @@ exports.createVendorBill = asyncHandler(async (req, res) => {
       product: l.product || null,
     };
   });
-  const settings = await getTaxSettings();
+  const settings = await getTaxSettings(req.tenantId);
   const supplyType = stIn || 'local_vat_registered';
   const tax = skipPurchaseTax
     ? {
@@ -119,12 +120,10 @@ exports.createVendorBill = asyncHandler(async (req, res) => {
     : computePurchaseBillTax(taxable, settings, { supplyType });
   const bn =
     billNumber || `VB-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
-  const terms =
-    (await Vendor.findById(vendor))?.paymentTermsDays || 30;
-  const due = dueDate
-    ? new Date(dueDate)
-    : new Date(Date.now() + terms * 86400000);
+  const terms = (await Vendor.findOne(byTenant(req, { _id: vendor })))?.paymentTermsDays || 30;
+  const due = dueDate ? new Date(dueDate) : new Date(Date.now() + terms * 86400000);
   const bill = await VendorBill.create({
+    tenantId: req.tenantId,
     billNumber: bn,
     vendor,
     lines: norm,
@@ -141,12 +140,17 @@ exports.createVendorBill = asyncHandler(async (req, res) => {
     notes: notes || '',
     status: 'Open',
   });
-  const populated = await VendorBill.findById(bill._id).populate('vendor', 'code name');
+  const populated = await VendorBill.findOne(byTenant(req, { _id: bill._id })).populate(
+    'vendor',
+    'code name'
+  );
   res.status(201).json({ success: true, data: populated });
 });
 
 exports.createVendorBillFromPO = asyncHandler(async (req, res) => {
-  const po = await PurchaseOrder.findById(req.params.poId).populate('lines.product');
+  const po = await PurchaseOrder.findOne(byTenant(req, { _id: req.params.poId })).populate(
+    'lines.product'
+  );
   if (!po) {
     return res.status(404).json({ success: false, message: 'PO not found' });
   }
@@ -156,7 +160,7 @@ exports.createVendorBillFromPO = asyncHandler(async (req, res) => {
       message: 'PO has no vendor linked; set vendor on PO or create manual bill',
     });
   }
-  const dup = await VendorBill.findOne({ purchaseOrder: po._id });
+  const dup = await VendorBill.findOne(byTenant(req, { purchaseOrder: po._id }));
   if (dup) {
     return res.status(400).json({
       success: false,
@@ -186,13 +190,13 @@ exports.createVendorBillFromPO = asyncHandler(async (req, res) => {
       message: 'PO has no received lines to bill',
     });
   }
-  const settings = await getTaxSettings();
-  const supplyType =
-    po.supplyType === 'import' ? 'import' : 'local_vat_registered';
+  const settings = await getTaxSettings(req.tenantId);
+  const supplyType = po.supplyType === 'import' ? 'import' : 'local_vat_registered';
   const tax = computePurchaseBillTax(taxable, settings, { supplyType });
-  const vendor = await Vendor.findById(po.vendor);
+  const vendor = await Vendor.findOne(byTenant(req, { _id: po.vendor }));
   const due = new Date(Date.now() + (vendor?.paymentTermsDays || 30) * 86400000);
   const bill = await VendorBill.create({
+    tenantId: req.tenantId,
     billNumber: `VB-PO-${po.poNumber}-${Date.now().toString(36)}`,
     vendor: po.vendor,
     purchaseOrder: po._id,
@@ -209,7 +213,7 @@ exports.createVendorBillFromPO = asyncHandler(async (req, res) => {
     status: 'Open',
     notes: `From ${po.poNumber}`,
   });
-  const populated = await VendorBill.findById(bill._id)
+  const populated = await VendorBill.findOne(byTenant(req, { _id: bill._id }))
     .populate('vendor', 'code name')
     .populate('purchaseOrder', 'poNumber');
   res.status(201).json({ success: true, data: populated });
@@ -227,7 +231,7 @@ async function recomputeBillStatus(bill) {
 
 exports.recordVendorPayment = asyncHandler(async (req, res) => {
   const { amount, method, reference, paidAt } = req.body;
-  const bill = await VendorBill.findById(req.params.id);
+  const bill = await VendorBill.findOne(byTenant(req, { _id: req.params.id }));
   if (!bill) {
     return res.status(404).json({ success: false, message: 'Bill not found' });
   }
@@ -243,6 +247,7 @@ exports.recordVendorPayment = asyncHandler(async (req, res) => {
     });
   }
   await VendorPayment.create({
+    tenantId: req.tenantId,
     vendorBill: bill._id,
     amount: pay,
     method: method || 'ach',
@@ -252,21 +257,26 @@ exports.recordVendorPayment = asyncHandler(async (req, res) => {
   });
   bill.amountPaid += pay;
   await recomputeBillStatus(bill);
-  const populated = await VendorBill.findById(bill._id).populate('vendor', 'code name');
+  const populated = await VendorBill.findOne(byTenant(req, { _id: bill._id })).populate(
+    'vendor',
+    'code name'
+  );
   res.json({ success: true, data: populated });
 });
 
 exports.getAPAging = asyncHandler(async (req, res) => {
   const now = new Date();
   await VendorBill.updateMany(
-    { status: { $in: ['Open', 'Partial'] }, dueDate: { $lt: now } },
+    byTenant(req, { status: { $in: ['Open', 'Partial'] }, dueDate: { $lt: now } }),
     { $set: { status: 'Overdue' } }
   );
 
-  const open = await VendorBill.find({
-    status: { $in: ['Open', 'Partial', 'Overdue'] },
-    $expr: { $lt: ['$amountPaid', '$amount'] },
-  })
+  const open = await VendorBill.find(
+    byTenant(req, {
+      status: { $in: ['Open', 'Partial', 'Overdue'] },
+      $expr: { $lt: ['$amountPaid', '$amount'] },
+    })
+  )
     .populate('vendor', 'code name')
     .sort({ dueDate: 1 })
     .lean();

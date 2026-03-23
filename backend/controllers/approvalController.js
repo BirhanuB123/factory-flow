@@ -2,9 +2,10 @@ const asyncHandler = require('../middleware/asyncHandler');
 const ApprovalRequest = require('../models/ApprovalRequest');
 const Order = require('../models/Order');
 const { record: auditRecord } = require('../services/auditService');
+const { byTenant } = require('../utils/tenantQuery');
 
 exports.listPending = asyncHandler(async (req, res) => {
-  const list = await ApprovalRequest.find({ status: 'pending' })
+  const list = await ApprovalRequest.find(byTenant(req, { status: 'pending' }))
     .sort({ createdAt: -1 })
     .populate('requestedBy', 'name employeeId')
     .lean();
@@ -13,7 +14,7 @@ exports.listPending = asyncHandler(async (req, res) => {
 
 exports.approve = asyncHandler(async (req, res) => {
   const { note } = req.body;
-  const ar = await ApprovalRequest.findById(req.params.id);
+  const ar = await ApprovalRequest.findOne(byTenant(req, { _id: req.params.id }));
   if (!ar || ar.status !== 'pending') {
     return res.status(404).json({ success: false, message: 'Request not found or not pending' });
   }
@@ -24,7 +25,7 @@ exports.approve = asyncHandler(async (req, res) => {
   await ar.save();
 
   if (ar.entityType === 'Order') {
-    await Order.findByIdAndUpdate(ar.entityId, {
+    await Order.findOneAndUpdate(byTenant(req, { _id: ar.entityId }), {
       approvalStatus: 'approved',
       pendingApprovalId: null,
     });
@@ -41,7 +42,7 @@ exports.approve = asyncHandler(async (req, res) => {
 
 exports.reject = asyncHandler(async (req, res) => {
   const { note } = req.body;
-  const ar = await ApprovalRequest.findById(req.params.id);
+  const ar = await ApprovalRequest.findOne(byTenant(req, { _id: req.params.id }));
   if (!ar || ar.status !== 'pending') {
     return res.status(404).json({ success: false, message: 'Request not found or not pending' });
   }
@@ -52,7 +53,7 @@ exports.reject = asyncHandler(async (req, res) => {
   await ar.save();
 
   if (ar.entityType === 'Order') {
-    await Order.findByIdAndUpdate(ar.entityId, {
+    await Order.findOneAndUpdate(byTenant(req, { _id: ar.entityId }), {
       approvalStatus: 'rejected',
       pendingApprovalId: null,
     });

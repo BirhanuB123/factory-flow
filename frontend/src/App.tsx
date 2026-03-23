@@ -8,11 +8,14 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { OfflineQueueBanner } from "@/components/OfflineQueueBanner";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AuthProvider } from "./contexts/AuthContext";
 import { LocaleProvider } from "./contexts/LocaleContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Login from "./pages/Login.tsx";
+import InviteAccept from "./pages/InviteAccept.tsx";
+import ChangePassword from "./pages/ChangePassword.tsx";
 import Profile from "./pages/Profile.tsx";
 import Index from "./pages/Index.tsx";
 import ProductionJobs from "./pages/ProductionJobs.tsx";
@@ -28,6 +31,10 @@ import Shipments from "./pages/Shipments.tsx";
 import Settings from "./pages/Settings.tsx";
 import SmeBundle from "./pages/SmeBundle.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import PlatformAdmin from "./pages/PlatformAdmin.tsx";
+import PlatformTenantDetail from "./pages/PlatformTenantDetail.tsx";
+import { SuperAdminRoute } from "./components/SuperAdminRoute";
+import { MustChangePasswordGate } from "./components/MustChangePasswordGate";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -162,6 +169,7 @@ const Layout = () => {
         <div className="flex-1 flex flex-col min-w-0">
           <DashboardHeader />
           <OfflineQueueBanner />
+          <AnnouncementBanner />
           <main className="flex-1 p-4 lg:p-6 overflow-auto">
             <Outlet />
           </main>
@@ -182,8 +190,10 @@ const App = () => {
             <LocaleProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/invite" element={<InviteAccept />} />
               <Route element={<ProtectedRoute />}>
-                <Route element={<Layout />}>
+                <Route element={<MustChangePasswordGate />}>
+                  <Route element={<Layout />}>
                   <Route path="/" element={<Index />} />
                   <Route path="/production" element={<Production />} />
                   <Route path="/production-jobs" element={<ProductionJobs />} />
@@ -218,9 +228,15 @@ const App = () => {
                     <Route path="/shipments" element={<Shipments />} />
                   </Route>
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/account/change-password" element={<ChangePassword />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/sme-bundle" element={<SmeBundle />} />
+                  <Route element={<SuperAdminRoute />}>
+                    <Route path="/platform" element={<PlatformAdmin />} />
+                    <Route path="/platform/tenants/:tenantId" element={<PlatformTenantDetail />} />
+                  </Route>
                   <Route path="*" element={<NotFound />} />
+                  </Route>
                 </Route>
               </Route>
             </Routes>

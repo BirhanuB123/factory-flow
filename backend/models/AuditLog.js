@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 
 const AuditLogSchema = new mongoose.Schema(
   {
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+      index: true,
+    },
     at: { type: Date, default: Date.now, index: true },
     actor: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', default: null },
     action: { type: String, required: true, index: true },

@@ -1,9 +1,14 @@
+const mongoose = require('mongoose');
 const TaxSettings = require('../models/TaxSettings');
 
-async function getTaxSettings() {
-  let doc = await TaxSettings.findOne({ key: 'default' });
+async function getTaxSettings(tenantId) {
+  if (!tenantId) {
+    throw new Error('getTaxSettings: tenantId is required');
+  }
+  const tid = new mongoose.Types.ObjectId(tenantId);
+  let doc = await TaxSettings.findOne({ tenantId: tid, key: 'default' });
   if (!doc) {
-    doc = await TaxSettings.create({ key: 'default' });
+    doc = await TaxSettings.create({ tenantId: tid, key: 'default' });
   }
   return doc;
 }

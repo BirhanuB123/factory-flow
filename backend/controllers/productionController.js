@@ -15,14 +15,15 @@ const {
   releaseJobReservations,
   listActiveForJob,
 } = require('../services/reservationService');
+const { byTenant } = require('../utils/tenantQuery');
 
 exports.getJobs = asyncHandler(async (req, res, next) => {
-  const jobs = await ProductionJob.find().populate('bom');
+  const jobs = await ProductionJob.find(byTenant(req)).populate('bom');
   res.status(200).json({ success: true, count: jobs.length, data: jobs });
 });
 
 exports.getJob = asyncHandler(async (req, res, next) => {
-  const job = await ProductionJob.findById(req.params.id).populate('bom');
+  const job = await ProductionJob.findOne(byTenant(req, { _id: req.params.id })).populate('bom');
   if (!job) {
     return res.status(404).json({ success: false, message: 'Job not found' });
   }
@@ -31,28 +32,29 @@ exports.getJob = asyncHandler(async (req, res, next) => {
 
 exports.createJob = asyncHandler(async (req, res, next) => {
   const payload = { ...req.body, inventoryPosted: false };
+  delete payload.tenantId;
   if (payload.status === 'Completed') {
     payload.inventoryPosted = false;
   }
-  const bom = await BOM.findById(payload.bom);
+  const bom = await BOM.findOne(byTenant(req, { _id: payload.bom }));
   if (!bom) {
     return res.status(400).json({ success: false, message: 'BOM not found' });
   }
   payload.operations = buildOperationsFromBom(bom, payload.quantity);
   payload.travelerToken = randomUUID();
-  const job = await ProductionJob.create(payload);
+  const job = await ProductionJob.create({ ...payload, tenantId: req.tenantId });
 
   if (job.status === 'Completed' && !job.inventoryPosted) {
     try {
       await postProductionCompletion(job);
     } catch (e) {
-      await ProductionJob.findByIdAndDelete(job._id);
+      await ProductionJob.findOneAndDelete(byTenant(req, { _id: job._id }));
       return res.status(400).json({
         success: false,
         message: e.message || 'Could not complete job (inventory)',
       });
     }
-    const updated = await ProductionJob.findById(job._id).populate('bom');
+    const updated = await ProductionJob.findOne(byTenant(req, { _id: job._id })).populate('bom');
     return res.status(201).json({ success: true, data: updated });
   }
 
@@ -79,7 +81,7 @@ exports.createJobFromOrder = asyncHandler(async (req, res) => {
     });
   }
 
-  const order = await Order.findById(orderId).populate('items.product');
+  const order = await Order.findOne(byTenant(req, { _id: orderId })).populate('items.product');
   if (!order || !order.items[idx]) {
     return res.status(404).json({ success: false, message: 'Order or line not found' });
   }
@@ -95,8 +97,8 @@ exports.createJobFromOrder = asyncHandler(async (req, res) => {
   }
   const pid = line.product._id || line.product;
   const bom =
-    (await BOM.findOne({ outputProduct: pid, status: 'Active' })) ||
-    (await BOM.findOne({ outputProduct: pid }));
+    (await BOM.findOne(byTenant(req, { outputProduct: pid, status: 'Active' }))) ||
+    (await BOM.findOne(byTenant(req, { outputProduct: pid })));
 
   if (!bom) {
     return res.status(400).json({
@@ -114,6 +116,7 @@ exports.createJobFromOrder = asyncHandler(async (req, res) => {
     `JOB-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
 
   const job = await ProductionJob.create({
+    tenantId: req.tenantId,
     jobId: jid,
     bom: bom._id,
     quantity: qty,
@@ -133,12 +136,12 @@ exports.createJobFromOrder = asyncHandler(async (req, res) => {
   order.items[idx].productionJob = job._id;
   await order.save();
 
-  const populated = await ProductionJob.findById(job._id).populate('bom');
+  const populated = await ProductionJob.findOne(byTenant(req, { _id: job._id })).populate('bom');
   res.status(201).json({ success: true, data: populated });
 });
 
 exports.reserveJobMaterials = asyncHandler(async (req, res) => {
-  const job = await ProductionJob.findById(req.params.id);
+  const job = await ProductionJob.findOne(byTenant(req, { _id: req.params.id }));
   if (!job) {
     return res.status(404).json({ success: false, message: 'Job not found' });
   }
@@ -149,12 +152,12 @@ exports.reserveJobMaterials = asyncHandler(async (req, res) => {
     });
   }
 
-  const bom = await BOM.findById(job.bom).populate('components.product');
+  const bom = await BOM.findOne(byTenant(req, { _id: job.bom })).populate('components.product');
   if (!bom) {
     return res.status(404).json({ success: false, message: 'BOM not found' });
   }
 
-  await releaseJobReservations(job._id);
+  await releaseJobReservations(job._id, req.tenantId);
   const createdIds = [];
 
   try {
@@ -163,6 +166,7 @@ exports.reserveJobMaterials = asyncHandler(async (req, res) => {
       const need = c.quantity * job.quantity;
       if (need <= 0) continue;
       const doc = await createReservation({
+        tenantId: req.tenantId,
         productId: pid,
         quantity: need,
         refType: 'ProductionJob',
@@ -173,7 +177,7 @@ exports.reserveJobMaterials = asyncHandler(async (req, res) => {
     }
   } catch (e) {
     if (createdIds.length) {
-      await StockReservation.deleteMany({ _id: { $in: createdIds } });
+      await StockReservation.deleteMany(byTenant(req, { _id: { $in: createdIds } }));
     }
     return res.status(400).json({
       success: false,
@@ -181,13 +185,15 @@ exports.reserveJobMaterials = asyncHandler(async (req, res) => {
     });
   }
 
-  await ProductionJob.findByIdAndUpdate(job._id, { materialsReserved: true });
-  const list = await listActiveForJob(job._id);
+  await ProductionJob.findOneAndUpdate(byTenant(req, { _id: job._id }), {
+    materialsReserved: true,
+  });
+  const list = await listActiveForJob(job._id, req.tenantId);
   res.json({ success: true, data: list });
 });
 
 exports.updateJob = asyncHandler(async (req, res, next) => {
-  const job = await ProductionJob.findById(req.params.id);
+  const job = await ProductionJob.findOne(byTenant(req, { _id: req.params.id }));
   if (!job) {
     return res.status(404).json({ success: false, message: 'Job not found' });
   }
@@ -195,9 +201,10 @@ exports.updateJob = asyncHandler(async (req, res, next) => {
   const prevStatus = job.status;
   const nextStatus = req.body.status !== undefined ? req.body.status : prevStatus;
   const body = { ...req.body };
+  delete body.tenantId;
 
   if (nextStatus === 'Cancelled' && prevStatus !== 'Cancelled') {
-    await releaseJobReservations(job._id);
+    await releaseJobReservations(job._id, req.tenantId);
     body.materialsReserved = false;
   }
 
@@ -217,7 +224,7 @@ exports.updateJob = asyncHandler(async (req, res, next) => {
     }
   }
 
-  const updated = await ProductionJob.findByIdAndUpdate(req.params.id, body, {
+  const updated = await ProductionJob.findOneAndUpdate(byTenant(req, { _id: req.params.id }), body, {
     new: true,
     runValidators: true,
   }).populate('bom');
@@ -226,15 +233,15 @@ exports.updateJob = asyncHandler(async (req, res, next) => {
 });
 
 exports.deleteJob = asyncHandler(async (req, res, next) => {
-  const job = await ProductionJob.findById(req.params.id);
+  const job = await ProductionJob.findOne(byTenant(req, { _id: req.params.id }));
   if (!job) {
     return res.status(404).json({ success: false, message: 'Job not found' });
   }
 
-  await releaseJobReservations(job._id);
+  await releaseJobReservations(job._id, req.tenantId);
 
   if (job.sourceOrder != null && job.sourceLineIndex != null) {
-    const order = await Order.findById(job.sourceOrder);
+    const order = await Order.findOne(byTenant(req, { _id: job.sourceOrder }));
     if (order && order.items[job.sourceLineIndex]) {
       const pj = order.items[job.sourceLineIndex].productionJob;
       if (pj && pj.toString() === job._id.toString()) {
@@ -244,7 +251,7 @@ exports.deleteJob = asyncHandler(async (req, res, next) => {
     }
   }
 
-  await ProductionJob.findByIdAndDelete(req.params.id);
+  await ProductionJob.findOneAndDelete(byTenant(req, { _id: req.params.id }));
   res.status(200).json({ success: true, data: {} });
 });
 
@@ -257,19 +264,19 @@ function getOperation(job, opIndex) {
 }
 
 exports.syncJobOperations = asyncHandler(async (req, res) => {
-  const job = await ProductionJob.findById(req.params.id);
+  const job = await ProductionJob.findOne(byTenant(req, { _id: req.params.id }));
   if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
-  const bom = await BOM.findById(job.bom);
+  const bom = await BOM.findOne(byTenant(req, { _id: job.bom }));
   if (!bom) return res.status(404).json({ success: false, message: 'BOM not found' });
   job.operations = buildOperationsFromBom(bom, job.quantity);
   ensureTravelerToken(job);
   await job.save();
-  const populated = await ProductionJob.findById(job._id).populate('bom');
+  const populated = await ProductionJob.findOne(byTenant(req, { _id: job._id })).populate('bom');
   res.json({ success: true, data: populated });
 });
 
 exports.startOperation = asyncHandler(async (req, res) => {
-  const job = await ProductionJob.findById(req.params.id);
+  const job = await ProductionJob.findOne(byTenant(req, { _id: req.params.id }));
   if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
   const got = getOperation(job, req.params.opIndex);
   if (!got) return res.status(400).json({ success: false, message: 'Invalid operation index' });
@@ -284,7 +291,7 @@ exports.startOperation = asyncHandler(async (req, res) => {
 });
 
 exports.completeOperation = asyncHandler(async (req, res) => {
-  const job = await ProductionJob.findById(req.params.id);
+  const job = await ProductionJob.findOne(byTenant(req, { _id: req.params.id }));
   if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
   const got = getOperation(job, req.params.opIndex);
   if (!got) return res.status(400).json({ success: false, message: 'Invalid operation index' });
@@ -300,7 +307,7 @@ exports.logOperationTime = asyncHandler(async (req, res) => {
   if (!minutes || minutes <= 0) {
     return res.status(400).json({ success: false, message: 'minutes > 0 required' });
   }
-  const job = await ProductionJob.findById(req.params.id);
+  const job = await ProductionJob.findOne(byTenant(req, { _id: req.params.id }));
   if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
   const got = getOperation(job, req.params.opIndex);
   if (!got) return res.status(400).json({ success: false, message: 'Invalid operation index' });
@@ -321,7 +328,7 @@ exports.scrapReworkOperation = asyncHandler(async (req, res) => {
   if (scrap < 0 || rework < 0) {
     return res.status(400).json({ success: false, message: 'Quantities must be >= 0' });
   }
-  const job = await ProductionJob.findById(req.params.id);
+  const job = await ProductionJob.findOne(byTenant(req, { _id: req.params.id }));
   if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
   const got = getOperation(job, req.params.opIndex);
   if (!got) return res.status(400).json({ success: false, message: 'Invalid operation index' });

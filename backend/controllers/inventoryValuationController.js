@@ -1,9 +1,10 @@
 const asyncHandler = require('../middleware/asyncHandler');
 const Product = require('../models/Product');
 const { unitCostForSale } = require('../services/costingService');
+const { byTenant } = require('../utils/tenantQuery');
 
 exports.getValuation = asyncHandler(async (req, res) => {
-  const products = await Product.find().select(
+  const products = await Product.find(byTenant(req)).select(
     'name sku stock unitCost costingMethod standardUnitCost'
   );
   const lines = [];

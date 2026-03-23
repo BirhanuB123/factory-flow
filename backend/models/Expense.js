@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const ExpenseSchema = new mongoose.Schema({
+  tenantId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
+  },
   category: {
     type: String,
     required: [true, 'Please add a category']

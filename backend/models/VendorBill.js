@@ -13,7 +13,13 @@ const LineSchema = new mongoose.Schema(
 
 const VendorBillSchema = new mongoose.Schema(
   {
-    billNumber: { type: String, required: true, unique: true, trim: true },
+    tenantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tenant',
+      required: true,
+      index: true,
+    },
+    billNumber: { type: String, required: true, trim: true },
     vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor', required: true },
     purchaseOrder: {
       type: mongoose.Schema.Types.ObjectId,
@@ -46,5 +52,7 @@ const VendorBillSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+VendorBillSchema.index({ tenantId: 1, billNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('VendorBill', VendorBillSchema);

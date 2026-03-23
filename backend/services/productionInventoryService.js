@@ -5,6 +5,10 @@ const Product = require('../models/Product');
 const { applyMovement } = require('./stockService');
 const { consumeJobMaterialReservations } = require('./reservationService');
 
+function tid(tenantId) {
+  return new mongoose.Types.ObjectId(tenantId);
+}
+
 function isReplicaSetError(err) {
   const msg = err && err.message ? String(err.message) : '';
   return (
@@ -15,6 +19,7 @@ function isReplicaSetError(err) {
 }
 
 async function postProductionCompletionWithoutTxn(job, bom, jobQty) {
+  const tenantOid = tid(job.tenantId);
   const consumes = [];
   for (const c of bom.components) {
     const pid = c.product._id || c.product;
@@ -23,7 +28,7 @@ async function postProductionCompletionWithoutTxn(job, bom, jobQty) {
   }
 
   for (const { productId, need } of consumes) {
-    const p = await Product.findById(productId);
+    const p = await Product.findOne({ _id: productId, tenantId: tenantOid });
     if (!p || p.stock < need) {
       throw new Error(
         `Insufficient stock for ${p ? p.sku : productId}: need ${need}, have ${p ? p.stock : 0}`
@@ -35,6 +40,7 @@ async function postProductionCompletionWithoutTxn(job, bom, jobQty) {
   try {
     for (const { productId, need } of consumes) {
       await applyMovement(null, {
+        tenantId: job.tenantId,
         productId,
         delta: -need,
         movementType: 'production_consume',
@@ -45,6 +51,7 @@ async function postProductionCompletionWithoutTxn(job, bom, jobQty) {
       done.push({ productId, delta: -need });
     }
     await applyMovement(null, {
+      tenantId: job.tenantId,
       productId: bom.outputProduct,
       delta: jobQty,
       movementType: 'production_output',
@@ -57,6 +64,7 @@ async function postProductionCompletionWithoutTxn(job, bom, jobQty) {
     for (const d of done.reverse()) {
       try {
         await applyMovement(null, {
+          tenantId: job.tenantId,
           productId: d.productId,
           delta: -d.delta,
           movementType: 'adjustment',
@@ -73,7 +81,10 @@ async function postProductionCompletionWithoutTxn(job, bom, jobQty) {
 }
 
 async function postProductionCompletion(job) {
-  const bom = await BOM.findById(job.bom).populate('components.product');
+  const bom = await BOM.findOne({
+    _id: job.bom,
+    tenantId: tid(job.tenantId),
+  }).populate('components.product');
   if (!bom) {
     throw new Error('BOM not found');
   }
@@ -91,7 +102,7 @@ async function postProductionCompletion(job) {
     throw new Error('This BOM is past its effective end date (effectiveTo)');
   }
 
-  await consumeJobMaterialReservations(job._id);
+  await consumeJobMaterialReservations(job._id, job.tenantId);
 
   const jobQty = job.quantity;
   let posted = false;
@@ -104,6 +115,7 @@ async function postProductionCompletion(job) {
       const need = c.quantity * jobQty;
       if (need > 0) {
         await applyMovement(session, {
+          tenantId: job.tenantId,
           productId: pid,
           delta: -need,
           movementType: 'production_consume',
@@ -114,6 +126,7 @@ async function postProductionCompletion(job) {
       }
     }
     await applyMovement(session, {
+      tenantId: job.tenantId,
       productId: bom.outputProduct,
       delta: jobQty,
       movementType: 'production_output',
@@ -136,7 +149,10 @@ async function postProductionCompletion(job) {
   }
 
   if (posted) {
-    await ProductionJob.findByIdAndUpdate(job._id, { inventoryPosted: true });
+    await ProductionJob.findOneAndUpdate(
+      { _id: job._id, tenantId: tid(job.tenantId) },
+      { inventoryPosted: true }
+    );
   }
 }
 

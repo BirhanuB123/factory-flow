@@ -2,12 +2,13 @@ const asyncHandler = require('../middleware/asyncHandler');
 const StockMovement = require('../models/StockMovement');
 const { applyMovement } = require('../services/stockService');
 const audit = require('../services/auditService');
+const { byTenant } = require('../utils/tenantQuery');
 
 const VALID_KINDS = ['receipt', 'issue', 'adjustment'];
 
 exports.getMovements = asyncHandler(async (req, res) => {
   const { productId, limit = '100', skip = '0' } = req.query;
-  const q = {};
+  const q = byTenant(req);
   if (productId) q.product = productId;
 
   const movements = await StockMovement.find(q)
@@ -66,6 +67,7 @@ exports.createMovement = asyncHandler(async (req, res) => {
 
   try {
     const movement = await applyMovement(null, {
+      tenantId: req.tenantId,
       productId,
       delta,
       movementType,
@@ -74,7 +76,7 @@ exports.createMovement = asyncHandler(async (req, res) => {
       lotNumber: lotNumber || '',
       batchNumber: batchNumber || '',
     });
-    const populated = await StockMovement.findById(movement._id).populate(
+    const populated = await StockMovement.findOne(byTenant(req, { _id: movement._id })).populate(
       'product',
       'name sku stock unit'
     );

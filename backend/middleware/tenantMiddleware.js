@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Tenant = require('../models/Tenant');
+const { ensureTenantAccess, ensureTenantExists } = require('../utils/tenantAccess');
 
 function parseTenantHeader(req) {
   const raw = req.headers['x-tenant-id'];
@@ -10,13 +10,7 @@ function parseTenantHeader(req) {
 }
 
 async function ensureTenantUsable(tenantId) {
-  const t = await Tenant.findById(tenantId).select('status');
-  if (!t) return { ok: false, reason: 'Tenant not found' };
-  const status = String(t.status || '').toLowerCase();
-  if (!['active', 'trial'].includes(status)) {
-    return { ok: false, reason: `Tenant is ${status || 'unavailable'}` };
-  }
-  return { ok: true };
+  return ensureTenantAccess(tenantId);
 }
 
 /**
@@ -37,11 +31,16 @@ async function withTenant(req, res, next) {
     const isSuper = user.platformRole === 'super_admin';
 
     if (isSuper) {
+      // Subscription / trial gates apply to tenant users only — not super_admin (otherwise
+      // a super admin homed on a suspended default company gets 403 on every /api call and
+      // the SPA logs them out).
       if (headerTenantId) {
-        const check = await ensureTenantUsable(headerTenantId);
+        const check = await ensureTenantExists(headerTenantId);
         if (!check.ok) {
-          const err = new Error(check.reason === 'Tenant not found' ? 'Invalid tenant id (x-tenant-id)' : check.reason);
-          err.statusCode = check.reason === 'Tenant not found' ? 400 : 403;
+          const err = new Error(
+            check.reason === 'Tenant not found' ? 'Invalid tenant id (x-tenant-id)' : check.reason
+          );
+          err.statusCode = check.code || (check.reason === 'Tenant not found' ? 400 : 403);
           return next(err);
         }
         req.tenantId = headerTenantId;
@@ -50,10 +49,10 @@ async function withTenant(req, res, next) {
       }
       if (user.tenantId) {
         const tid = String(user.tenantId);
-        const check = await ensureTenantUsable(tid);
+        const check = await ensureTenantExists(tid);
         if (!check.ok) {
           const err = new Error(check.reason);
-          err.statusCode = check.reason === 'Tenant not found' ? 400 : 403;
+          err.statusCode = check.code || (check.reason === 'Tenant not found' ? 400 : 403);
           return next(err);
         }
         req.tenantId = tid;
@@ -79,7 +78,7 @@ async function withTenant(req, res, next) {
     const check = await ensureTenantUsable(tid);
     if (!check.ok) {
       const err = new Error(check.reason);
-      err.statusCode = check.reason === 'Tenant not found' ? 400 : 403;
+      err.statusCode = check.code || (check.reason === 'Tenant not found' ? 400 : 403);
       return next(err);
     }
 

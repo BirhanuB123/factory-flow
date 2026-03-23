@@ -60,7 +60,7 @@ Then use `x-tenant-id` on requests to act inside a specific tenant (or rely on t
 - **UI:** Route `/platform` (sidebar **Platform** + user menu), visible only when `platformRole === 'super_admin'`. Per-tenant **`/platform/tenants/:tenantId`**: profile, counts, user sample, status, **Work in this company** (sets act-as + goes to dashboard).
 - **Cross-tenant search (super admin):** `GET /api/platform/tenants?q=<key-or-name>` filters by tenant `key`, `displayName`, or `legalName` (case-insensitive) so platform UI can quickly find and jump into tenant context.
 - **Announcements / maintenance banners:** tenant-level announcement is stored on `Tenant.announcement`; global fallback is stored in `PlatformSettings.globalAnnouncement`.
-  - Super admin endpoints: `GET /api/platform/announcement`, `PATCH /api/platform/announcement`
+  - Super admin endpoints: `GET /api/platform/announcement`, `PATCH` or `PUT /api/platform/announcement`
   - Tenant-level update: `PATCH /api/platform/tenants/:id` with `announcement`
   - Runtime banner endpoint (authenticated): `GET /api/announcements/current` (tenant announcement overrides global)
 - **Tenant switcher:** Header control stores override in `localStorage` key `erp_act_as_tenant_id`; axios sends **`x-tenant-id`** via `getEffectiveTenantIdForRequest()` (super admin: act-as wins, else profile `tenantId`).

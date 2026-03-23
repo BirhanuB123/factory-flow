@@ -3,6 +3,18 @@ import { getEffectiveTenantIdForRequest } from '@/lib/tenantContext';
 import { getApiBaseUrl } from '@/lib/apiBase';
 
 const API_BASE_URL = getApiBaseUrl();
+
+function isStoredUserSuperAdmin(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const raw = localStorage.getItem('erp_user');
+    if (!raw) return false;
+    const u = JSON.parse(raw) as { platformRole?: string };
+    return u?.platformRole === 'super_admin';
+  } catch {
+    return false;
+  }
+}
 let nextPlatformStepUpPassword: string | null = null;
 let cachedPlatformStepUpPassword: string | null = null;
 let cachedPlatformStepUpUntilMs = 0;
@@ -133,11 +145,22 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const url = String(error.config?.url ?? '');
     const message = String(error.response?.data?.message || '');
+    const lowerMessage = message.toLowerCase();
     const isStepUp401 = status === 401 && message.toLowerCase().includes('step-up');
+    const isSubscriptionBlocked403 =
+      status === 403 &&
+      lowerMessage.includes('tenant') &&
+      (lowerMessage.includes('suspended') ||
+        lowerMessage.includes('archived') ||
+        lowerMessage.includes('trial expired') ||
+        lowerMessage.includes('subscription'));
     if (isStepUp401) {
       clearPlatformStepUpCache();
     }
-    if (status === 401 && !url.includes('/auth/login') && !isStepUp401) {
+    const kickToLogin =
+      (status === 401 && !url.includes('/auth/login') && !isStepUp401) ||
+      (isSubscriptionBlocked403 && !isStoredUserSuperAdmin());
+    if (kickToLogin) {
       localStorage.removeItem('erp_token');
       localStorage.removeItem('erp_user');
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
@@ -989,7 +1012,8 @@ export const platformApi = {
     level?: "info" | "warning" | "maintenance";
     message?: string;
   }) => {
-    const response = await api.patch<{
+    // PUT avoids rare "Cannot PATCH" from proxies; backend accepts PATCH and PUT.
+    const response = await api.put<{
       success: boolean;
       data: {
         enabled: boolean;

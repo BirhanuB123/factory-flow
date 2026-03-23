@@ -4,6 +4,7 @@ const Tenant = require('../models/Tenant');
 const generateToken = require('../utils/generateToken');
 const { rolePermissions } = require('../config/permissions');
 const { hashInviteToken } = require('../utils/inviteToken');
+const { ensureTenantAccess } = require('../utils/tenantAccess');
 
 async function buildTenantSubscription(tenantId) {
   if (!tenantId) return null;
@@ -30,6 +31,15 @@ const loginUser = asyncHandler(async (req, res) => {
   });
 
   if (user && (await user.matchPassword(password))) {
+    if (user.platformRole !== 'super_admin') {
+      const access = await ensureTenantAccess(user.tenantId);
+      if (!access.ok) {
+        return res.status(access.code || 403).json({
+          success: false,
+          message: access.reason || 'Tenant subscription is not active',
+        });
+      }
+    }
     const tenantSubscription = await buildTenantSubscription(user.tenantId);
     res.json({
       _id: user._id,
@@ -60,6 +70,15 @@ const getMe = asyncHandler(async (req, res) => {
   const user = await Employee.findById(req.user._id);
 
   if (user) {
+    if (user.platformRole !== 'super_admin') {
+      const access = await ensureTenantAccess(user.tenantId);
+      if (!access.ok) {
+        return res.status(access.code || 403).json({
+          success: false,
+          message: access.reason || 'Tenant subscription is not active',
+        });
+      }
+    }
     const tenantSubscription = await buildTenantSubscription(user.tenantId);
     res.json({
       _id: user._id,

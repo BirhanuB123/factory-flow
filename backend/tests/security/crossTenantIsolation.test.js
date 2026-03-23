@@ -18,6 +18,7 @@ jest.mock('../../models/Tenant', () => ({
   findByIdAndUpdate: jest.fn(),
   aggregate: jest.fn(),
   updateOne: jest.fn().mockResolvedValue({ acknowledged: true }),
+  exists: jest.fn(),
 }));
 
 jest.mock('../../models/Product', () => ({
@@ -91,6 +92,7 @@ describe('Cross-tenant hardening suite', () => {
   const tenantB = '64f0000000000000000000b2';
 
   beforeEach(() => {
+    Tenant.exists.mockResolvedValue({ _id: tenantA });
     Tenant.findById.mockReturnValue({
       select: jest.fn().mockResolvedValue({ _id: tenantA, status: 'active' }),
     });

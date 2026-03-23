@@ -184,12 +184,38 @@ describe('Two-tenant integration (MongoMemoryServer)', () => {
     expect(res.body.data.sku).toBe('SKU-B-INT');
   });
 
+  test('super admin can use tenant API when home tenant is suspended', async () => {
+    await Tenant.updateOne({ _id: tenantAId }, { $set: { status: 'suspended', statusReason: 'Test' } });
+
+    const res = await request(app)
+      .get(`/api/products/${productAId}`)
+      .set('Authorization', authSuper());
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.sku).toBe('SKU-A-INT');
+  });
+
   test('suspended tenant blocks API for normal user (403)', async () => {
     await Tenant.updateOne({ _id: tenantAId }, { $set: { status: 'suspended' } });
 
     const res = await request(app)
       .get(`/api/products/${productAId}`)
       .set('Authorization', authA());
+
+    expect(res.status).toBe(403);
+    expect(String(res.body.message || '')).toMatch(/suspended/i);
+  });
+
+  test('suspended tenant blocks login for normal user (403)', async () => {
+    await Tenant.updateOne(
+      { _id: tenantAId },
+      { $set: { status: 'suspended', statusReason: 'Trial expired' } }
+    );
+
+    const res = await request(app).post('/api/auth/login').send({
+      employeeId: 'INT-A-001',
+      password: 'testpass123',
+    });
 
     expect(res.status).toBe(403);
     expect(String(res.body.message || '')).toMatch(/suspended/i);

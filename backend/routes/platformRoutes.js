@@ -7,6 +7,7 @@ const {
   updateTenantStatus,
   extendTenantTrial,
   createTenantAdmin,
+  resetTenantAdminAccess,
   getPlatformMetrics,
   listPlatformAuditLogs,
   exportPlatformAuditLogsCsv,
@@ -27,6 +28,7 @@ router.patch('/tenants/:id/status', updateTenantStatus);
 router.patch('/tenants/:id/trial', extendTenantTrial);
 router.patch('/tenants/:id', patchTenant);
 router.post('/tenants/:id/admin', createTenantAdmin);
+router.post('/tenants/:id/admins/:employeeId/reset-access', resetTenantAdminAccess);
 router.get('/metrics', getPlatformMetrics);
 router.get('/audit-logs/export', exportPlatformAuditLogsCsv);
 router.get('/audit-logs', listPlatformAuditLogs);

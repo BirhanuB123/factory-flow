@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api, { auditApi, ethiopiaTaxApi, type EthiopiaTaxSettings } from "@/lib/api";
+import { useLocation, useNavigate } from "react-router-dom";
+import api, { auditApi, billingApi, ethiopiaTaxApi, type EthiopiaTaxSettings } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,8 @@ import {
 } from "@/components/ui/table";
 
 const SETTINGS_KEY = "erp-settings";
+const DEVICE_ONLY_LABEL = "Device-only preference";
+const TENANT_WIDE_LABEL = "Tenant-wide server setting";
 
 function subscriptionBadgeVariant(
   status?: string
@@ -163,7 +166,9 @@ const defaultSettings = {
 };
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, refreshPermissions } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const tenantSubscription = user?.tenantSubscription;
   const trialDate = tenantSubscription?.trialEndDate ? new Date(tenantSubscription.trialEndDate) : null;
   const trialDaysLeft =
@@ -227,6 +232,54 @@ export default function Settings() {
     },
     onError: () => toast.error("Could not save tax settings"),
   });
+  const startChapaCheckout = useMutation({
+    mutationFn: (body?: { plan?: string; email?: string; returnPath?: string }) =>
+      billingApi.startChapaCheckout(body),
+    onSuccess: (result) => {
+      const checkoutUrl = result?.data?.checkoutUrl;
+      if (!checkoutUrl) {
+        toast.error("Could not open Chapa checkout");
+        return;
+      }
+      window.location.assign(checkoutUrl);
+    },
+    onError: (err: unknown) => {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Could not start Chapa checkout";
+      toast.error(message);
+    },
+  });
+  const verifyChapaCheckout = useMutation({
+    mutationFn: (txRef: string) => billingApi.verifyChapaPayment(txRef),
+    onSuccess: async () => {
+      await refreshPermissions();
+      toast.success("Payment verified. Subscription is now active.");
+      const params = new URLSearchParams(location.search);
+      params.delete("chapa_ref");
+      params.delete("chapa_status");
+      navigate(
+        {
+          pathname: location.pathname,
+          search: params.toString() ? `?${params.toString()}` : "",
+        },
+        { replace: true }
+      );
+    },
+    onError: (err: unknown) => {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Payment not yet completed";
+      toast.error(message);
+    },
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const txRef = String(params.get("chapa_ref") || "").trim();
+    if (!txRef || verifyChapaCheckout.isPending || verifyChapaCheckout.isSuccess) return;
+    verifyChapaCheckout.mutate(txRef);
+  }, [location.search, verifyChapaCheckout]);
 
   useEffect(() => {
     try {
@@ -326,12 +379,17 @@ export default function Settings() {
     setShowEthiopianDates(defaultSettings.showEthiopianDates);
     toast.success("Settings reset to defaults");
   };
+  const canSelfPaySubscription = user?.role === "Admin" || user?.role === "finance_head";
+  const handlePayWithChapa = () => {
+    const plan = String(tenantSubscription?.plan || "starter").toLowerCase();
+    startChapaCheckout.mutate({ plan, returnPath: "/settings", email: shopEmail || user?.email });
+  };
 
   return (
     <ModuleDashboardLayout
-      className="max-w-5xl"
+      className="max-w-[1400px]"
       title="Control Center"
-      description="Global configuration, facility profile, and alerts—same command layout as Production."
+      description="Manage company profile, regional preferences, notifications, and policy settings."
       icon={SettingsIcon}
       healthStats={[
         { label: "Core build", value: "1.2.0", accent: "text-primary" },
@@ -349,7 +407,7 @@ export default function Settings() {
           </Button>
           <Button
             onClick={handleSave}
-            className="h-11 rounded-xl px-8 font-black uppercase italic text-xs tracking-widest shadow-xl shadow-primary/20 gap-2 bg-primary"
+            className="h-11 rounded-xl px-6 font-semibold text-sm gap-2"
           >
             <Save className="h-4 w-4" />
             Save
@@ -357,12 +415,30 @@ export default function Settings() {
         </div>
       }
     >
-      <Tabs defaultValue="shop" className="space-y-8">
+      <Tabs defaultValue="shop" className="space-y-6">
+        <Card className="rounded-2xl border-border/60 bg-background/70">
+          <CardContent className="pt-5 pb-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
+                {DEVICE_ONLY_LABEL}
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                Saved in this browser only. Other users and devices will not see these values.
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <Badge className="text-[10px] uppercase tracking-wider">{TENANT_WIDE_LABEL}</Badge>
+              <span className="text-xs text-muted-foreground">
+                Stored on the server for your company and shared with authorized users.
+              </span>
+            </div>
+          </CardContent>
+        </Card>
         <StickyModuleTabs>
           <TabsList className={moduleTabsListClassName()}>
             <TabsTrigger value="shop" className={moduleTabsTriggerClassName()}>
               <Factory className="h-4 w-4 shrink-0" />
-              Facility
+              Company
             </TabsTrigger>
             <TabsTrigger value="user" className={moduleTabsTriggerClassName()}>
               <User className="h-4 w-4 shrink-0" />
@@ -457,62 +533,83 @@ export default function Settings() {
                         <span>Review with your platform administrator</span>
                       )}
                     </div>
+                    {canSelfPaySubscription ? (
+                      <Button
+                        onClick={handlePayWithChapa}
+                        disabled={startChapaCheckout.isPending || verifyChapaCheckout.isPending}
+                        className="h-8 rounded-lg text-[11px] font-bold uppercase tracking-wider"
+                        variant="default"
+                      >
+                        {startChapaCheckout.isPending || verifyChapaCheckout.isPending ? (
+                          <>
+                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                            Processing
+                          </>
+                        ) : (
+                          "Pay with Chapa"
+                        )}
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-white/10 bg-white/[0.02] backdrop-blur-2xl rounded-[2rem] overflow-hidden shadow-2xl transition-all hover:bg-white/[0.03]">
-              <CardHeader className="p-8 pb-4">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm xl:col-span-2">
+              <CardHeader className="p-6 pb-3">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-white/10 text-primary">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
                     <Factory className="h-4 w-4" />
                   </div>
-                  <CardTitle className="text-lg font-black uppercase tracking-tighter italic">Factory Identity</CardTitle>
+                  <CardTitle className="text-base font-semibold">Company Profile</CardTitle>
                 </div>
-                <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40 italic">Structural credentials for institutional sync</CardDescription>
+                <Badge className="w-fit text-[10px] uppercase tracking-wider">{DEVICE_ONLY_LABEL}</Badge>
+                <CardDescription className="text-xs text-muted-foreground">
+                  Local profile details used on this device.
+                </CardDescription>
               </CardHeader>
-              <CardContent className="p-8 pt-0 space-y-4">
+              <CardContent className="p-6 pt-0 space-y-4">
                 <div className="grid gap-6">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">Legal Shop Designation</Label>
-                    <Input value={shopName} onChange={(e) => setShopName(e.target.value)} className="h-12 bg-white/5 border-white/10 rounded-xl font-bold text-base italic" />
+                    <Label className="text-[11px] font-medium text-muted-foreground">Company name</Label>
+                    <Input value={shopName} onChange={(e) => setShopName(e.target.value)} className="h-11 rounded-xl" />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">Technical Contact</Label>
-                    <Input type="email" value={shopEmail} onChange={(e) => setShopEmail(e.target.value)} className="h-12 bg-white/5 border-white/10 rounded-xl font-bold font-mono" />
+                    <Label className="text-[11px] font-medium text-muted-foreground">Contact email</Label>
+                    <Input type="email" value={shopEmail} onChange={(e) => setShopEmail(e.target.value)} className="h-11 rounded-xl" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">Comms Terminal</Label>
-                      <Input value={shopPhone} onChange={(e) => setShopPhone(e.target.value)} className="h-12 bg-white/5 border-white/10 rounded-xl font-bold font-mono" />
+                      <Label className="text-[11px] font-medium text-muted-foreground">Phone</Label>
+                      <Input value={shopPhone} onChange={(e) => setShopPhone(e.target.value)} className="h-11 rounded-xl" />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">Regional Code</Label>
-                      <Input value={shopCity} onChange={(e) => setShopCity(e.target.value)} className="h-12 bg-white/5 border-white/10 rounded-xl font-bold" />
+                      <Label className="text-[11px] font-medium text-muted-foreground">City/Region</Label>
+                      <Input value={shopCity} onChange={(e) => setShopCity(e.target.value)} className="h-11 rounded-xl" />
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="space-y-6">
-              <Card className="border-white/10 bg-white/[0.02] backdrop-blur-2xl rounded-[2rem] overflow-hidden shadow-2xl">
-                <CardHeader className="p-8 pb-4 font-black uppercase italic">
+            <div className="space-y-6 xl:col-span-1">
+              <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
+                <CardHeader className="p-6 pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-white/10 text-blue-500">
+                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-500">
                       <Globe className="h-4 w-4" />
                     </div>
-                    <span>Regional Synchro</span>
+                    <span className="text-base font-semibold">Regional Settings</span>
                   </div>
+                <Badge className="w-fit text-[10px] uppercase tracking-wider">{DEVICE_ONLY_LABEL}</Badge>
                 </CardHeader>
-                <CardContent className="p-8 pt-0 space-y-6">
+                <CardContent className="p-6 pt-0 space-y-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">Temporal Zone</Label>
+                      <Label className="text-[11px] font-medium text-muted-foreground">Timezone</Label>
                       <Select value={timezone} onValueChange={setTimezone}>
-                        <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl font-bold italic">
+                        <SelectTrigger className="h-11 rounded-xl">
                           <Clock className="h-4 w-4 mr-2 text-primary" />
                           <SelectValue />
                         </SelectTrigger>
@@ -527,9 +624,9 @@ export default function Settings() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">Monetary Standard</Label>
+                      <Label className="text-[11px] font-medium text-muted-foreground">Currency</Label>
                       <Select value={currency} onValueChange={setCurrency}>
-                        <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl font-bold italic font-mono text-primary">
+                        <SelectTrigger className="h-11 rounded-xl">
                           <Globe className="h-4 w-4 mr-2" />
                           <SelectValue />
                         </SelectTrigger>
@@ -543,14 +640,14 @@ export default function Settings() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">
-                        UI language (sidebar)
+                      <Label className="text-[11px] font-medium text-muted-foreground">
+                        Interface language
                       </Label>
                       <Select
                         value={uiLanguage}
                         onValueChange={(v) => setUiLanguage(v as "en" | "am" | "om")}
                       >
-                        <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl font-bold">
+                        <SelectTrigger className="h-11 rounded-xl">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -560,10 +657,10 @@ export default function Settings() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                    <div className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-muted/20">
                       <div>
-                        <p className="text-xs font-black uppercase italic">Ethiopian dates</p>
-                        <p className="text-[9px] text-muted-foreground">
+                        <p className="text-xs font-semibold">Ethiopian date display</p>
+                        <p className="text-[11px] text-muted-foreground">
                           Show EC next to Gregorian (G.C.) in lists
                         </p>
                       </div>
@@ -576,14 +673,22 @@ export default function Settings() {
                   </div>
                 </CardContent>
               </Card>
-              
-              <div className="p-8 rounded-[2rem] bg-gradient-to-br from-primary/20 to-blue-500/10 border border-white/10 backdrop-blur-3xl flex items-center justify-between">
-                <div className="space-y-1">
-                  <h3 className="text-xl font-black italic uppercase tracking-tighter">Live Status</h3>
-                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-40 italic underline decoration-primary/30 underline-offset-4">Sector Ready for synchronization</p>
-                </div>
-                <div className="h-12 w-12 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-              </div>
+
+              <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold">Sync Status</p>
+                      <p className="text-xs text-muted-foreground">
+                        Settings are saved locally on this device until synced to server-backed modules.
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="uppercase tracking-wider text-[10px]">
+                      Ready
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </TabsContent>
@@ -591,46 +696,48 @@ export default function Settings() {
         {/* User Preferences */}
         <TabsContent value="user" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-white/10 bg-white/[0.02] backdrop-blur-2xl rounded-[2rem] overflow-hidden shadow-2xl transition-all hover:bg-white/[0.03]">
-              <CardHeader className="p-8 pb-4">
+            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
+              <CardHeader className="p-6 pb-3">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-white/10 text-primary">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
                     <User className="h-4 w-4" />
                   </div>
-                  <CardTitle className="text-lg font-black uppercase tracking-tighter italic">Identity Profile</CardTitle>
+                  <CardTitle className="text-base font-semibold">Identity Profile</CardTitle>
                 </div>
-                <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40 italic">User-specific authorization data</CardDescription>
+                <Badge className="w-fit text-[10px] uppercase tracking-wider">{DEVICE_ONLY_LABEL}</Badge>
+                <CardDescription className="text-xs text-muted-foreground">Local profile preferences on this device.</CardDescription>
               </CardHeader>
-              <CardContent className="p-8 pt-0 space-y-4">
+              <CardContent className="p-6 pt-0 space-y-4">
                 <div className="grid gap-6">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">Display Alias</Label>
-                    <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="h-12 bg-white/5 border-white/10 rounded-xl font-bold text-base italic" />
+                    <Label className="text-[11px] font-medium text-muted-foreground">Display name</Label>
+                    <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="h-11 rounded-xl" />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">Rank & Privilege</Label>
-                    <Input value={role} disabled className="h-12 bg-white/5 border-white/5 rounded-xl font-black uppercase italic text-xs tracking-widest opacity-50" />
+                    <Label className="text-[11px] font-medium text-muted-foreground">Role</Label>
+                    <Input value={role} disabled className="h-11 rounded-xl opacity-70" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-white/10 bg-white/[0.02] backdrop-blur-2xl rounded-[2rem] overflow-hidden shadow-2xl transition-all hover:bg-white/[0.03]">
-              <CardHeader className="p-8 pb-4">
+            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
+              <CardHeader className="p-6 pb-3">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-white/10 text-blue-500">
+                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-500">
                     <Palette className="h-4 w-4" />
                   </div>
-                  <CardTitle className="text-lg font-black uppercase tracking-tighter italic">Interface Specs</CardTitle>
+                  <CardTitle className="text-base font-semibold">Interface Preferences</CardTitle>
                 </div>
-                <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40 italic">Viewport & aesthetic overrides</CardDescription>
+                <Badge className="w-fit text-[10px] uppercase tracking-wider">{DEVICE_ONLY_LABEL}</Badge>
+                <CardDescription className="text-xs text-muted-foreground">Display and layout behavior for this browser.</CardDescription>
               </CardHeader>
-              <CardContent className="p-8 pt-0 space-y-6">
+              <CardContent className="p-6 pt-0 space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">Chronicle Format</Label>
+                    <Label className="text-[11px] font-medium text-muted-foreground">Date format</Label>
                     <Select value={dateFormat} onValueChange={setDateFormat}>
-                      <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl font-bold italic"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-card/95 backdrop-blur-2xl border-white/10">
                         <SelectItem value="YYYY-MM-DD">2026-03-12</SelectItem>
                         <SelectItem value="MM/DD/YYYY">03/12/2026</SelectItem>
@@ -639,9 +746,9 @@ export default function Settings() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground/60 tracking-widest ml-1">Default Viewforce</Label>
+                    <Label className="text-[11px] font-medium text-muted-foreground">Default job view</Label>
                     <Select value={defaultJobView} onValueChange={setDefaultJobView}>
-                      <SelectTrigger className="h-12 bg-white/5 border-white/10 rounded-xl font-bold italic"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-card/95 backdrop-blur-2xl border-white/10">
                         <SelectItem value="table">Ledger Table</SelectItem>
                         <SelectItem value="kanban">Kanban Grid</SelectItem>
@@ -650,19 +757,19 @@ export default function Settings() {
                     </Select>
                   </div>
                 </div>
-                <Separator className="bg-white/5" />
+                <Separator />
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-muted/20">
                     <div className="space-y-0.5">
-                      <p className="text-xs font-black uppercase italic tracking-wider">Density Mode</p>
-                      <p className="text-[9px] font-bold text-muted-foreground/60 italic uppercase tracking-widest">Minimalist data spacing toggle</p>
+                      <p className="text-xs font-semibold">Compact density</p>
+                      <p className="text-[11px] text-muted-foreground">Show denser table and list spacing.</p>
                     </div>
                     <Switch checked={compactView} onCheckedChange={setCompactView} className="data-[state=checked]:bg-primary" />
                   </div>
-                  <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-muted/20">
                     <div className="space-y-0.5">
-                      <p className="text-xs font-black uppercase italic tracking-wider">Dark Protocol</p>
-                      <p className="text-[9px] font-bold text-muted-foreground/60 italic uppercase tracking-widest">High-contrast nocturnal mode</p>
+                      <p className="text-xs font-semibold">Dark mode</p>
+                      <p className="text-[11px] text-muted-foreground">Use dark theme for low-light environments.</p>
                     </div>
                     <Switch checked={darkMode} onCheckedChange={setDarkMode} className="data-[state=checked]:bg-primary" />
                   </div>
@@ -675,29 +782,29 @@ export default function Settings() {
         {/* Notifications */}
         <TabsContent value="notifications" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-white/10 bg-white/[0.02] backdrop-blur-2xl rounded-[2rem] overflow-hidden shadow-2xl transition-all hover:bg-white/[0.03]">
-              <CardHeader className="p-8 pb-4">
+            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
+              <CardHeader className="p-6 pb-3">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-white/10 text-amber-500">
                     <Zap className="h-4 w-4" />
                   </div>
-                  <CardTitle className="text-lg font-black uppercase tracking-tighter italic">Broadcast Channels</CardTitle>
+                  <CardTitle className="text-base font-semibold">Notification Channels</CardTitle>
                 </div>
-                <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40 italic">Critical telemetry routing</CardDescription>
+                <CardDescription className="text-xs text-muted-foreground">Choose where alerts are delivered.</CardDescription>
               </CardHeader>
-              <CardContent className="p-8 pt-0 space-y-4">
+              <CardContent className="p-6 pt-0 space-y-4">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-muted/20">
                     <div className="space-y-0.5">
-                      <p className="text-xs font-black uppercase italic tracking-wider">Email Protocol</p>
-                      <p className="text-[9px] font-bold text-muted-foreground/60 italic uppercase tracking-widest">Dispatch system alerts to primary email</p>
+                      <p className="text-xs font-semibold">Email alerts</p>
+                      <p className="text-[11px] text-muted-foreground">Send important system alerts by email.</p>
                     </div>
                     <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} className="data-[state=checked]:bg-amber-500" />
                   </div>
-                  <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-muted/20">
                     <div className="space-y-0.5">
-                      <p className="text-xs font-black uppercase italic tracking-wider">SMS Frequency</p>
-                      <p className="text-[9px] font-bold text-muted-foreground/60 italic uppercase tracking-widest">Mobile cellular alert sequence</p>
+                      <p className="text-xs font-semibold">SMS alerts</p>
+                      <p className="text-[11px] text-muted-foreground">Send urgent notifications to mobile.</p>
                     </div>
                     <Switch checked={smsNotifications} onCheckedChange={setSmsNotifications} className="data-[state=checked]:bg-amber-500" />
                   </div>
@@ -705,27 +812,27 @@ export default function Settings() {
               </CardContent>
             </Card>
 
-            <Card className="border-white/10 bg-white/[0.02] backdrop-blur-2xl rounded-[2rem] overflow-hidden shadow-2xl transition-all hover:bg-white/[0.03]">
-              <CardHeader className="p-8 pb-4">
+            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
+              <CardHeader className="p-6 pb-3">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-white/10 text-primary">
                     <Sliders className="h-4 w-4" />
                   </div>
-                  <CardTitle className="text-lg font-black uppercase tracking-tighter italic">Alert Overrides</CardTitle>
+                  <CardTitle className="text-base font-semibold">Operational Alerts</CardTitle>
                 </div>
-                <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40 italic">Operational threshold notifications</CardDescription>
+                <CardDescription className="text-xs text-muted-foreground">Enable module-specific operational warnings.</CardDescription>
               </CardHeader>
-              <CardContent className="p-8 pt-0 space-y-4">
+              <CardContent className="p-6 pt-0 space-y-4">
                 <div className="space-y-4">
                   {[
                     { label: "Inventory Criticality", sub: "Low stock/reorder point alerts", checked: lowStockAlerts, setter: setLowStockAlerts },
                     { label: "Job Lifecycle Update", sub: "Real-time production stage changes", checked: jobStatusAlerts, setter: setJobStatusAlerts },
                     { label: "Throughput Latency", sub: "Production delay & risk warnings", checked: delayAlerts, setter: setDelayAlerts },
                   ].map((alert, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                    <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-muted/20">
                       <div className="space-y-0.5">
-                        <p className="text-xs font-black uppercase italic tracking-wider">{alert.label}</p>
-                        <p className="text-[9px] font-bold text-muted-foreground/60 italic uppercase tracking-widest">{alert.sub}</p>
+                        <p className="text-xs font-semibold">{alert.label}</p>
+                        <p className="text-[11px] text-muted-foreground">{alert.sub}</p>
                       </div>
                       <Switch checked={alert.checked} onCheckedChange={alert.setter} className="data-[state=checked]:bg-primary" />
                     </div>
@@ -739,66 +846,72 @@ export default function Settings() {
         {/* System */}
         <TabsContent value="system" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-white/10 bg-white/[0.02] backdrop-blur-2xl rounded-[2rem] overflow-hidden shadow-2xl">
-              <CardHeader className="p-8 pb-4">
+            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
+              <CardHeader className="p-6 pb-3">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-white/10 text-primary">
                     <ShieldCheck className="h-4 w-4" />
                   </div>
-                  <CardTitle className="text-lg font-black uppercase tracking-tighter italic">Data Integrity</CardTitle>
+                  <CardTitle className="text-base font-semibold">Data & Backup</CardTitle>
                 </div>
-                <CardDescription className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40 italic">System-level backup & export protocols</CardDescription>
+                <CardDescription className="text-xs text-muted-foreground">Backup and export controls for local settings.</CardDescription>
               </CardHeader>
-              <CardContent className="p-8 pt-0 space-y-4">
+              <CardContent className="p-6 pt-0 space-y-4">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-muted/20">
                     <div className="space-y-0.5">
-                      <p className="text-xs font-black uppercase italic tracking-wider">Automated Redundancy</p>
-                      <p className="text-[9px] font-bold text-muted-foreground/60 italic uppercase tracking-widest">Daily system snapshot serialization</p>
+                      <p className="text-xs font-semibold">Auto backup</p>
+                      <p className="text-[11px] text-muted-foreground">Create periodic local snapshots.</p>
                     </div>
                     <Switch checked={autoBackup} onCheckedChange={setAutoBackup} className="data-[state=checked]:bg-primary" />
                   </div>
-                  <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-muted/20">
                     <div className="space-y-0.5">
-                      <p className="text-xs font-black uppercase italic tracking-wider">Secure JSON Export</p>
-                      <p className="text-[9px] font-bold text-muted-foreground/60 italic uppercase tracking-widest">Download current configuration state</p>
+                      <p className="text-xs font-semibold">Export JSON</p>
+                      <p className="text-[11px] text-muted-foreground">Download current configuration state.</p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleExport} className="h-9 rounded-xl font-black uppercase italic text-[10px] tracking-widest px-6 border-white/10 hover:bg-white/10">Extract</Button>
+                    <Button variant="outline" size="sm" onClick={handleExport} className="h-9 rounded-xl px-5">Export</Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <div className="space-y-6">
-              <Card className="border-white/10 bg-white/[0.02] backdrop-blur-2xl rounded-[2rem] overflow-hidden shadow-2xl">
-                <CardHeader className="p-8 pb-4 font-black uppercase italic">
+              <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
+                <CardHeader className="p-6 pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-white/10 text-primary">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
                       <Sparkles className="h-4 w-4" />
                     </div>
-                    <span>Build Environment</span>
+                    <span className="text-base font-semibold">Environment</span>
                   </div>
                 </CardHeader>
-                <CardContent className="p-8 pt-0">
-                  <div className="grid grid-cols-2 gap-y-4 text-[10px] font-black uppercase tracking-widest italic">
-                    <p className="text-muted-foreground/60 italic">Core Revision</p>
-                    <p className="text-primary text-right italic">1.2.0-F_FLOW</p>
-                    <p className="text-muted-foreground/60 italic">Instance Mode</p>
-                    <p className="text-emerald-500 text-right italic">Optimized Prod</p>
-                    <p className="text-muted-foreground/60 italic">Baseline Sync</p>
-                    <p className="text-foreground text-right italic">MARCH 16, 2026</p>
+                <CardContent className="p-6 pt-0">
+                  <div className="grid grid-cols-2 gap-y-3 text-xs">
+                    <p className="text-muted-foreground">Core revision</p>
+                    <p className="text-primary text-right font-medium">1.2.0-F_FLOW</p>
+                    <p className="text-muted-foreground">Mode</p>
+                    <p className="text-emerald-600 dark:text-emerald-400 text-right font-medium">Optimized production</p>
+                    <p className="text-muted-foreground">Baseline sync</p>
+                    <p className="text-right font-medium">March 16, 2026</p>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-rose-500/30 bg-rose-500/[0.02] backdrop-blur-2xl rounded-[2rem] overflow-hidden shadow-2xl transition-all hover:bg-rose-500/[0.05]">
-                <CardHeader className="p-8 pb-4">
-                  <CardTitle className="text-lg font-black uppercase tracking-tighter italic text-rose-500">NULL PROTOCOL</CardTitle>
-                  <CardDescription className="text-xs font-bold uppercase tracking-widest text-rose-500/40 italic">Irreversible factory reset sequence</CardDescription>
+              <Card className="rounded-2xl border border-rose-500/30 bg-rose-500/[0.04] shadow-sm">
+                <CardHeader className="p-6 pb-3">
+                  <CardTitle className="text-base font-semibold text-rose-600 dark:text-rose-400">Reset local settings</CardTitle>
+                  <CardDescription className="text-xs text-rose-700/80 dark:text-rose-300/80">
+                    Clears device-only settings and restores defaults.
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="p-8 pt-0 flex items-center justify-between bg-gradient-to-t from-rose-500/5 to-transparent">
-                  <p className="text-[9px] font-bold text-rose-500/60 italic uppercase tracking-widest max-w-[200px]">WIPE ALL CONFIGURATION STATE AND RESTORE BASELINE DEFAULTS</p>
-                  <Button variant="destructive" size="sm" onClick={handleReset} className="h-10 rounded-xl font-black uppercase italic text-xs tracking-widest px-8 shadow-xl shadow-rose-500/20">Wipe</Button>
+                <CardContent className="p-6 pt-0 flex items-center justify-between gap-4">
+                  <p className="text-xs text-rose-700/80 dark:text-rose-300/80 max-w-[320px]">
+                    This action affects only this browser profile.
+                  </p>
+                  <Button variant="destructive" size="sm" onClick={handleReset} className="h-10 rounded-xl px-6">
+                    Reset
+                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -806,9 +919,9 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="access" className="space-y-6">
-          <Card className="border-white/10 bg-white/[0.02] rounded-[2rem] overflow-hidden">
+          <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm overflow-hidden">
             <CardHeader>
-              <CardTitle className="text-lg font-black uppercase">Role → permissions</CardTitle>
+              <CardTitle className="text-base font-semibold">Role permissions</CardTitle>
               <CardDescription className="text-xs">
                 {permDoc?.matrix?.note} Seeded logins:{" "}
                 <code className="text-primary">buyer@integracnc.com</code>,{" "}
@@ -818,24 +931,24 @@ export default function Settings() {
             <CardContent className="space-y-4">
               {permDoc && (
                 <>
-                  <div className="rounded-xl border border-white/10 p-4 text-sm">
+                  <div className="rounded-xl border border-border/60 p-4 text-sm">
                     <span className="text-muted-foreground">Your role:</span>{" "}
                     <span className="font-black">{permDoc.role}</span>
                     <br />
                     <span className="text-muted-foreground">Permissions:</span>{" "}
                     <span className="font-mono text-xs">{(permDoc.permissions || []).join(", ") || "—"}</span>
                   </div>
-                  <div className="overflow-x-auto rounded-xl border border-white/10">
+                  <div className="overflow-x-auto rounded-xl border border-border/60">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="border-b border-white/10 bg-muted/30">
-                          <th className="text-left p-3 font-black uppercase">Role</th>
-                          <th className="text-left p-3 font-black uppercase">Granted actions</th>
+                        <tr className="border-b border-border/60 bg-muted/30">
+                          <th className="text-left p-3 font-semibold uppercase text-[11px]">Role</th>
+                          <th className="text-left p-3 font-semibold uppercase text-[11px]">Granted actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(permDoc.matrix?.roles || []).map((r) => (
-                          <tr key={r.role} className="border-b border-white/5">
+                          <tr key={r.role} className="border-b border-border/40">
                             <td className="p-3 font-bold align-top whitespace-nowrap">{r.role}</td>
                             <td className="p-3 text-muted-foreground">{r.grants.join(" · ")}</td>
                           </tr>
@@ -851,9 +964,9 @@ export default function Settings() {
 
         {canAudit && (
           <TabsContent value="audit" className="space-y-6">
-            <Card className="border-white/10 bg-white/[0.02] rounded-[2rem] overflow-hidden">
+            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm overflow-hidden">
               <CardHeader>
-                <CardTitle className="text-lg font-black uppercase">Audit trail</CardTitle>
+                <CardTitle className="text-base font-semibold">Audit trail</CardTitle>
                 <CardDescription className="text-xs">
                   Compliance-friendly read-only log (SOX-style roles use finance_viewer + this tab).
                 </CardDescription>
@@ -867,9 +980,10 @@ export default function Settings() {
 
         {canFinance && (
           <TabsContent value="ethiopia-tax" className="space-y-6">
-            <Card className="border-white/10 bg-white/[0.02] rounded-[2rem] overflow-hidden">
+            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm overflow-hidden">
               <CardHeader>
-                <CardTitle className="text-lg font-black uppercase">Ethiopia — VAT & withholding</CardTitle>
+                <CardTitle className="text-base font-semibold">Ethiopia — VAT & withholding</CardTitle>
+                <Badge className="w-fit text-[10px] uppercase tracking-wider">{TENANT_WIDE_LABEL}</Badge>
                 <CardDescription className="text-xs">
                   Company legal profile on tax invoices and statutory CSVs. Rates are indicative — confirm with ERCA
                   and your accountant.{" "}

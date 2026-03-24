@@ -2,16 +2,32 @@ import { useNavigate } from "react-router-dom";
 import { Plus, AlertOctagon, PackagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/contexts/AuthContext";
+import type { TenantModuleKey } from "@/lib/api";
 import { toast } from "sonner";
 
 const actions = [
-  { label: "Create New Job", icon: Plus, variant: "default" as const, path: "/jobs" },
-  { label: "Report Machine Down", icon: AlertOctagon, variant: "destructive" as const, path: null as string | null },
-  { label: "Receive Inventory", icon: PackagePlus, variant: "outline" as const, path: "/inventory" },
+  { label: "Create New Job", icon: Plus, variant: "default" as const, path: "/jobs", moduleKey: "manufacturing" as TenantModuleKey },
+  {
+    label: "Report Machine Down",
+    icon: AlertOctagon,
+    variant: "destructive" as const,
+    path: null as string | null,
+    moduleKey: "manufacturing" as TenantModuleKey,
+  },
+  {
+    label: "Receive Inventory",
+    icon: PackagePlus,
+    variant: "outline" as const,
+    path: "/inventory",
+    moduleKey: "inventory" as TenantModuleKey,
+  },
 ];
 
 export function QuickActions() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   return (
     <Card className="shadow-sm border-none bg-card/50 backdrop-blur-sm overflow-hidden">
@@ -21,15 +37,23 @@ export function QuickActions() {
         </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2.5">
-        {actions.map((action) => (
+        {actions.map((action) => {
+          const isDisabledByPolicy =
+            user?.platformRole !== "super_admin" && user?.tenantModuleFlags?.[action.moduleKey] === false;
+          return (
           <Button
             key={action.label}
             variant={action.variant}
+            disabled={isDisabledByPolicy}
             className={`w-full justify-between h-11 group transition-all duration-300 ${
               action.variant === 'default' ? 'shadow-lg shadow-primary/20 hover:shadow-primary/40' : 
               action.variant === 'destructive' ? 'shadow-lg shadow-destructive/10 hover:shadow-destructive/20' : ''
             }`}
             onClick={() => {
+              if (isDisabledByPolicy) {
+                toast.error("This action is disabled by your tenant module policy.");
+                return;
+              }
               if (action.path) navigate(action.path);
               else toast.info("Report machine down: log this in your maintenance system.");
             }}
@@ -39,12 +63,17 @@ export function QuickActions() {
                 <action.icon className="h-4 w-4" />
               </div>
               <span className="font-semibold text-xs tracking-tight">{action.label}</span>
+              {isDisabledByPolicy ? (
+                <Badge variant="outline" className="text-[9px] uppercase tracking-wider border-amber-500/40 text-amber-700 dark:text-amber-300">
+                  Disabled
+                </Badge>
+              ) : null}
             </div>
             <div className="h-5 w-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-background/20">
               <Plus className="h-3 w-3 rotate-45" />
             </div>
           </Button>
-        ))}
+        )})}
       </CardContent>
     </Card>
   );

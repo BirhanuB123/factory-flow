@@ -5,10 +5,13 @@ const generateToken = require('../utils/generateToken');
 const { rolePermissions } = require('../config/permissions');
 const { hashInviteToken } = require('../utils/inviteToken');
 const { ensureTenantAccess } = require('../utils/tenantAccess');
+const { normalizeModuleFlags } = require('../utils/tenantModules');
 
 async function buildTenantSubscription(tenantId) {
   if (!tenantId) return null;
-  const tenant = await Tenant.findById(tenantId).select('status plan trialEndDate statusReason displayName legalName');
+  const tenant = await Tenant.findById(tenantId).select(
+    'status plan trialEndDate statusReason displayName legalName moduleFlags'
+  );
   if (!tenant) return null;
   return {
     status: tenant.status,
@@ -16,6 +19,7 @@ async function buildTenantSubscription(tenantId) {
     trialEndDate: tenant.trialEndDate || null,
     statusReason: tenant.statusReason || '',
     displayName: tenant.displayName || tenant.legalName || '',
+    moduleFlags: normalizeModuleFlags(tenant.moduleFlags),
   };
 }
 
@@ -53,6 +57,7 @@ const loginUser = asyncHandler(async (req, res) => {
       mustChangePassword: !!user.mustChangePassword,
       permissions: rolePermissions(user.role),
       tenantSubscription,
+      tenantModuleFlags: tenantSubscription?.moduleFlags || undefined,
       token: generateToken({
         id: user._id,
         tenantId: user.tenantId,
@@ -92,6 +97,7 @@ const getMe = asyncHandler(async (req, res) => {
       mustChangePassword: !!user.mustChangePassword,
       permissions: rolePermissions(user.role),
       tenantSubscription,
+      tenantModuleFlags: tenantSubscription?.moduleFlags || undefined,
     });
   } else {
     res.status(404);

@@ -5,6 +5,7 @@ import {
   isLikelyMongoObjectId,
 } from "@/lib/tenantContext";
 import { getApiBaseUrl } from "@/lib/apiBase";
+import type { TenantModuleFlags } from "@/lib/api";
 
 export type Role =
   | "employee"
@@ -34,7 +35,9 @@ export interface User {
     trialEndDate?: string | null;
     statusReason?: string;
     displayName?: string;
+    moduleFlags?: Partial<TenantModuleFlags>;
   } | null;
+  tenantModuleFlags?: Partial<TenantModuleFlags>;
 }
 
 /** Normalize login + /auth/me JSON (handles string ids, platformRole). */
@@ -54,6 +57,10 @@ export function userFromApiPayload(data: Record<string, unknown>): User {
       data.tenantSubscription && typeof data.tenantSubscription === "object"
         ? (data.tenantSubscription as User["tenantSubscription"])
         : null,
+    tenantModuleFlags:
+      data.tenantModuleFlags && typeof data.tenantModuleFlags === "object"
+        ? (data.tenantModuleFlags as User["tenantModuleFlags"])
+        : undefined,
   };
 }
 

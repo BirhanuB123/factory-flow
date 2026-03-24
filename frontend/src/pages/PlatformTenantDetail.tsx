@@ -62,7 +62,7 @@ const INDUSTRY_OPTIONS = [
   "service",
   "other",
 ] as const;
-const BILLING_PROVIDER_OPTIONS = ["none", "manual", "stripe", "other"] as const;
+const BILLING_PROVIDER_OPTIONS = ["none", "manual", "stripe", "chapa", "other"] as const;
 
 const MODULE_LABELS: Record<(typeof TENANT_MODULE_KEYS)[number], string> = {
   manufacturing: "Manufacturing & production",
@@ -132,7 +132,7 @@ export default function PlatformTenantDetail() {
         timezone: editTimezone.trim(),
         currency: editCurrency.trim().toUpperCase(),
         industry: editIndustry,
-        billingProvider: editBillingProvider as "none" | "manual" | "stripe" | "other",
+        billingProvider: editBillingProvider as "none" | "manual" | "stripe" | "chapa" | "other",
         billingCustomerId: editBillingCustomerId.trim(),
         announcement: {
           enabled: tenantAnnouncementEnabled,

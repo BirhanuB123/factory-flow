@@ -92,9 +92,28 @@ describe('Cross-tenant hardening suite', () => {
   const tenantB = '64f0000000000000000000b2';
 
   beforeEach(() => {
+    Tenant.findById.mockReset();
+    Tenant.exists.mockReset();
     Tenant.exists.mockResolvedValue({ _id: tenantA });
     Tenant.findById.mockReturnValue({
-      select: jest.fn().mockResolvedValue({ _id: tenantA, status: 'active' }),
+      select: jest.fn(() => {
+        const tenantDoc = {
+          _id: tenantA,
+          status: 'active',
+          moduleFlags: {
+            manufacturing: true,
+            inventory: true,
+            sales: true,
+            procurement: true,
+            finance: true,
+            hr: true,
+          },
+        };
+        return {
+          ...tenantDoc,
+          lean: jest.fn().mockResolvedValue(tenantDoc),
+        };
+      }),
     });
     const userChain = {};
     userChain.select = jest.fn(() => userChain);
@@ -548,5 +567,44 @@ describe('Cross-tenant hardening suite', () => {
         mustChangePassword: true,
       })
     );
+  });
+
+  test('platform reset-access returns temporary password for existing tenant admin', async () => {
+    mockAuthUser({
+      _id: 'sa-reset',
+      tenantId: tenantA,
+      platformRole: 'super_admin',
+      role: 'Admin',
+      department: 'Platform',
+      name: 'Super Admin',
+      email: 'sa-reset@test',
+      employeeId: 'SA-RESET',
+    });
+
+    Tenant.findById.mockResolvedValue({ _id: tenantB, key: 'tenant-b', displayName: 'B Co' });
+    Employee.findOne.mockResolvedValue({
+      _id: 'emp-reset',
+      tenantId: tenantB,
+      employeeId: 'B-ADMIN',
+      name: 'B Admin',
+      role: 'Admin',
+      email: 'b-admin@test',
+      mustChangePassword: false,
+      save: jest.fn().mockResolvedValue(true),
+    });
+
+    const res = await request(app)
+      .post(`/api/platform/tenants/${tenantB}/admins/B-ADMIN/reset-access`)
+      .set(
+        'Authorization',
+        bearerFor({ id: 'sa-reset', tenantId: tenantA, platformRole: 'super_admin' })
+      )
+      .send({ onboardingMode: 'temp_password' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(String(res.body.temporaryPassword || '').length).toBeGreaterThan(6);
+    expect(res.body.data.employeeId).toBe('B-ADMIN');
+    expect(Employee.findOne).toHaveBeenCalledWith({ tenantId: tenantB, employeeId: 'B-ADMIN' });
   });
 });

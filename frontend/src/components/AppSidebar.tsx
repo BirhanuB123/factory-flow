@@ -18,6 +18,7 @@ import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocale } from "@/contexts/LocaleContext";
+import type { TenantModuleKey } from "@/lib/api";
 import {
   Sidebar,
   SidebarContent,
@@ -65,6 +66,19 @@ const allNavItems = [
   { titleKey: "nav.settings", url: "/settings", icon: Settings },
 ] as const;
 
+const routeModuleMap: Partial<Record<(typeof allNavItems)[number]["url"], TenantModuleKey>> = {
+  "/production": "manufacturing",
+  "/production-jobs": "manufacturing",
+  "/boms": "manufacturing",
+  "/inventory": "inventory",
+  "/orders": "sales",
+  "/clients": "sales",
+  "/shipments": "sales",
+  "/purchase-orders": "procurement",
+  "/finance": "finance",
+  "/hr": "hr",
+};
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -77,6 +91,10 @@ export function AppSidebar() {
     if ("platformSuperAdmin" in item && item.platformSuperAdmin) {
       return user?.platformRole === "super_admin";
     }
+    const moduleKey = routeModuleMap[item.url];
+    if (moduleKey && user?.tenantModuleFlags?.[moduleKey] === false) {
+      return false;
+    }
     if (!("roles" in item)) return true;
     const allowed = item.roles as readonly string[];
     if (user && allowed.includes(user.role)) return true;
@@ -87,8 +105,12 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Factory className="h-4 w-4 text-sidebar-primary-foreground" />
+          <div className="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/90 p-0">
+            <img
+              src="/integra-logo.svg"
+              alt="Integra logo"
+              className="h-full w-full object-contain"
+            />
           </div>
           {!collapsed && (
             <div className="flex flex-col">

@@ -862,7 +862,7 @@ export type PlatformTenant = {
   lastApiActivityAt?: string;
   trialEndDate?: string | null;
   plan?: string;
-  billingProvider?: 'none' | 'manual' | 'stripe' | 'other';
+  billingProvider?: 'none' | 'manual' | 'stripe' | 'chapa' | 'other';
   billingCustomerId?: string;
   announcement?: {
     enabled: boolean;
@@ -973,7 +973,7 @@ export const platformApi = {
       displayName?: string;
       legalName?: string;
       plan?: string;
-      billingProvider?: 'none' | 'manual' | 'stripe' | 'other';
+      billingProvider?: 'none' | 'manual' | 'stripe' | 'chapa' | 'other';
       billingCustomerId?: string;
       timezone?: string;
       currency?: string;
@@ -1113,6 +1113,36 @@ export const announcementApi = {
             updatedByEmployeeId?: string;
           };
     }>('/announcements/current');
+    return response.data;
+  },
+};
+
+export const billingApi = {
+  startChapaCheckout: async (body?: { plan?: string; returnPath?: string; email?: string }) => {
+    const response = await api.post<{
+      success: boolean;
+      data: {
+        provider: 'chapa';
+        txRef: string;
+        checkoutUrl: string;
+        amount: number;
+        currency: string;
+        plan: string;
+      };
+    }>('/billing/chapa/checkout', body || {});
+    return response.data;
+  },
+  verifyChapaPayment: async (txRef: string) => {
+    const response = await api.get<{
+      success: boolean;
+      data: {
+        tenantId: string;
+        status: string;
+        plan: string;
+        billingProvider: string;
+        txRef: string;
+      };
+    }>(`/billing/chapa/verify/${encodeURIComponent(txRef)}`);
     return response.data;
   },
 };

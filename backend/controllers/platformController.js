@@ -176,7 +176,7 @@ exports.createTenant = asyncHandler(async (req, res) => {
     status,
     trialEndDate,
     plan: req.body.plan || 'starter',
-    billingProvider: ['none', 'manual', 'stripe', 'other'].includes(String(req.body.billingProvider))
+    billingProvider: ['none', 'manual', 'stripe', 'chapa', 'other'].includes(String(req.body.billingProvider))
       ? String(req.body.billingProvider)
       : 'none',
     billingCustomerId: String(req.body.billingCustomerId || '').trim().slice(0, 200),
@@ -358,10 +358,10 @@ exports.patchTenant = asyncHandler(async (req, res) => {
   }
   if (req.body.billingProvider != null) {
     const provider = String(req.body.billingProvider).trim().toLowerCase();
-    if (!['none', 'manual', 'stripe', 'other'].includes(provider)) {
+    if (!['none', 'manual', 'stripe', 'chapa', 'other'].includes(provider)) {
       return res.status(400).json({
         success: false,
-        message: 'billingProvider must be one of: none, manual, stripe, other',
+        message: 'billingProvider must be one of: none, manual, stripe, chapa, other',
       });
     }
     $set.billingProvider = provider;
@@ -683,6 +683,114 @@ exports.createTenantAdmin = asyncHandler(async (req, res) => {
   }
 
   res.status(201).json(payload);
+});
+
+/**
+ * Super-admin account recovery for tenant admins.
+ * - temp_password: sets a generated temporary password + mustChangePassword=true
+ * - invite_link: rotates one-time invite token and optionally sends email
+ */
+exports.resetTenantAdminAccess = asyncHandler(async (req, res) => {
+  const tenantId = req.params.id;
+  if (!mongoose.Types.ObjectId.isValid(tenantId)) {
+    return res.status(400).json({ success: false, message: 'Invalid tenant id' });
+  }
+  const tenant = await Tenant.findById(tenantId);
+  if (!tenant) return res.status(404).json({ success: false, message: 'Tenant not found' });
+
+  const employeeId = String(req.params.employeeId || '').trim();
+  if (!employeeId) {
+    return res.status(400).json({ success: false, message: 'employeeId path parameter is required' });
+  }
+
+  const onboardingMode = ['temp_password', 'invite_link'].includes(String(req.body.onboardingMode || ''))
+    ? String(req.body.onboardingMode)
+    : 'temp_password';
+
+  const user = await Employee.findOne({ tenantId, employeeId });
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: 'User not found in tenant',
+    });
+  }
+
+  const origin = getPublicAppOrigin();
+  const email =
+    req.body.email != null ? String(req.body.email).trim().toLowerCase() : String(user.email || '').trim().toLowerCase();
+
+  if (onboardingMode === 'invite_link' && !email) {
+    return res.status(400).json({
+      success: false,
+      message: 'email is required for invite_link onboarding',
+    });
+  }
+
+  let temporaryPassword;
+  let inviteUrl;
+  let passwordResetExpires;
+  let emailResult = { sent: false };
+
+  if (onboardingMode === 'temp_password') {
+    temporaryPassword = generateTempPasswordForUser();
+    user.password = temporaryPassword;
+    user.mustChangePassword = true;
+    user.passwordResetTokenHash = '';
+    user.passwordResetExpires = null;
+    await user.save();
+  } else {
+    const inviteRawToken = generateInviteRawToken();
+    passwordResetExpires = new Date(Date.now() + INVITE_VALID_DAYS * 86400000);
+    user.mustChangePassword = true;
+    user.passwordResetTokenHash = hashInviteToken(inviteRawToken);
+    user.passwordResetExpires = passwordResetExpires;
+    if (email) user.email = email;
+    await user.save();
+    inviteUrl = `${origin}/invite?token=${encodeURIComponent(inviteRawToken)}`;
+    emailResult = await sendTenantAdminInvite({
+      to: email,
+      employeeName: user.name,
+      tenantDisplayName: tenant.displayName || tenant.legalName,
+      inviteUrl,
+    });
+  }
+
+  await logPlatformAction(req, {
+    action: 'tenant.admin.reset_access',
+    resourceType: 'Employee',
+    resourceId: String(user._id),
+    details: {
+      tenantId: String(tenantId),
+      tenantKey: tenant.key,
+      employeeId: user.employeeId,
+      onboardingMode,
+      inviteEmailed: onboardingMode === 'invite_link' ? emailResult.sent : undefined,
+    },
+  });
+
+  const payload = {
+    success: true,
+    data: {
+      _id: user._id,
+      tenantId: user.tenantId,
+      employeeId: user.employeeId,
+      name: user.name,
+      role: user.role,
+      email: user.email,
+      onboardingMode,
+      mustChangePassword: user.mustChangePassword,
+    },
+  };
+  if (temporaryPassword) payload.temporaryPassword = temporaryPassword;
+  if (inviteUrl) {
+    payload.invite = {
+      url: inviteUrl,
+      emailed: emailResult.sent,
+      expiresAt: passwordResetExpires,
+    };
+    if (emailResult.error) payload.invite.emailError = emailResult.error;
+  }
+  res.json(payload);
 });
 
 exports.listPlatformAuditLogs = asyncHandler(async (req, res) => {

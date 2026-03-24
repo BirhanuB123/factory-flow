@@ -2,6 +2,9 @@ const asyncHandler = require('express-async-handler');
 const Stripe = require('stripe');
 const Tenant = require('../models/Tenant');
 const PlatformAuditLog = require('../models/PlatformAuditLog');
+const { verifyTimestampedHmac, normalizeRawBody } = require('../utils/webhookSecurity');
+const { consumeWebhookEvent, hashPayload } = require('../utils/webhookIdempotency');
+const { optionalNormalizedPlan } = require('../utils/billingDomain');
 
 const PLAN_BY_STRIPE_PRICE = {
   starter: String(process.env.STRIPE_PRICE_STARTER || '').trim(),
@@ -9,25 +12,29 @@ const PLAN_BY_STRIPE_PRICE = {
   enterprise: String(process.env.STRIPE_PRICE_ENTERPRISE || '').trim(),
 };
 
+function idempotencyTtlMs() {
+  return Math.max(60_000, Number(process.env.BILLING_WEBHOOK_IDEMPOTENCY_TTL_MS) || 24 * 60 * 60 * 1000);
+}
+
 function resolvePlanFromPayload(payload) {
-  const explicitPlan = String(payload.plan || '').trim().toLowerCase();
-  if (explicitPlan) return explicitPlan;
+  const explicitPlan = optionalNormalizedPlan(payload.plan);
+  if (explicitPlan.hasValue) return explicitPlan;
 
   const stripePriceId = String(payload.stripePriceId || payload.priceId || '').trim();
-  if (!stripePriceId) return '';
+  if (!stripePriceId) return { hasValue: false, plan: '', isKnown: true, input: '' };
   for (const [plan, id] of Object.entries(PLAN_BY_STRIPE_PRICE)) {
-    if (id && id === stripePriceId) return plan;
+    if (id && id === stripePriceId) return { hasValue: true, plan, isKnown: true, input: plan };
   }
-  return '';
+  return { hasValue: false, plan: '', isKnown: true, input: '' };
 }
 
 function resolvePlanFromStripePriceId(priceId) {
   const incoming = String(priceId || '').trim();
-  if (!incoming) return '';
+  if (!incoming) return { hasValue: false, plan: '', isKnown: true, input: '' };
   for (const [plan, id] of Object.entries(PLAN_BY_STRIPE_PRICE)) {
-    if (id && id === incoming) return plan;
+    if (id && id === incoming) return { hasValue: true, plan, isKnown: true, input: plan };
   }
-  return '';
+  return { hasValue: false, plan: '', isKnown: true, input: '' };
 }
 
 async function findTenantForBillingSync({ tenantId, tenantKey, billingCustomerId }) {
@@ -69,10 +76,24 @@ async function writeSystemBillingAudit(action, tenantDoc, details) {
  * { billingProvider, billingCustomerId, plan?, stripePriceId?, status?, trialEndDate? }.
  */
 const billingWebhookSync = asyncHandler(async (req, res) => {
-  const expected = String(process.env.BILLING_WEBHOOK_SECRET || '').trim();
-  const incoming = String(req.headers['x-billing-webhook-secret'] || '').trim();
-  if (!expected || !incoming || incoming !== expected) {
-    return res.status(401).json({ success: false, message: 'Invalid webhook secret' });
+  const hmacSecret = String(process.env.BILLING_WEBHOOK_HMAC_SECRET || '').trim();
+  if (hmacSecret) {
+    const verify = verifyTimestampedHmac({
+      req,
+      secret: hmacSecret,
+      signatureHeaders: ['x-billing-webhook-signature', 'x-webhook-signature'],
+      timestampHeaders: ['x-billing-webhook-timestamp', 'x-webhook-timestamp'],
+      toleranceSec: Number(process.env.BILLING_WEBHOOK_TOLERANCE_SEC) || 300,
+    });
+    if (!verify.ok) {
+      return res.status(401).json({ success: false, message: `Invalid webhook signature (${verify.reason})` });
+    }
+  } else {
+    const expected = String(process.env.BILLING_WEBHOOK_SECRET || '').trim();
+    const incoming = String(req.headers['x-billing-webhook-secret'] || '').trim();
+    if (!expected || !incoming || incoming !== expected) {
+      return res.status(401).json({ success: false, message: 'Invalid webhook secret' });
+    }
   }
 
   const provider = String(req.body.billingProvider || req.body.provider || '').trim().toLowerCase() || 'other';
@@ -80,7 +101,7 @@ const billingWebhookSync = asyncHandler(async (req, res) => {
   const tenantId = String(req.body.tenantId || '').trim();
   const tenantKey = String(req.body.tenantKey || '').trim().toLowerCase();
   const billingStatus = String(req.body.status || '').trim().toLowerCase();
-  const plan = resolvePlanFromPayload(req.body);
+  const planMeta = resolvePlanFromPayload(req.body);
   const trialEndDate =
     req.body.trialEndDate != null && req.body.trialEndDate !== ''
       ? new Date(String(req.body.trialEndDate))
@@ -96,6 +117,16 @@ const billingWebhookSync = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid trialEndDate' });
   }
 
+  const explicitEventKey = String(
+    req.headers['x-billing-event-id'] || req.headers['x-event-id'] || req.body.eventId || req.body.id || ''
+  ).trim();
+  const rawBodyText = normalizeRawBody(req) || JSON.stringify(req.body || {});
+  const derivedEventKey = explicitEventKey || `body:${hashPayload(rawBodyText)}`;
+  const idempotency = await consumeWebhookEvent('billing_sync', derivedEventKey, idempotencyTtlMs());
+  if (!idempotency.accepted) {
+    return res.json({ success: true, duplicate: true });
+  }
+
   const tenant = await findTenantForBillingSync({
     tenantId,
     tenantKey,
@@ -106,9 +137,13 @@ const billingWebhookSync = asyncHandler(async (req, res) => {
   }
 
   const $set = {};
-  if (provider) $set.billingProvider = ['none', 'manual', 'stripe', 'other'].includes(provider) ? provider : 'other';
+  if (provider) {
+    $set.billingProvider = ['none', 'manual', 'stripe', 'chapa', 'other'].includes(provider)
+      ? provider
+      : 'other';
+  }
   if (customerId) $set.billingCustomerId = customerId.slice(0, 200);
-  if (plan) $set.plan = plan.slice(0, 64);
+  if (planMeta.hasValue && planMeta.isKnown && planMeta.plan) $set.plan = planMeta.plan;
   if (trialEndDate) $set.trialEndDate = trialEndDate;
 
   if (billingStatus === 'trialing') {
@@ -130,6 +165,7 @@ const billingWebhookSync = asyncHandler(async (req, res) => {
     billingCustomerId: updated.billingCustomerId || undefined,
     plan: updated.plan,
     status: updated.status,
+    ignoredPlan: planMeta.hasValue && !planMeta.isKnown ? planMeta.input : undefined,
   });
 
   res.json({ success: true, data: updated });
@@ -162,11 +198,20 @@ const stripeWebhook = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid Stripe signature' });
   }
 
+  const eventId = String(event.id || '').trim();
+  if (eventId) {
+    const idempotency = await consumeWebhookEvent('stripe', eventId, idempotencyTtlMs());
+    if (!idempotency.accepted) {
+      return res.json({ success: true, duplicate: true });
+    }
+  }
+
   const eventType = String(event.type || '');
   let targetTenantId = '';
   let patch = {};
   let billingCustomerId = '';
   let resolvedPlan = '';
+  let ignoredPlan = '';
 
   if (eventType === 'invoice.payment_failed') {
     const invoice = event.data?.object || {};
@@ -187,8 +232,11 @@ const stripeWebhook = asyncHandler(async (req, res) => {
       statusReason: 'Billing status: past_due (invoice.payment_failed)',
     };
     const linePriceId = invoice.lines?.data?.[0]?.price?.id;
-    resolvedPlan = resolvePlanFromStripePriceId(linePriceId);
-    if (resolvedPlan) patch.plan = resolvedPlan;
+    const resolvedPlanMeta = resolvePlanFromStripePriceId(linePriceId);
+    if (resolvedPlanMeta.hasValue && resolvedPlanMeta.isKnown && resolvedPlanMeta.plan) {
+      resolvedPlan = resolvedPlanMeta.plan;
+      patch.plan = resolvedPlanMeta.plan;
+    }
   } else if (eventType === 'customer.subscription.updated') {
     const sub = event.data?.object || {};
     billingCustomerId = String(sub.customer || '').trim();
@@ -209,8 +257,19 @@ const stripeWebhook = asyncHandler(async (req, res) => {
       ...statusPatch,
     };
     const linePriceId = sub.items?.data?.[0]?.price?.id;
-    resolvedPlan = resolvePlanFromStripePriceId(linePriceId);
-    if (resolvedPlan) patch.plan = resolvedPlan;
+    const resolvedPlanMeta = resolvePlanFromStripePriceId(linePriceId);
+    if (resolvedPlanMeta.hasValue && resolvedPlanMeta.isKnown && resolvedPlanMeta.plan) {
+      resolvedPlan = resolvedPlanMeta.plan;
+      patch.plan = resolvedPlanMeta.plan;
+    } else {
+      const metaPlan = optionalNormalizedPlan(sub.metadata?.plan);
+      if (metaPlan.hasValue && metaPlan.isKnown && metaPlan.plan) {
+        resolvedPlan = metaPlan.plan;
+        patch.plan = metaPlan.plan;
+      } else if (metaPlan.hasValue && !metaPlan.isKnown) {
+        ignoredPlan = metaPlan.input;
+      }
+    }
     if (sub.current_period_end) {
       const trialEnd = new Date(Number(sub.current_period_end) * 1000);
       if (!Number.isNaN(trialEnd.getTime())) patch.trialEndDate = trialEnd;
@@ -250,6 +309,7 @@ const stripeWebhook = asyncHandler(async (req, res) => {
     status: updated.status,
     plan: updated.plan,
     mappedPlan: resolvedPlan || undefined,
+    ignoredPlan: ignoredPlan || undefined,
   });
 
   return res.json({ success: true });

@@ -35,6 +35,7 @@ import PlatformAdmin from "./pages/PlatformAdmin.tsx";
 import PlatformTenantDetail from "./pages/PlatformTenantDetail.tsx";
 import { SuperAdminRoute } from "./components/SuperAdminRoute";
 import { MustChangePasswordGate } from "./components/MustChangePasswordGate";
+import { TenantModuleRoute } from "./components/TenantModuleRoute";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -195,16 +196,27 @@ const App = () => {
                 <Route element={<MustChangePasswordGate />}>
                   <Route element={<Layout />}>
                   <Route path="/" element={<Index />} />
-                  <Route path="/production" element={<Production />} />
-                  <Route path="/production-jobs" element={<ProductionJobs />} />
-                  <Route path="/boms" element={<Boms />} />
-                  <Route path="/orders" element={<Orders />} />
-                  <Route path="/clients" element={<Clients />} />
-                  <Route path="/inventory" element={<Inventory />} />
-                  <Route path="/purchase-orders" element={<PurchaseOrders />} />
-                  <Route element={<ProtectedRoute allowedRoles={['Admin', 'hr_head', 'finance_head']} />}>
-                    <Route path="/hr" element={<Hr />} />
+                  <Route element={<TenantModuleRoute moduleKey="manufacturing" moduleLabel="Manufacturing & production" />}>
+                    <Route path="/production" element={<Production />} />
+                    <Route path="/production-jobs" element={<ProductionJobs />} />
+                    <Route path="/boms" element={<Boms />} />
                   </Route>
+                  <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
+                    <Route path="/orders" element={<Orders />} />
+                    <Route path="/clients" element={<Clients />} />
+                  </Route>
+                  <Route element={<TenantModuleRoute moduleKey="inventory" moduleLabel="Inventory & stock" />}>
+                    <Route path="/inventory" element={<Inventory />} />
+                  </Route>
+                  <Route element={<TenantModuleRoute moduleKey="procurement" moduleLabel="Procurement & POs" />}>
+                    <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                  </Route>
+                  <Route element={<TenantModuleRoute moduleKey="hr" moduleLabel="HR & payroll" />}>
+                    <Route element={<ProtectedRoute allowedRoles={['Admin', 'hr_head', 'finance_head']} />}>
+                      <Route path="/hr" element={<Hr />} />
+                    </Route>
+                  </Route>
+                  <Route element={<TenantModuleRoute moduleKey="finance" moduleLabel="Finance & AP/AR" />}>
                   <Route
                     element={
                       <ProtectedRoute allowedRoles={["Admin", "finance_head", "finance_viewer"]} />
@@ -212,6 +224,8 @@ const App = () => {
                   >
                     <Route path="/finance" element={<Finance />} />
                   </Route>
+                  </Route>
+                  <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
                   <Route
                     element={
                       <ProtectedRoute
@@ -226,6 +240,7 @@ const App = () => {
                     }
                   >
                     <Route path="/shipments" element={<Shipments />} />
+                  </Route>
                   </Route>
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/account/change-password" element={<ChangePassword />} />

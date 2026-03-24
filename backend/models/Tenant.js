@@ -28,10 +28,10 @@ const tenantSchema = new mongoose.Schema(
     /** Trial lifecycle: when trial access ends (auto-suspend job reads this). */
     trialEndDate: { type: Date, default: null, index: true },
     plan: { type: String, default: 'starter' },
-    /** Billing metadata for external plan sync (Stripe/manual/other). */
+    /** Billing metadata for external plan sync (Stripe/Chapa/manual/other). */
     billingProvider: {
       type: String,
-      enum: ['none', 'manual', 'stripe', 'other'],
+      enum: ['none', 'manual', 'stripe', 'chapa', 'other'],
       default: 'none',
     },
     billingCustomerId: { type: String, default: '', trim: true, index: true },

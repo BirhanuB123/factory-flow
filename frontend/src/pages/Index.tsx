@@ -8,6 +8,7 @@ import { useSettings } from "@/hooks/use-settings";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertTriangle, Ban, CalendarClock, CheckCircle2, Sparkles, Zap } from "lucide-react";
+import type { TenantModuleFlags } from "@/lib/api";
 
 function subscriptionBadgeVariant(
   status?: string
@@ -41,6 +42,15 @@ const Index = () => {
   const isTrialExpired = typeof trialDaysLeft === "number" && trialDaysLeft < 0;
   const isSuspendedOrArchived =
     tenantSubscription?.status === "suspended" || tenantSubscription?.status === "archived";
+  const moduleFlags = user?.tenantModuleFlags as Partial<TenantModuleFlags> | undefined;
+  const disabledModules = [
+    { key: "manufacturing", label: "Manufacturing & production" },
+    { key: "inventory", label: "Inventory & stock" },
+    { key: "sales", label: "Sales & orders" },
+    { key: "procurement", label: "Procurement & POs" },
+    { key: "finance", label: "Finance & AP/AR" },
+    { key: "hr", label: "HR & payroll" },
+  ].filter((m) => moduleFlags?.[m.key as keyof TenantModuleFlags] === false);
 
   return (
     <div className="space-y-8 pb-8 animate-in fade-in duration-700">
@@ -130,6 +140,35 @@ const Index = () => {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+      {user?.platformRole !== "super_admin" && (
+        <Card className="rounded-2xl border-border/70 bg-background/70">
+          <CardContent className="pt-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
+                Module access
+              </span>
+              {disabledModules.length === 0 ? (
+                <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
+                  All enabled
+                </Badge>
+              ) : (
+                <Badge variant="destructive" className="text-[10px] uppercase tracking-wider">
+                  {disabledModules.length} disabled by tenant policy
+                </Badge>
+              )}
+            </div>
+            {disabledModules.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {disabledModules.map((mod) => (
+                  <Badge key={mod.key} variant="outline" className="text-[10px] uppercase tracking-wider">
+                    {mod.label}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       )}

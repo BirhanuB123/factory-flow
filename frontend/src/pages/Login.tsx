@@ -108,6 +108,13 @@ export default function Login() {
         />
 
         <div className="w-full max-w-[400px] animate-in fade-in zoom-in-95 duration-700 fill-mode-both">
+          <div className="mb-16 flex justify-center">
+            <img
+              src="/integra-logo.png"
+              alt="Integra logo"
+              className="h-auto w-full max-w-[380px] object-contain"
+            />
+          </div>
           <div className="rounded-2xl border border-border/80 bg-card/95 p-8 shadow-[0_4px_28px_-6px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.04] sm:p-9 dark:ring-white/[0.06]">
             <div className="mb-8 flex flex-col items-center space-y-3 text-center lg:items-start lg:text-left">
               <div className="mb-1 flex lg:hidden">

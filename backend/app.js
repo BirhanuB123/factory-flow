@@ -138,8 +138,10 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const announcementRoutes = require('./routes/announcementRoutes');
 const platformRoutes = require('./routes/platformRoutes');
 const billingWebhookRoutes = require('./routes/billingWebhookRoutes');
+const billingRoutes = require('./routes/billingRoutes');
 const { protect, authorize, authorizePerm, P, requireSuperAdmin } = require('./middleware/authMiddleware');
 const { withTenant } = require('./middleware/tenantMiddleware');
+const { requireTenantModule } = require('./utils/tenantModules');
 const { touchTenantApiActivity } = require('./middleware/tenantActivityMiddleware');
 const {
   enforceSuperAdminIpAllowlist,
@@ -171,7 +173,7 @@ app.use(
   express.json({
     limit: process.env.JSON_BODY_LIMIT || '200kb',
     verify: (req, _res, buf) => {
-      if (req.originalUrl === '/api/billing/webhook/stripe') {
+      if (String(req.originalUrl || '').startsWith('/api/billing/webhook/')) {
         req.rawBody = buf;
       }
     },
@@ -220,7 +222,20 @@ app.use(
 app.use('/api', protect);
 app.use('/api', withTenant);
 app.use('/api', touchTenantApiActivity);
+app.use('/api/production', requireTenantModule('manufacturing'));
+app.use('/api/boms', requireTenantModule('manufacturing'));
+app.use('/api/mrp', requireTenantModule('manufacturing'));
+app.use('/api/manufacturing', requireTenantModule('manufacturing'));
+app.use('/api/products', requireTenantModule('inventory'));
+app.use('/api/inventory', requireTenantModule('inventory'));
+app.use('/api/orders', requireTenantModule('sales'));
+app.use('/api/clients', requireTenantModule('sales'));
+app.use('/api/shipments', requireTenantModule('sales'));
+app.use('/api/purchase-orders', requireTenantModule('procurement'));
+app.use('/api/finance', requireTenantModule('finance'));
+app.use('/api/hr', requireTenantModule('hr'));
 app.use('/api/announcements', announcementRoutes);
+app.use('/api/billing', billingRoutes);
 
 app.use('/api/finance', financeAccess);
 app.use('/api/hr', authorize('Admin', 'hr_head', 'finance_head'));

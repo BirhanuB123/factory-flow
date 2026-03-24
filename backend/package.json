@@ -9,6 +9,7 @@
     "migrate:tenant": "node scripts/ensureDefaultTenant.js",
     "test": "jest --forceExit",
     "test:integration": "jest --runInBand --forceExit tests/integration/twoTenantIsolation.integration.test.js",
+    "test:billing": "jest --runInBand --forceExit tests/integration/chapaVerify.integration.test.js",
     "test:watch": "jest --watch"
   },
   "keywords": [],

@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { productionApi, inventoryApi } from "@/lib/api";
-import { useCurrency } from "@/hooks/use-currency";
 import { Wrench, Gauge, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function KpiCards() {
-  const { symbol } = useCurrency();
+  const navigate = useNavigate();
   const { data: jobs = [] } = useQuery({
     queryKey: ["productions"],
     queryFn: productionApi.getAll,
@@ -36,6 +36,7 @@ export function KpiCards() {
       iconBg: "bg-primary/10",
       iconColor: "text-primary",
       alert: false,
+      href: "/production-jobs",
     },
     {
       label: "Machine Utilization",
@@ -45,6 +46,7 @@ export function KpiCards() {
       iconBg: "bg-success/10",
       iconColor: "text-success",
       alert: false,
+      href: "/production",
     },
     {
       label: "Low Stock Alerts",
@@ -54,6 +56,7 @@ export function KpiCards() {
       iconBg: "bg-destructive/10",
       iconColor: "text-destructive",
       alert: lowStockCount + outOfStockCount > 0,
+      href: "/inventory",
     },
     {
       label: "Completed Today",
@@ -63,6 +66,7 @@ export function KpiCards() {
       iconBg: "bg-info/10",
       iconColor: "text-info",
       alert: false,
+      href: "/production-jobs?status=Completed",
     },
   ];
 
@@ -71,7 +75,16 @@ export function KpiCards() {
       {kpis.map((kpi) => (
         <Card 
           key={kpi.label} 
-          className="relative overflow-hidden group border-none shadow-md bg-card/60 backdrop-blur-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
+          role="link"
+          tabIndex={0}
+          className="relative overflow-hidden group border-none shadow-md bg-card/60 backdrop-blur-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          onClick={() => navigate(kpi.href)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              navigate(kpi.href);
+            }
+          }}
         >
           {/* Subtle gradient overlay */}
           <div className={`absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 rounded-full blur-3xl opacity-20 transition-opacity group-hover:opacity-30 ${kpi.iconBg}`} />

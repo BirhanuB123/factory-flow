@@ -62,6 +62,9 @@ const {
   exportIncomeTaxCsv,
   getPayslipHtml,
   updatePayrollRecord,
+  getPayrollMonthStatus,
+  postPayrollToFinance,
+  closePayrollMonth,
 } = require('./controllers/hrPayrollController');
 const {
   getTransactions,
@@ -114,6 +117,8 @@ const {
   updateEthiopiaTaxSettings,
   getTaxInvoiceHtml,
   issueSalesWithholdingCertificate,
+  issuePurchaseWithholdingCertificate,
+  getWithholdingCertificateHtml,
   reportVatSalesCsv,
   reportVatPurchasesCsv,
   reportWithholdingSalesCsv,
@@ -451,6 +456,17 @@ app.post('/api/hr/payroll/preview', previewPayroll);
 app.get('/api/hr/payroll/prepare', preparePayroll);
 app.post('/api/hr/payroll/run', runPayrollMonth);
 app.patch('/api/hr/payroll/record/:id', updatePayrollRecord);
+app.get('/api/hr/payroll/status/:month', getPayrollMonthStatus);
+app.post(
+  '/api/hr/payroll/:month/post-to-finance',
+  authorizePerm(P.HR_FULL, P.FINANCE_WRITE),
+  postPayrollToFinance
+);
+app.post(
+  '/api/hr/payroll/:month/close',
+  authorizePerm(P.HR_FULL, P.FINANCE_WRITE),
+  closePayrollMonth
+);
 app.get('/api/hr/payroll', getPayroll);
 app.post('/api/hr/payroll', createPayroll);
 
@@ -464,6 +480,14 @@ app.get('/api/finance/invoices/:id/tax-invoice.html', getTaxInvoiceHtml);
 app.post(
   '/api/finance/invoices/:id/withholding-certificate',
   issueSalesWithholdingCertificate
+);
+app.post(
+  '/api/finance/vendor-bills/:id/withholding-certificate',
+  issuePurchaseWithholdingCertificate
+);
+app.get(
+  '/api/finance/withholding-certificates/:id/print.html',
+  getWithholdingCertificateHtml
 );
 app.get('/api/finance/reports/ethiopia/vat-sales.csv', reportVatSalesCsv);
 app.get('/api/finance/reports/ethiopia/vat-purchases.csv', reportVatPurchasesCsv);

@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Circle } from "lucide-react";
 
@@ -11,6 +12,8 @@ const machines = [
 ];
 
 export function MachineStatus() {
+  const navigate = useNavigate();
+
   return (
     <Card className="shadow-sm border-none bg-card/50 backdrop-blur-sm">
       <CardHeader className="pb-3">
@@ -23,7 +26,16 @@ export function MachineStatus() {
           {machines.map((machine) => (
             <div 
               key={machine.name} 
-              className="group p-3 rounded-xl border bg-background/40 hover:bg-background/60 transition-all duration-300"
+              role="link"
+              tabIndex={0}
+              className="group p-3 rounded-xl border bg-background/40 hover:bg-background/60 transition-all duration-300 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={() => navigate("/production")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  navigate("/production");
+                }
+              }}
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold truncate max-w-[120px]">{machine.name}</span>

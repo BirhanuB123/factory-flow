@@ -8,7 +8,13 @@ import type { TenantModuleKey } from "@/lib/api";
 import { toast } from "sonner";
 
 const actions = [
-  { label: "Create New Job", icon: Plus, variant: "default" as const, path: "/jobs", moduleKey: "manufacturing" as TenantModuleKey },
+  {
+    label: "Create New Job",
+    icon: Plus,
+    variant: "default" as const,
+    path: "/production-jobs?action=new",
+    moduleKey: "manufacturing" as TenantModuleKey,
+  },
   {
     label: "Report Machine Down",
     icon: AlertOctagon,
@@ -20,7 +26,7 @@ const actions = [
     label: "Receive Inventory",
     icon: PackagePlus,
     variant: "outline" as const,
-    path: "/inventory",
+    path: "/inventory?action=receipt",
     moduleKey: "inventory" as TenantModuleKey,
   },
 ];
@@ -54,7 +60,10 @@ export function QuickActions() {
                 toast.error("This action is disabled by your tenant module policy.");
                 return;
               }
-              if (action.path) navigate(action.path);
+              if (action.path) {
+                const [pathname, search] = action.path.split("?");
+                navigate({ pathname, search: search ? `?${search}` : "" });
+              }
               else toast.info("Report machine down: log this in your maintenance system.");
             }}
           >

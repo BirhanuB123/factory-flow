@@ -1,8 +1,91 @@
 const asyncHandler = require('express-async-handler');
 const Employee = require('../models/Employee');
 const Payroll = require('../models/Payroll');
+const JournalEntry = require('../models/JournalEntry');
+const PayrollPosting = require('../models/PayrollPosting');
+const PayrollMonthClose = require('../models/PayrollMonthClose');
 const { computeEthiopiaPayroll } = require('../services/ethiopiaPayrollService');
 const { byTenant } = require('../utils/tenantQuery');
+const { assertPayrollMonthEditable } = require('../utils/payrollMonthGuard');
+
+function round2(n) {
+  return Math.round(Number(n) * 100) / 100;
+}
+
+/**
+ * Double-entry lines for accrued payroll (employer cost = gross + employer pension).
+ * Credits: net pay + withholdings + employer pension + other deductions payable.
+ */
+function buildPayrollJournalFromRows(rows) {
+  let net = 0;
+  let pe = 0;
+  let tax = 0;
+  let pq = 0;
+  let od = 0;
+  let empCost = 0;
+  for (const p of rows) {
+    net += Number(p.netSalary) || 0;
+    pe += Number(p.pensionEmployee) || 0;
+    tax += Number(p.incomeTax) || 0;
+    pq += Number(p.pensionEmployer) || 0;
+    od += Number(p.otherDeductionsPayroll) || 0;
+    empCost += Number(p.employerMonthlyCost) || 0;
+  }
+  net = round2(net);
+  pe = round2(pe);
+  tax = round2(tax);
+  pq = round2(pq);
+  od = round2(od);
+  empCost = round2(empCost);
+  const credits = round2(net + pe + tax + pq + od);
+  if (Math.abs(empCost - credits) > 0.02) {
+    empCost = credits;
+  }
+  const lines = [
+    {
+      account: '6100 — Payroll expense (employer cost)',
+      debit: empCost,
+      credit: 0,
+      memo: 'Accrued payroll — gross + employer pension',
+    },
+    { account: '2110 — Net salaries payable', debit: 0, credit: net, memo: 'Net pay to employees' },
+    { account: '2120 — Pension withholding (employee)', debit: 0, credit: pe, memo: 'Employee pension share' },
+    { account: '2130 — PAYE withheld', debit: 0, credit: tax, memo: 'Income tax withheld' },
+    { account: '2140 — Pension accrual (employer)', debit: 0, credit: pq, memo: 'Employer pension share' },
+  ];
+  if (od > 0) {
+    lines.push({
+      account: '2150 — Other payroll deductions payable',
+      debit: 0,
+      credit: od,
+      memo: 'Loans / other after-tax deductions',
+    });
+  }
+  const totalDebit = round2(lines.reduce((s, l) => s + (Number(l.debit) || 0), 0));
+  const totalCredit = round2(lines.reduce((s, l) => s + (Number(l.credit) || 0), 0));
+  return {
+    lines,
+    totals: {
+      employerMonthlyCost: empCost,
+      netSalary: net,
+      pensionEmployee: pe,
+      incomeTax: tax,
+      pensionEmployer: pq,
+      otherDeductionsPayroll: od,
+      headcount: rows.length,
+      totalDebit,
+      totalCredit,
+    },
+  };
+}
+
+function endOfMonthUtc(yyyyMm) {
+  const [ys, ms] = String(yyyyMm).trim().split('-');
+  const y = Number(ys);
+  const m = Number(ms);
+  if (!y || !m) return new Date();
+  return new Date(Date.UTC(y, m, 0, 23, 59, 59, 999));
+}
 
 function csvEscape(val) {
   const s = val == null ? '' : String(val);
@@ -120,6 +203,7 @@ exports.runPayrollMonth = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: 'month must be YYYY-MM' });
   }
   const m = String(month).trim();
+  await assertPayrollMonthEditable(req, m);
   const entryList = Array.isArray(entries) ? entries : [];
   const results = [];
   const skipped = [];
@@ -236,6 +320,11 @@ exports.runPayrollMonth = asyncHandler(async (req, res) => {
  * Body: { paymentStatus?, paymentDate? }
  */
 exports.updatePayrollRecord = asyncHandler(async (req, res) => {
+  const existing = await Payroll.findOne(byTenant(req, { _id: req.params.id })).select('month').lean();
+  if (!existing) {
+    return res.status(404).json({ success: false, message: 'Payroll record not found' });
+  }
+  await assertPayrollMonthEditable(req, existing.month);
   const { paymentStatus, paymentDate } = req.body;
   const set = {};
   if (paymentStatus && ['Paid', 'Pending', 'Processing'].includes(paymentStatus)) {
@@ -256,6 +345,172 @@ exports.updatePayrollRecord = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: 'Payroll record not found' });
   }
   res.json({ success: true, data: p });
+});
+
+/**
+ * GET /api/hr/payroll/status/:month
+ */
+exports.getPayrollMonthStatus = asyncHandler(async (req, res) => {
+  const month = req.params.month;
+  if (!monthRe(month)) {
+    return res.status(400).json({ success: false, message: 'month must be YYYY-MM' });
+  }
+  const m = String(month).trim();
+  const [posting, closedDoc, count] = await Promise.all([
+    PayrollPosting.findOne(byTenant(req, { month: m })).populate('journalEntryId').lean(),
+    PayrollMonthClose.findOne(byTenant(req, { month: m })).lean(),
+    Payroll.countDocuments(byTenant(req, { month: m })),
+  ]);
+  res.json({
+    success: true,
+    month: m,
+    payrollRecordCount: count,
+    posted: !!posting,
+    posting: posting
+      ? {
+          postedAt: posting.postedAt,
+          postedBy: posting.postedBy,
+          totals: posting.totals,
+          journalEntryId: posting.journalEntryId?._id || posting.journalEntryId,
+        }
+      : null,
+    closed: !!closedDoc,
+    closedAt: closedDoc?.closedAt || null,
+  });
+});
+
+/**
+ * POST /api/hr/payroll/:month/post-to-finance
+ * Idempotent: returns existing posting if already done.
+ */
+exports.postPayrollToFinance = asyncHandler(async (req, res) => {
+  const month = req.params.month;
+  if (!monthRe(month)) {
+    return res.status(400).json({ success: false, message: 'month must be YYYY-MM' });
+  }
+  const m = String(month).trim();
+  await assertPayrollMonthEditable(req, m);
+
+  const existing = await PayrollPosting.findOne(byTenant(req, { month: m }))
+    .populate('journalEntryId')
+    .lean();
+  if (existing) {
+    return res.status(200).json({
+      success: true,
+      idempotent: true,
+      message: 'Payroll already posted for this month.',
+      data: existing,
+    });
+  }
+
+  const rows = await Payroll.find(byTenant(req, { month: m })).lean();
+  if (rows.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'No payroll records for this month. Run payroll before posting.',
+    });
+  }
+
+  const { lines, totals } = buildPayrollJournalFromRows(rows);
+  if (totals.totalDebit <= 0) {
+    return res.status(400).json({ success: false, message: 'Computed payroll total is zero — nothing to post.' });
+  }
+
+  const memo = `Payroll accrual — ${m} (${totals.headcount} employees)`;
+  let journal;
+  try {
+    journal = await JournalEntry.create({
+      tenantId: req.tenantId,
+      entryDate: endOfMonthUtc(m),
+      memo,
+      source: 'payroll',
+      sourceRef: m,
+      lines,
+      postedBy: req.user._id,
+    });
+
+    const posting = await PayrollPosting.create({
+      tenantId: req.tenantId,
+      month: m,
+      totals,
+      journalEntryId: journal._id,
+      postedAt: new Date(),
+      postedBy: req.user._id,
+    });
+
+    res.status(201).json({
+    success: true,
+    data: {
+      posting: posting.toObject ? posting.toObject() : posting,
+      journalEntry: journal.toObject ? journal.toObject() : journal,
+    },
+  });
+  } catch (err) {
+    if (journal && journal._id) {
+      await JournalEntry.deleteOne({ _id: journal._id }).catch(() => {});
+    }
+    if (err && err.code === 11000) {
+      const again = await PayrollPosting.findOne(byTenant(req, { month: m }))
+        .populate('journalEntryId')
+        .lean();
+      if (again) {
+        return res.status(200).json({
+          success: true,
+          idempotent: true,
+          message: 'Payroll already posted for this month.',
+          data: again,
+        });
+      }
+    }
+    throw err;
+  }
+});
+
+/**
+ * POST /api/hr/payroll/:month/close
+ * Locks payroll edits for the month unless user is Admin.
+ */
+exports.closePayrollMonth = asyncHandler(async (req, res) => {
+  const month = req.params.month;
+  if (!monthRe(month)) {
+    return res.status(400).json({ success: false, message: 'month must be YYYY-MM' });
+  }
+  const m = String(month).trim();
+
+  const already = await PayrollMonthClose.findOne(byTenant(req, { month: m })).lean();
+  if (already) {
+    return res.status(200).json({
+      success: true,
+      idempotent: true,
+      message: 'Month already closed.',
+      data: already,
+    });
+  }
+
+  const posted = await PayrollPosting.findOne(byTenant(req, { month: m })).lean();
+  if (!posted) {
+    return res.status(400).json({
+      success: false,
+      message: 'Post payroll to finance before closing this month.',
+    });
+  }
+
+  const count = await Payroll.countDocuments(byTenant(req, { month: m }));
+  if (count === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'No payroll for this month — run payroll before closing.',
+    });
+  }
+
+  const doc = await PayrollMonthClose.create({
+    tenantId: req.tenantId,
+    month: m,
+    closedAt: new Date(),
+    closedBy: req.user._id,
+  });
+
+  res.status(201).json({ success: true, data: doc });
 });
 
 /**

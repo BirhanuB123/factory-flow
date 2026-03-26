@@ -85,6 +85,7 @@ exports.createVendorBill = asyncHandler(async (req, res) => {
     billNumber,
     supplyType: stIn,
     skipPurchaseTax,
+    taxOptions,
   } = req.body;
   if (!vendor || !Array.isArray(lines) || lines.length === 0) {
     return res.status(400).json({
@@ -117,7 +118,7 @@ exports.createVendorBill = asyncHandler(async (req, res) => {
         vatRecoverable: false,
         supplyType: 'import',
       }
-    : computePurchaseBillTax(taxable, settings, { supplyType });
+    : computePurchaseBillTax(taxable, settings, { supplyType, ...(taxOptions || {}) });
   const bn =
     billNumber || `VB-${Date.now()}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
   const terms = (await Vendor.findOne(byTenant(req, { _id: vendor })))?.paymentTermsDays || 30;
@@ -148,6 +149,7 @@ exports.createVendorBill = asyncHandler(async (req, res) => {
 });
 
 exports.createVendorBillFromPO = asyncHandler(async (req, res) => {
+  const taxOptions = req.body?.taxOptions || {};
   const po = await PurchaseOrder.findOne(byTenant(req, { _id: req.params.poId })).populate(
     'lines.product'
   );
@@ -192,7 +194,7 @@ exports.createVendorBillFromPO = asyncHandler(async (req, res) => {
   }
   const settings = await getTaxSettings(req.tenantId);
   const supplyType = po.supplyType === 'import' ? 'import' : 'local_vat_registered';
-  const tax = computePurchaseBillTax(taxable, settings, { supplyType });
+  const tax = computePurchaseBillTax(taxable, settings, { supplyType, ...taxOptions });
   const vendor = await Vendor.findOne(byTenant(req, { _id: po.vendor }));
   const due = new Date(Date.now() + (vendor?.paymentTermsDays || 30) * 86400000);
   const bill = await VendorBill.create({

@@ -59,6 +59,20 @@ This document explains how a **company (tenant)** uses the ERP from first access
 - For regular users, **trial / active / suspended** information may appear on the **dashboard** and under **Settings**, with optional **status reasons** when the company is suspended or archived.
 - **Super admins** are not shown the same subscription banner in the UI when acting as platform operators.
 
+### Subscription self-payment (Chapa)
+
+If your company is on **trial** or becomes **suspended** due to billing, company administrators can pay directly in-app:
+
+1. Go to **Settings** (`/settings`).
+2. In the **Subscription status** card, click **Pay with Chapa** (visible to `Admin` and `finance_head`).
+3. Complete checkout in Chapa.
+4. After Chapa returns you to the app, the system verifies the transaction and activates your subscription (tenant status becomes **Active**).
+
+Notes:
+
+- The system verifies payment using the transaction reference (`tx_ref`) returned from Chapa.
+- If payment is not yet completed, the app will show a “not completed yet” message and you can retry from the same Settings page.
+
 ### Announcements
 
 - A top-of-app **banner** can show **company-specific** or **global** messages (maintenance, warnings, info), loaded from the announcements API. Users can dismiss a banner for the current browser session.
@@ -181,7 +195,7 @@ System support:
 ## 4) New client demo script (10–15 minutes)
 
 1. Log in as **Admin** (or complete **`/invite`** / password change if demoing onboarding).
-2. Confirm **Settings** and dashboard show the correct **company** and subscription/trial if applicable.
+2. Confirm **Settings** and dashboard show the correct **company** and subscription/trial if applicable (optionally demo **Pay with Chapa** if using self-serve billing).
 3. Create one client, one product, and one BOM.
 4. Create a sales order; show MRP and create a linked production job.
 5. Reserve materials and update one operation on the job.

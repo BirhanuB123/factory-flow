@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { productionApi, bomApi, downloadReportCsv } from "@/lib/api";
 import { SavedViewsBar } from "@/components/SavedViewsBar";
@@ -112,6 +113,7 @@ import { ProductionMetrics } from "@/components/ProductionMetrics";
 
 const ProductionJobs = () => {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
@@ -143,6 +145,68 @@ const ProductionJobs = () => {
     queryKey: ['boms'],
     queryFn: bomApi.getAll,
   });
+
+  useEffect(() => {
+    const action = searchParams.get("action");
+    const jobParam = searchParams.get("job");
+    const statusParam = searchParams.get("status");
+    const validStatuses: JobStatus[] = [
+      "Scheduled",
+      "In Progress",
+      "On Hold",
+      "Completed",
+      "Cancelled",
+    ];
+
+    const syncKeys: string[] = [];
+    if (action === "new") {
+      setNewJobOpen(true);
+      syncKeys.push("action");
+    }
+    if (statusParam && validStatuses.includes(statusParam as JobStatus)) {
+      setStatusFilter(statusParam);
+      setPage(1);
+      syncKeys.push("status");
+    }
+    if (syncKeys.length > 0) {
+      setSearchParams(
+        (prev) => {
+          const n = new URLSearchParams(prev);
+          syncKeys.forEach((k) => n.delete(k));
+          return n;
+        },
+        { replace: true },
+      );
+    }
+
+    /* Wait until URL-only deep links (e.g. job) run alone, so we don't double-fetch after stripping status/action */
+    if (!jobParam || syncKeys.length > 0) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const full = await productionApi.getOne(jobParam);
+        if (!cancelled) setSelectedJob(full as Job);
+      } catch {
+        if (!cancelled) toast.error("Could not open that job. It may have been removed.");
+      } finally {
+        if (!cancelled) {
+          setSearchParams(
+            (prev) => {
+              const n = new URLSearchParams(prev);
+              n.delete("job");
+              return n;
+            },
+            { replace: true },
+          );
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, setSearchParams]);
 
   const createJobMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => productionApi.create(data),

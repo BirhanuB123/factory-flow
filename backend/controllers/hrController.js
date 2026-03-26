@@ -3,6 +3,7 @@ const Employee = require('../models/Employee');
 const Attendance = require('../models/Attendance');
 const Payroll = require('../models/Payroll');
 const { byTenant } = require('../utils/tenantQuery');
+const { assertPayrollMonthEditable } = require('../utils/payrollMonthGuard');
 
 // @desc    Get all employees
 // @route   GET /api/hr/employees
@@ -203,6 +204,10 @@ const getPayroll = asyncHandler(async (req, res) => {
 // @access  Public
 const createPayroll = asyncHandler(async (req, res) => {
   const { employee, month, basicSalary, bonuses, deductions, netSalary, paymentStatus, paymentDate } = req.body;
+
+  if (month) {
+    await assertPayrollMonthEditable(req, String(month).trim());
+  }
 
   const empOk = await Employee.exists(byTenant(req, { _id: employee }));
   if (!empOk) {

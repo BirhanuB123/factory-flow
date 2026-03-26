@@ -16,6 +16,7 @@ import {
   Download,
   Building2,
   FileText,
+  BookMarked,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { financeExtendedApi, ordersApi } from "@/lib/api";
@@ -56,8 +57,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-type FinanceStatus = "Paid" | "Pending" | "Overdue";
-type TransactionType = "Income" | "Expense";
+type FinanceStatus = "Paid" | "Pending" | "Overdue" | "Posted";
+type TransactionType = "Income" | "Expense" | "Journal";
 
 type Transaction = {
   id: string;
@@ -77,6 +78,7 @@ const statusVariant: Record<FinanceStatus, "success" | "warning" | "destructive"
   Paid: "success",
   Pending: "warning",
   Overdue: "destructive",
+  Posted: "success",
 };
 
 const API_BASE_URL = "http://localhost:5000/api/finance";
@@ -166,11 +168,15 @@ function FinanceLedgerTable({
                       className={`text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${
                         t.type === "Income"
                           ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                          : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                          : t.type === "Journal"
+                            ? "bg-violet-500/15 text-violet-600 dark:text-violet-400"
+                            : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
                       }`}
                     >
                       {t.type === "Income" ? (
                         <TrendingUp className="h-3 w-3" />
+                      ) : t.type === "Journal" ? (
+                        <BookMarked className="h-3 w-3" />
                       ) : (
                         <TrendingDown className="h-3 w-3" />
                       )}
@@ -182,17 +188,37 @@ function FinanceLedgerTable({
                   <TableCell>
                     <span
                       className={`text-sm font-black ${
-                        t.type === "Income" ? "text-emerald-500" : "text-rose-500"
+                        t.type === "Income"
+                          ? "text-emerald-500"
+                          : t.type === "Journal"
+                            ? "text-violet-600 dark:text-violet-400"
+                            : "text-rose-500"
                       }`}
                       title={
                         t.type === "Income" && t.grossBeforeWht != null
                           ? `Net receivable. Gross before WHT: ${symbol}${formatAmount(t.grossBeforeWht)}`
-                          : undefined
+                          : t.type === "Journal"
+                            ? "Payroll accrual (total debit)"
+                            : undefined
                       }
                     >
-                      {t.type === "Income" ? "+" : "-"}
-                      {symbol}
-                      {formatAmount(t.amount)}
+                      {t.type === "Income" ? (
+                        <>
+                          +{symbol}
+                          {formatAmount(t.amount)}
+                        </>
+                      ) : t.type === "Journal" ? (
+                        <>
+                          {symbol}
+                          {formatAmount(t.amount)}
+                          <span className="text-[10px] font-mono font-bold opacity-50 ml-1">dr</span>
+                        </>
+                      ) : (
+                        <>
+                          -{symbol}
+                          {formatAmount(t.amount)}
+                        </>
+                      )}
                     </span>
                   </TableCell>
                   <TableCell className="text-[10px] font-mono text-muted-foreground">
@@ -265,6 +291,10 @@ export default function Finance() {
   const [invOrderId, setInvOrderId] = useState("");
   const [invShipmentId, setInvShipmentId] = useState("");
   const [invDue, setInvDue] = useState(() => new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
+  const [invTaxCategory, setInvTaxCategory] = useState("");
+  const [invForceVatRate, setInvForceVatRate] = useState("");
+  const [invForceWhtRate, setInvForceWhtRate] = useState("");
+  const [invVatExempt, setInvVatExempt] = useState(false);
   const [ethCsvOpen, setEthCsvOpen] = useState(false);
   const [ethFrom, setEthFrom] = useState(() => {
     const d = new Date();
@@ -308,11 +338,23 @@ export default function Finance() {
         orderId: invOrderId,
         dueDate: new Date(invDue).toISOString(),
         ...(needShipmentInvoice && invShipmentId ? { shipmentId: invShipmentId } : {}),
+        taxOptions: {
+          taxCategory: invTaxCategory.trim() || undefined,
+          forceVatRate:
+            invForceVatRate.trim() === "" ? undefined : Math.max(0, parseFloat(invForceVatRate) || 0),
+          forceWhtRate:
+            invForceWhtRate.trim() === "" ? undefined : Math.max(0, parseFloat(invForceWhtRate) || 0),
+          isVatExempt: invVatExempt,
+        },
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ar-aging"] });
       sonnerToast.success("Invoice created from order");
       setInvFromOrderOpen(false);
+      setInvTaxCategory("");
+      setInvForceVatRate("");
+      setInvForceWhtRate("");
+      setInvVatExempt(false);
       fetchTransactions();
       fetchStats();
     },
@@ -366,7 +408,6 @@ export default function Finance() {
     try {
       const endpoint = newTransaction.type === "Income" ? "invoices" : "expenses";
       const payload = newTransaction.type === "Income" ? {
-        invoiceId: `INV-${Math.floor(Math.random() * 10000)}`,
         amount: newTransaction.amount,
         status: newTransaction.status,
         dueDate: newTransaction.date,
@@ -601,6 +642,48 @@ export default function Finance() {
                 <div className="space-y-2">
                   <Label>Due date</Label>
                   <Input type="date" value={invDue} onChange={(e) => setInvDue(e.target.value)} />
+                </div>
+                <div className="rounded-lg border p-3 space-y-3">
+                  <Label className="text-[10px] uppercase">Tax override (optional)</Label>
+                  <div className="space-y-2">
+                    <Label>Tax category key</Label>
+                    <Input
+                      value={invTaxCategory}
+                      onChange={(e) => setInvTaxCategory(e.target.value)}
+                      placeholder="e.g. service, export"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
+                      <Label>Force VAT %</Label>
+                      <Input
+                        type="number"
+                        value={invForceVatRate}
+                        onChange={(e) => setInvForceVatRate(e.target.value)}
+                        placeholder="leave empty"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Force WHT %</Label>
+                      <Input
+                        type="number"
+                        value={invForceWhtRate}
+                        onChange={(e) => setInvForceWhtRate(e.target.value)}
+                        placeholder="leave empty"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="inv-vat-exempt"
+                      type="checkbox"
+                      checked={invVatExempt}
+                      onChange={(e) => setInvVatExempt(e.target.checked)}
+                    />
+                    <Label htmlFor="inv-vat-exempt" className="font-normal">
+                      VAT exempt / zero-rated
+                    </Label>
+                  </div>
                 </div>
               </div>
               <DialogFooter>

@@ -17,6 +17,8 @@ import {
   Download,
   FileText,
   Play,
+  BookOpen,
+  Lock,
 } from "lucide-react";
 import {
   hrPayrollApi,
@@ -24,6 +26,7 @@ import {
   downloadPayrollIncomeTaxCsv,
   openPayrollPayslipHtml,
   type PayrollPrepareRow,
+  type PayrollMonthStatus,
 } from "@/lib/api";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -66,6 +69,8 @@ const APP_ACCESS_ROLES = [
   "warehouse_head",
   "Admin",
 ] as const;
+
+const PAYROLL_FINANCE_ROLES = new Set(["Admin", "hr_head", "finance_head"]);
 
 type Employee = {
   _id?: string;
@@ -133,8 +138,12 @@ export default function Hr() {
   const [prepareLoading, setPrepareLoading] = useState(false);
   const [prepareHint, setPrepareHint] = useState<string | null>(null);
   const [runGrid, setRunGrid] = useState<PayrollPrepareRow[]>([]);
+  const [payrollMonthStatus, setPayrollMonthStatus] = useState<PayrollMonthStatus | null>(null);
+  const [payrollActionLoading, setPayrollActionLoading] = useState(false);
 
   const { toast } = useToast();
+  const canPostOrClosePayroll = !!(user?.role && PAYROLL_FINANCE_ROLES.has(user.role));
+  const payrollMonthLocked = !!(payrollMonthStatus?.closed && user?.role !== "Admin");
 
   useEffect(() => {
     if (authLoading || !token) return;
@@ -171,6 +180,12 @@ export default function Hr() {
     try {
       const data = await hrPayrollApi.list(month);
       setPayroll(Array.isArray(data) ? data : []);
+      try {
+        const st = await hrPayrollApi.monthStatus(month);
+        setPayrollMonthStatus(st);
+      } catch {
+        setPayrollMonthStatus(null);
+      }
     } catch (error) {
       console.error("Failed to fetch payroll:", error);
       toast({
@@ -179,6 +194,7 @@ export default function Hr() {
         variant: "destructive",
       });
       setPayroll([]);
+      setPayrollMonthStatus(null);
     } finally {
       setPayLoading(false);
     }
@@ -893,9 +909,25 @@ export default function Hr() {
                     onChange={(e) => setPayrollMonth(e.target.value)}
                   />
                 </div>
+                {(payrollMonthStatus?.posted || payrollMonthStatus?.closed) && (
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {payrollMonthStatus.posted && (
+                      <Badge variant="secondary" className="text-[9px] font-black uppercase tracking-wide">
+                        Posted to finance
+                      </Badge>
+                    )}
+                    {payrollMonthStatus.closed && (
+                      <Badge variant="outline" className="text-[9px] font-black uppercase tracking-wide border-amber-500/50 text-amber-700 dark:text-amber-400">
+                        <Lock className="h-3 w-3 mr-1 inline" />
+                        Month closed
+                      </Badge>
+                    )}
+                  </div>
+                )}
                 <Button
                   className="h-10 gap-2 font-black uppercase text-xs"
-                  disabled={!token}
+                  disabled={!token || payrollMonthLocked}
+                  title={payrollMonthLocked ? "Month is closed — only Admin can change payroll." : undefined}
                   onClick={() => {
                     setRunDialogOpen(true);
                     setTimeout(() => loadPayrollPrepare(), 0);
@@ -903,6 +935,93 @@ export default function Hr() {
                 >
                   <Play className="h-4 w-4" />
                   Run payroll…
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="h-10 gap-2 font-black uppercase text-xs"
+                  disabled={
+                    !token ||
+                    !canPostOrClosePayroll ||
+                    payrollActionLoading ||
+                    payroll.length === 0 ||
+                    !!payrollMonthStatus?.posted ||
+                    payrollMonthLocked
+                  }
+                  title={
+                    payrollMonthStatus?.posted
+                      ? "Already posted for this month."
+                      : payrollMonthLocked
+                        ? "Month is closed — only Admin can post or change payroll."
+                        : "Creates a balanced journal in Finance (idempotent)."
+                  }
+                  onClick={async () => {
+                    setPayrollActionLoading(true);
+                    try {
+                      const r = await hrPayrollApi.postToFinance(payrollMonth);
+                      toast({
+                        title: r.idempotent ? "Already posted" : "Posted to finance",
+                        description: r.message || "Journal entry created — see Finance ledger.",
+                      });
+                      await fetchPayroll(payrollMonth);
+                    } catch (e: unknown) {
+                      const msg =
+                        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+                        "Could not post payroll.";
+                      toast({ title: "Post failed", description: msg, variant: "destructive" });
+                    } finally {
+                      setPayrollActionLoading(false);
+                    }
+                  }}
+                >
+                  {payrollActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+                  Post to finance
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-10 gap-2 font-black uppercase text-xs border-amber-500/40"
+                  disabled={
+                    !token ||
+                    !canPostOrClosePayroll ||
+                    payrollActionLoading ||
+                    payroll.length === 0 ||
+                    !payrollMonthStatus?.posted ||
+                    !!payrollMonthStatus?.closed
+                  }
+                  title={
+                    payrollMonthStatus?.closed
+                      ? "This month is already closed."
+                      : !payrollMonthStatus?.posted
+                        ? "Post payroll to finance first."
+                        : "Locks payroll edits for this month (Admin can still change records)."
+                  }
+                  onClick={async () => {
+                    if (
+                      !window.confirm(
+                        "Close this payroll month? HR users will not be able to re-run payroll or mark paid unless an Admin edits records."
+                      )
+                    ) {
+                      return;
+                    }
+                    setPayrollActionLoading(true);
+                    try {
+                      const r = await hrPayrollApi.closeMonth(payrollMonth);
+                      toast({
+                        title: r.idempotent ? "Already closed" : "Month closed",
+                        description: r.message || "Payroll is locked for this period.",
+                      });
+                      await fetchPayroll(payrollMonth);
+                    } catch (e: unknown) {
+                      const msg =
+                        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+                        "Could not close month.";
+                      toast({ title: "Close failed", description: msg, variant: "destructive" });
+                    } finally {
+                      setPayrollActionLoading(false);
+                    }
+                  }}
+                >
+                  <Lock className="h-4 w-4" />
+                  Close month
                 </Button>
                 <Button
                   variant="outline"
@@ -990,6 +1109,8 @@ export default function Hr() {
                               variant="outline"
                               size="sm"
                               className="h-7 text-[10px] uppercase font-bold"
+                              disabled={payrollMonthLocked}
+                              title={payrollMonthLocked ? "Month closed — Admin only" : undefined}
                               onClick={async () => {
                                 try {
                                   await hrPayrollApi.updateRecord(p._id, {
@@ -1207,7 +1328,7 @@ export default function Hr() {
             </Button>
             <Button
               type="button"
-              disabled={payRunLoading || runGrid.length === 0}
+              disabled={payRunLoading || runGrid.length === 0 || payrollMonthLocked}
               className="font-black uppercase text-xs"
               onClick={async () => {
                 const entries = runGrid

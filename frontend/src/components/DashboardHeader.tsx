@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, Bell, Settings as SettingsIcon, LogOut, User, Shield, AlertTriangle, CheckCircle2, Loader2, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useSettings } from "@/hooks/use-settings";
 import { useAuth } from "@/contexts/AuthContext";
 import { SuperTenantSwitcher, TenantContextSelect } from "@/components/SuperTenantSwitcher";
@@ -45,6 +45,7 @@ export function DashboardHeader() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Notifications State
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
@@ -135,6 +136,34 @@ export function DashboardHeader() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
+  useEffect(() => {
+    const onGlobalKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName?.toLowerCase();
+      const typingInField =
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
+        t?.isContentEditable;
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        if (searchQuery.trim().length > 1) setShowSearch(true);
+        return;
+      }
+
+      if (e.key === "Escape" && showSearch) {
+        if (!typingInField || t === searchInputRef.current) {
+          e.preventDefault();
+          setShowSearch(false);
+        }
+      }
+    };
+    window.addEventListener("keydown", onGlobalKey);
+    return () => window.removeEventListener("keydown", onGlobalKey);
+  }, [searchQuery, showSearch]);
+
   const performSearch = async () => {
     setIsSearching(true);
     setShowSearch(true);
@@ -182,12 +211,20 @@ export function DashboardHeader() {
         <div className="relative hidden sm:block w-full">
           <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search jobs, inventory, clients..."
-            className="w-full pl-9 h-9 bg-secondary border-0 text-sm focus-visible:ring-1 focus-visible:ring-primary/20"
+            ref={searchInputRef}
+            placeholder="Search jobs, inventory, clients…"
+            className="w-full pl-9 pr-16 h-9 bg-secondary border-0 text-sm focus-visible:ring-1 focus-visible:ring-primary/20"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => searchQuery.trim().length > 1 && setShowSearch(true)}
           />
+          <span
+            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 rounded border bg-muted/80 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+            aria-hidden
+          >
+            <kbd className="font-sans">Ctrl</kbd>
+            <kbd className="font-sans">K</kbd>
+          </span>
           
           {showSearch && (
             <div className="absolute top-full left-0 w-full mt-1 bg-card border rounded-md shadow-lg p-2 max-h-[400px] overflow-y-auto z-50">

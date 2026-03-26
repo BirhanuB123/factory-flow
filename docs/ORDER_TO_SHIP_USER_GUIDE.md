@@ -26,6 +26,7 @@ How shop floor and office staff run the happy path in **Factory Flow**.
 1. **Shipments** (warehouse) — **New shipment** → pick order line(s) and qty → **Picked** → **Packed** → **Ship** (carrier + tracking). Partial shipments are supported.
 2. **Finance** — **Invoice from order**: if the order already has **shipped** packages, select the **shipment** to bill; otherwise one full-order invoice. **AP & vendors** tab for payables; **Export CSV** for AR/AP/orders/inventory/production.
 3. **Settings → Audit log** (Admin / finance) — compliance trail when `AUDIT_LOG_ENABLED=true` on the server.
+4. **Settings → Subscription** (Admin / finance_head) — if the tenant is trial/blocked, use **Pay with Chapa** to self-serve activation.
 
 ## 5. Purchasing (if you buy parts)
 

@@ -420,9 +420,14 @@ export const financeExtendedApi = {
   createInvoiceFromOrder: async (body: {
     orderId: string;
     dueDate?: string;
-    invoiceId?: string;
     shippedAt?: string;
     shipmentId?: string;
+    taxOptions?: {
+      taxCategory?: string;
+      forceVatRate?: number;
+      forceWhtRate?: number;
+      isVatExempt?: boolean;
+    };
   }) => {
     const response = await api.post('/finance/invoices/from-order', body);
     return response.data.data;
@@ -573,6 +578,7 @@ export const apApi = {
       vendor?: { name: string; code: string };
       amount: number;
       amountPaid: number;
+      purchaseWhtAmount?: number;
       dueDate: string;
       status: string;
       purchaseOrder?: { poNumber: string };
@@ -581,6 +587,12 @@ export const apApi = {
   createBill: async (body: {
     vendor: string;
     lines: Array<{ description: string; quantity?: number; unitCost?: number; amount?: number }>;
+    taxOptions?: {
+      taxCategory?: string;
+      forceVatRate?: number;
+      forceWhtRate?: number;
+      isVatExempt?: boolean;
+    };
   }) => {
     const response = await api.post('/finance/vendor-bills', body);
     return response.data.data;
@@ -592,6 +604,17 @@ export const apApi = {
   recordPayment: async (billId: string, body: { amount: number; method?: string; reference?: string }) => {
     const response = await api.post(`/finance/vendor-bills/${billId}/payments`, body);
     return response.data.data;
+  },
+  issueWithholdingCertificate: async (billId: string, notes?: string) => {
+    const response = await api.post('/finance/vendor-bills/' + billId + '/withholding-certificate', {
+      notes: notes || '',
+    });
+    return response.data.data as {
+      _id: string;
+      certificateNumber: string;
+      vendorBill?: string;
+      withheldAmount?: number;
+    };
   },
   getAPAging: async () => {
     const response = await api.get('/finance/ap-aging');
@@ -708,11 +731,22 @@ export type EthiopiaTaxSettings = {
   companyAddress?: string;
   companyPhone?: string;
   currency?: string;
+  /** Prefix for server-issued sales invoice numbers (e.g. INV → INV-000001). */
+  invoiceSeriesPrefix?: string;
+  /** Last used sequence index; next invoice uses nextInvoiceSequence + 1. */
+  nextInvoiceSequence?: number;
   defaultVatRatePercent?: number;
   salesWithholdingRatePercent?: number;
   salesWhtBase?: string;
   purchaseWithholdingRatePercent?: number;
   salesPriceBasis?: string;
+  sellerVatRegistered?: boolean;
+  whtCategoryRates?: Array<{
+    key: string;
+    label?: string;
+    salesRatePercent?: number | null;
+    purchaseRatePercent?: number | null;
+  }>;
   eInvoicingNotes?: string;
 };
 
@@ -733,6 +767,38 @@ export const ethiopiaTaxApi = {
   /** Opens printable tax invoice in new tab (uses auth). */
   async openTaxInvoiceHtml(invoiceMongoId: string) {
     const response = await api.get<string>(`/finance/invoices/${invoiceMongoId}/tax-invoice.html`, {
+      responseType: 'text',
+    });
+    const blob = new Blob([response.data], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!w) {
+      URL.revokeObjectURL(url);
+      throw new Error('Popup blocked');
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 120_000);
+  },
+};
+
+export type WithholdingCertificateRow = {
+  _id: string;
+  certificateNumber: string;
+  type: 'on_sales' | 'on_purchase';
+  issueDate?: string;
+  withheldAmount?: number;
+  invoice?: { _id?: string; invoiceId?: string };
+  vendorBill?: string | { _id?: string; billNumber?: string };
+};
+
+export const withholdingCertificatesApi = {
+  list: async () => {
+    const response = await api.get<{ success: boolean; data: WithholdingCertificateRow[] }>(
+      '/finance/withholding-certificates'
+    );
+    return response.data.data;
+  },
+  async openPrintHtml(certificateId: string) {
+    const response = await api.get<string>(`/finance/withholding-certificates/${certificateId}/print.html`, {
       responseType: 'text',
     });
     const blob = new Blob([response.data], { type: 'text/html;charset=utf-8' });
@@ -778,10 +844,47 @@ export type PayrollPrepareRow = {
   includeInRun: boolean;
 };
 
+export type PayrollMonthStatus = {
+  success: boolean;
+  month: string;
+  payrollRecordCount: number;
+  posted: boolean;
+  posting: {
+    postedAt: string;
+    postedBy?: string;
+    totals: Record<string, number>;
+    journalEntryId?: string;
+  } | null;
+  closed: boolean;
+  closedAt: string | null;
+};
+
 export const hrPayrollApi = {
   list: async (month?: string) => {
     const r = await api.get('/hr/payroll', { params: month ? { month } : {} });
     return r.data as HrPayrollRow[];
+  },
+  monthStatus: async (month: string) => {
+    const r = await api.get<PayrollMonthStatus>(`/hr/payroll/status/${encodeURIComponent(month)}`);
+    return r.data;
+  },
+  postToFinance: async (month: string) => {
+    const r = await api.post<{
+      success: boolean;
+      idempotent?: boolean;
+      message?: string;
+      data?: unknown;
+    }>(`/hr/payroll/${encodeURIComponent(month)}/post-to-finance`);
+    return r.data;
+  },
+  closeMonth: async (month: string) => {
+    const r = await api.post<{
+      success: boolean;
+      idempotent?: boolean;
+      message?: string;
+      data?: unknown;
+    }>(`/hr/payroll/${encodeURIComponent(month)}/close`);
+    return r.data;
   },
   prepare: async (month: string) => {
     const r = await api.get<{

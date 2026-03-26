@@ -73,7 +73,7 @@ export function ProductionJobsTable() {
                   <TableRow
                     key={job._id}
                     className="cursor-pointer"
-                    onClick={() => navigate("/jobs")}
+                    onClick={() => navigate(`/production-jobs?job=${encodeURIComponent(job._id)}`)}
                   >
                     <TableCell className="pl-6 font-mono text-sm font-medium">{job.jobId}</TableCell>
                     <TableCell className="text-sm">{job.bom?.name ?? "—"}</TableCell>

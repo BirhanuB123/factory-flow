@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inventoryApi, inventoryMovementsApi, inventoryAlertsApi, downloadReportCsv } from "@/lib/api";
 import { submitInventoryMovementWhenOnline } from "@/lib/offlineCriticalActions";
@@ -80,6 +81,7 @@ export default function Inventory({
   embedded?: boolean;
 }) {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { can } = useAuth();
   const { symbol } = useCurrency();
   const canPostInventory = can("inventory:post");
@@ -98,6 +100,31 @@ export default function Inventory({
   const [movKind, setMovKind] = useState<"receipt" | "issue" | "adjustment">("receipt");
   const [movQty, setMovQty] = useState(1);
   const [movNote, setMovNote] = useState("");
+
+  useEffect(() => {
+    if (embedded) return;
+    if (searchParams.get("action") !== "receipt") return;
+
+    const clearAction = () =>
+      setSearchParams(
+        (prev) => {
+          const n = new URLSearchParams(prev);
+          n.delete("action");
+          return n;
+        },
+        { replace: true },
+      );
+
+    if (!canPostInventory) {
+      toast.error("You don't have permission to record inventory receipts.");
+      clearAction();
+      return;
+    }
+
+    setMovKind("receipt");
+    setMovDialogOpen(true);
+    clearAction();
+  }, [embedded, searchParams, setSearchParams, canPostInventory]);
 
   const { data: inventoryData = [], isLoading } = useQuery({
     queryKey: ['inventory'],

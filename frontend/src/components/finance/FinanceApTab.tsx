@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apApi, purchaseOrdersApi, type APAgingPayload } from "@/lib/api";
+import {
+  apApi,
+  purchaseOrdersApi,
+  withholdingCertificatesApi,
+  type APAgingPayload,
+  type WithholdingCertificateRow,
+} from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +60,10 @@ export function FinanceApTab({
   const [billVendor, setBillVendor] = useState("");
   const [billDesc, setBillDesc] = useState("");
   const [billAmt, setBillAmt] = useState("");
+  const [billTaxCategory, setBillTaxCategory] = useState("");
+  const [billForceVatRate, setBillForceVatRate] = useState("");
+  const [billForceWhtRate, setBillForceWhtRate] = useState("");
+  const [billVatExempt, setBillVatExempt] = useState(false);
   const [payBillId, setPayBillId] = useState<string | null>(null);
   const [payAmt, setPayAmt] = useState("");
   const [poForBill, setPoForBill] = useState("");
@@ -71,6 +81,11 @@ export function FinanceApTab({
   const { data: bills = [] } = useQuery({
     queryKey: ["vendor-bills"],
     queryFn: apApi.listBills,
+  });
+
+  const { data: certs = [] } = useQuery({
+    queryKey: ["withholding-certificates"],
+    queryFn: withholdingCertificatesApi.list,
   });
 
   const { data: pos = [] } = useQuery({
@@ -105,6 +120,14 @@ export function FinanceApTab({
       apApi.createBill({
         vendor: billVendor,
         lines: [{ description: billDesc || "Line", quantity: 1, amount: parseFloat(billAmt) || 0 }],
+        taxOptions: {
+          taxCategory: billTaxCategory.trim() || undefined,
+          forceVatRate:
+            billForceVatRate.trim() === "" ? undefined : Math.max(0, parseFloat(billForceVatRate) || 0),
+          forceWhtRate:
+            billForceWhtRate.trim() === "" ? undefined : Math.max(0, parseFloat(billForceWhtRate) || 0),
+          isVatExempt: billVatExempt,
+        },
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["vendor-bills"] });
@@ -113,6 +136,10 @@ export function FinanceApTab({
       setBillOpen(false);
       setBillDesc("");
       setBillAmt("");
+      setBillTaxCategory("");
+      setBillForceVatRate("");
+      setBillForceWhtRate("");
+      setBillVatExempt(false);
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
       toast.error(e?.response?.data?.message || "Failed"),
@@ -143,7 +170,25 @@ export function FinanceApTab({
       toast.error(e?.response?.data?.message || "Failed"),
   });
 
+  const issuePurchaseCertMut = useMutation({
+    mutationFn: (billId: string) => apApi.issueWithholdingCertificate(billId),
+    onSuccess: (cert) => {
+      qc.invalidateQueries({ queryKey: ["withholding-certificates"] });
+      toast.success(`Certificate issued: ${cert.certificateNumber}`);
+    },
+    onError: (e: { response?: { data?: { message?: string } } }) =>
+      toast.error(e?.response?.data?.message || "Could not issue withholding certificate"),
+  });
+
   const payload = apAging as APAgingPayload | undefined;
+  const purchaseCertByBillId = new Map<string, WithholdingCertificateRow>();
+  for (const cert of certs) {
+    if (cert.type !== "on_purchase") continue;
+    const vb = cert.vendorBill;
+    const billId = typeof vb === "string" ? vb : vb?._id;
+    if (!billId) continue;
+    purchaseCertByBillId.set(String(billId), cert);
+  }
 
   return (
     <Tabs defaultValue="bills" className="space-y-6">
@@ -253,6 +298,47 @@ export function FinanceApTab({
                       onChange={(e) => setBillAmt(e.target.value)}
                     />
                   </div>
+                  <div className="rounded-lg border p-3 space-y-3">
+                    <p className="text-[11px] font-semibold uppercase text-muted-foreground">Tax override (optional)</p>
+                    <div>
+                      <Label>Tax category key</Label>
+                      <Input
+                        value={billTaxCategory}
+                        onChange={(e) => setBillTaxCategory(e.target.value)}
+                        placeholder="e.g. service, rent, export"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label>Force VAT %</Label>
+                        <Input
+                          type="number"
+                          value={billForceVatRate}
+                          onChange={(e) => setBillForceVatRate(e.target.value)}
+                          placeholder="leave empty"
+                        />
+                      </div>
+                      <div>
+                        <Label>Force WHT %</Label>
+                        <Input
+                          type="number"
+                          value={billForceWhtRate}
+                          onChange={(e) => setBillForceWhtRate(e.target.value)}
+                          placeholder="leave empty"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="bill-vat-exempt"
+                        checked={billVatExempt}
+                        onCheckedChange={(c) => setBillVatExempt(c === true)}
+                      />
+                      <Label htmlFor="bill-vat-exempt" className="text-sm font-normal cursor-pointer">
+                        VAT exempt / zero-rated
+                      </Label>
+                    </div>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button
@@ -303,7 +389,7 @@ export function FinanceApTab({
                 <TableHead className="text-right">Paid</TableHead>
                 <TableHead>Due</TableHead>
                 <TableHead>Status</TableHead>
-                {canWrite && <TableHead className="w-[100px]" />}
+                {canWrite && <TableHead className="w-[220px] text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -334,21 +420,57 @@ export function FinanceApTab({
                       </Badge>
                     </TableCell>
                     {canWrite && (
-                      <TableCell>
-                        {b.status !== "Paid" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 text-[10px]"
-                            onClick={() => {
-                              setPayBillId(b._id);
-                              setPayAmt(String(Math.max(0, b.amount - (b.amountPaid ?? 0))));
-                            }}
-                          >
-                            <CreditCard className="h-3 w-3 mr-1" />
-                            Pay
-                          </Button>
-                        )}
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {b.status !== "Paid" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-[10px]"
+                              onClick={() => {
+                                setPayBillId(b._id);
+                                setPayAmt(String(Math.max(0, b.amount - (b.amountPaid ?? 0))));
+                              }}
+                            >
+                              <CreditCard className="h-3 w-3 mr-1" />
+                              Pay
+                            </Button>
+                          )}
+                          {Number(b.purchaseWhtAmount || 0) > 0 && (
+                            <>
+                              {!purchaseCertByBillId.get(b._id) ? (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-8 text-[10px]"
+                                  disabled={issuePurchaseCertMut.isPending}
+                                  onClick={() => issuePurchaseCertMut.mutate(b._id)}
+                                >
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  Issue WHT cert
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 text-[10px]"
+                                  onClick={async () => {
+                                    try {
+                                      await withholdingCertificatesApi.openPrintHtml(
+                                        purchaseCertByBillId.get(b._id)!._id
+                                      );
+                                    } catch {
+                                      toast.error("Could not open certificate");
+                                    }
+                                  }}
+                                >
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  Print WHT cert
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>

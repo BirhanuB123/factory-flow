@@ -1,5 +1,6 @@
 const Invoice = require('../models/Invoice');
 const Expense = require('../models/Expense');
+const JournalEntry = require('../models/JournalEntry');
 const Order = require('../models/Order');
 const Client = require('../models/Client');
 const Shipment = require('../models/Shipment');
@@ -10,6 +11,7 @@ const { unitCostForSale } = require('../services/costingService');
 const {
   getTaxSettings,
   computeSalesInvoiceTax,
+  allocateNextInvoiceNumber,
 } = require('../services/ethiopiaTaxService');
 const { byTenant } = require('../utils/tenantQuery');
 
@@ -18,6 +20,10 @@ const { byTenant } = require('../utils/tenantQuery');
 exports.getTransactions = asyncHandler(async (req, res, next) => {
   const invoices = await Invoice.find(byTenant(req)).populate('client', 'name');
   const expenses = await Expense.find(byTenant(req));
+  const payrollJournals = await JournalEntry.find(byTenant(req, { source: 'payroll' }))
+    .sort({ entryDate: -1 })
+    .limit(500)
+    .lean();
 
   const formattedInvoices = invoices.map(inv => ({
     id: inv.invoiceId,
@@ -43,7 +49,23 @@ exports.getTransactions = asyncHandler(async (req, res, next) => {
     description: exp.description
   }));
 
-  const transactions = [...formattedInvoices, ...formattedExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const formattedJournals = payrollJournals.map((j) => {
+    const totalDebit = (j.lines || []).reduce((s, l) => s + (Number(l.debit) || 0), 0);
+    return {
+      id: `JE-${j._id.toString().slice(-6).toUpperCase()}`,
+      sourceId: j._id.toString(),
+      category: 'Payroll journal',
+      amount: Math.round(totalDebit * 100) / 100,
+      date: j.entryDate.toISOString().split('T')[0],
+      status: 'Posted',
+      type: 'Journal',
+      description: j.memo || `Journal ${j.sourceRef || ''}`.trim(),
+    };
+  });
+
+  const transactions = [...formattedInvoices, ...formattedExpenses, ...formattedJournals].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
 
   res.status(200).json(transactions);
 });
@@ -60,7 +82,7 @@ exports.createInvoice = asyncHandler(async (req, res, next) => {
   ) {
     const client = await Client.findOne(byTenant(req, { _id: body.client }));
     const settings = await getTaxSettings(req.tenantId);
-    const tax = computeSalesInvoiceTax(Number(body.amount), client, settings);
+    const tax = computeSalesInvoiceTax(Number(body.amount), client, settings, body.taxOptions || {});
     body.amountTaxable = tax.taxableAmount;
     body.vatRate = tax.vatRate;
     body.vatAmount = tax.vatAmount;
@@ -71,9 +93,29 @@ exports.createInvoice = asyncHandler(async (req, res, next) => {
     body.sellerTinSnapshot = settings.companyTIN || '';
     body.buyerTinSnapshot = client?.tin || '';
     delete body.applyEthiopiaSalesTax;
+    delete body.taxOptions;
   }
   delete body.tenantId;
-  const invoice = await Invoice.create({ ...body, tenantId: req.tenantId });
+  const hasId = body.invoiceId != null && String(body.invoiceId).trim() !== '';
+  if (!hasId) {
+    body.invoiceId = await allocateNextInvoiceNumber(req.tenantId);
+  }
+  let invoice;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      invoice = await Invoice.create({ ...body, tenantId: req.tenantId });
+      break;
+    } catch (e) {
+      if (e && e.code === 11000 && String(e.message || '').includes('invoiceId') && !hasId) {
+        body.invoiceId = await allocateNextInvoiceNumber(req.tenantId);
+        continue;
+      }
+      throw e;
+    }
+  }
+  if (!invoice) {
+    return res.status(500).json({ success: false, message: 'Could not allocate unique invoice number' });
+  }
   res.status(201).json({ success: true, data: invoice });
 });
 
@@ -91,12 +133,17 @@ exports.createExpense = asyncHandler(async (req, res, next) => {
 exports.getFinanceStats = asyncHandler(async (req, res, next) => {
   const invoices = await Invoice.find(byTenant(req, { status: 'Paid' }));
   const expenses = await Expense.find(byTenant(req));
+  const payrollJournals = await JournalEntry.find(byTenant(req, { source: 'payroll' })).lean();
+  const journalPayrollExpense = payrollJournals.reduce((acc, j) => {
+    const d = (j.lines || []).reduce((s, l) => s + (Number(l.debit) || 0), 0);
+    return acc + d;
+  }, 0);
 
   const revenue = invoices.reduce(
     (acc, inv) => acc + (inv.grossBeforeWht != null ? inv.grossBeforeWht : inv.amount),
     0
   );
-  const totalExpenses = expenses.reduce((acc, exp) => acc + exp.amount, 0);
+  const totalExpenses = expenses.reduce((acc, exp) => acc + exp.amount, 0) + journalPayrollExpense;
   const pendingInvoices = await Invoice.find(byTenant(req, { status: 'Pending' }));
   const pendingAmount = pendingInvoices.reduce((acc, inv) => acc + inv.amount, 0);
 
@@ -109,7 +156,7 @@ exports.getFinanceStats = asyncHandler(async (req, res, next) => {
 });
 
 exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
-  const { orderId, dueDate, invoiceId, shippedAt, shipmentId } = req.body;
+  const { orderId, dueDate, shippedAt, shipmentId, taxOptions } = req.body;
   if (!orderId) {
     return res.status(400).json({ success: false, message: 'orderId required' });
   }
@@ -205,8 +252,7 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
     invoiceAmount = Math.round(invoiceAmount * discountFactor * 100) / 100;
   }
 
-  const invId =
-    invoiceId || `INV-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  let invId = await allocateNextInvoiceNumber(req.tenantId);
   const due = dueDate
     ? new Date(dueDate)
     : new Date(Date.now() + 30 * 86400000);
@@ -216,31 +262,63 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
 
   const client = await Client.findOne(byTenant(req, { _id: order.client }));
   const settings = await getTaxSettings(req.tenantId);
-  const tax = computeSalesInvoiceTax(invoiceAmount, client, settings);
+  const tax = computeSalesInvoiceTax(invoiceAmount, client, settings, taxOptions || {});
 
-  const invoice = await Invoice.create({
-    tenantId: req.tenantId,
-    client: order.client,
-    invoiceId: invId,
-    amount: tax.netPayable,
-    amountTaxable: tax.taxableAmount,
-    vatRate: tax.vatRate,
-    vatAmount: tax.vatAmount,
-    salesWhtRate: tax.salesWhtRate,
-    salesWhtAmount: tax.salesWhtAmount,
-    grossBeforeWht: tax.grossBeforeWht,
-    sellerTinSnapshot: settings.companyTIN || '',
-    buyerTinSnapshot: client?.tin || '',
-    dueDate: due,
-    description: shipment
-      ? `Shipment ${shipment.shipmentNumber} — order (${order._id.toString().slice(-8)})`
-      : `Invoice for order (${order._id.toString().slice(-8)})`,
-    order: order._id,
-    invoiceDate: new Date(),
-    shippedAt: shipDate,
-    shipment: shipment ? shipment._id : null,
-    status: 'Pending',
-  });
+  let invoice;
+  try {
+    invoice = await Invoice.create({
+      tenantId: req.tenantId,
+      client: order.client,
+      invoiceId: invId,
+      amount: tax.netPayable,
+      amountTaxable: tax.taxableAmount,
+      vatRate: tax.vatRate,
+      vatAmount: tax.vatAmount,
+      salesWhtRate: tax.salesWhtRate,
+      salesWhtAmount: tax.salesWhtAmount,
+      grossBeforeWht: tax.grossBeforeWht,
+      sellerTinSnapshot: settings.companyTIN || '',
+      buyerTinSnapshot: client?.tin || '',
+      dueDate: due,
+      description: shipment
+        ? `Shipment ${shipment.shipmentNumber} — order (${order._id.toString().slice(-8)})`
+        : `Invoice for order (${order._id.toString().slice(-8)})`,
+      order: order._id,
+      invoiceDate: new Date(),
+      shippedAt: shipDate,
+      shipment: shipment ? shipment._id : null,
+      status: 'Pending',
+    });
+  } catch (e) {
+    if (e && e.code === 11000 && String(e.message || '').includes('invoiceId')) {
+      invId = await allocateNextInvoiceNumber(req.tenantId);
+      invoice = await Invoice.create({
+        tenantId: req.tenantId,
+        client: order.client,
+        invoiceId: invId,
+        amount: tax.netPayable,
+        amountTaxable: tax.taxableAmount,
+        vatRate: tax.vatRate,
+        vatAmount: tax.vatAmount,
+        salesWhtRate: tax.salesWhtRate,
+        salesWhtAmount: tax.salesWhtAmount,
+        grossBeforeWht: tax.grossBeforeWht,
+        sellerTinSnapshot: settings.companyTIN || '',
+        buyerTinSnapshot: client?.tin || '',
+        dueDate: due,
+        description: shipment
+          ? `Shipment ${shipment.shipmentNumber} — order (${order._id.toString().slice(-8)})`
+          : `Invoice for order (${order._id.toString().slice(-8)})`,
+        order: order._id,
+        invoiceDate: new Date(),
+        shippedAt: shipDate,
+        shipment: shipment ? shipment._id : null,
+        status: 'Pending',
+      });
+    } else {
+      throw e;
+    }
+  }
 
   const cogsLines = [];
   let totalCogs = 0;

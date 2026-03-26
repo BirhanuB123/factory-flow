@@ -36,6 +36,12 @@ import {
   AlertTriangle,
   Ban,
   CheckCircle2,
+  Plus,
+  Trash2,
+  Building2,
+  Percent,
+  Tags,
+  Hash,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -221,12 +227,71 @@ export default function Settings() {
   });
   const [ethForm, setEthForm] = useState<Partial<EthiopiaTaxSettings>>({});
   useEffect(() => {
-    if (ethTax) setEthForm({ ...ethTax });
+    if (!ethTax) return;
+    setEthForm({
+      ...ethTax,
+      sellerVatRegistered: ethTax.sellerVatRegistered !== false,
+      whtCategoryRates: Array.isArray(ethTax.whtCategoryRates)
+        ? ethTax.whtCategoryRates.map((r) => ({
+            key: r.key ?? "",
+            label: r.label ?? "",
+            salesRatePercent:
+              r.salesRatePercent === undefined || r.salesRatePercent === null
+                ? null
+                : Number(r.salesRatePercent),
+            purchaseRatePercent:
+              r.purchaseRatePercent === undefined || r.purchaseRatePercent === null
+                ? null
+                : Number(r.purchaseRatePercent),
+          }))
+        : [],
+    });
   }, [ethTax]);
   const saveEthTax = useMutation({
-    mutationFn: () => ethiopiaTaxApi.updateSettings(ethForm),
+    mutationFn: () => {
+      const rates = (ethForm.whtCategoryRates ?? [])
+        .map((r) => ({
+          key: String(r.key ?? "").trim(),
+          label: String(r.label ?? "").trim(),
+          salesRatePercent:
+            r.salesRatePercent === null ||
+            r.salesRatePercent === undefined ||
+            String(r.salesRatePercent) === ""
+              ? null
+              : Math.max(0, Number(r.salesRatePercent)),
+          purchaseRatePercent:
+            r.purchaseRatePercent === null ||
+            r.purchaseRatePercent === undefined ||
+            String(r.purchaseRatePercent) === ""
+              ? null
+              : Math.max(0, Number(r.purchaseRatePercent)),
+        }))
+        .filter((r) => r.key.length > 0);
+      return ethiopiaTaxApi.updateSettings({
+        ...ethForm,
+        sellerVatRegistered: ethForm.sellerVatRegistered !== false,
+        whtCategoryRates: rates,
+      });
+    },
     onSuccess: (d) => {
-      setEthForm({ ...d });
+      setEthForm({
+        ...d,
+        sellerVatRegistered: d.sellerVatRegistered !== false,
+        whtCategoryRates: Array.isArray(d.whtCategoryRates)
+          ? d.whtCategoryRates.map((r) => ({
+              key: r.key ?? "",
+              label: r.label ?? "",
+              salesRatePercent:
+                r.salesRatePercent === undefined || r.salesRatePercent === null
+                  ? null
+                  : Number(r.salesRatePercent),
+              purchaseRatePercent:
+                r.purchaseRatePercent === undefined || r.purchaseRatePercent === null
+                  ? null
+                  : Number(r.purchaseRatePercent),
+            }))
+          : [],
+      });
       qcEth.invalidateQueries({ queryKey: ["ethiopia-tax-settings"] });
       toast.success("Ethiopia tax settings saved");
     },
@@ -416,21 +481,37 @@ export default function Settings() {
       }
     >
       <Tabs defaultValue="shop" className="space-y-6">
-        <Card className="rounded-2xl border-border/60 bg-background/70">
+        <Card className="rounded-2xl border-border/50 bg-gradient-to-br from-card via-card to-muted/20 shadow-md shadow-black/5 overflow-hidden">
+          <div className="h-1 w-full bg-gradient-to-r from-primary/60 via-primary to-primary/40" />
           <CardContent className="pt-5 pb-5">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
-                {DEVICE_ONLY_LABEL}
-              </Badge>
-              <span className="text-xs text-muted-foreground">
-                Saved in this browser only. Other users and devices will not see these values.
-              </span>
-            </div>
-            <div className="mt-2 flex flex-wrap items-center gap-3">
-              <Badge className="text-[10px] uppercase tracking-wider">{TENANT_WIDE_LABEL}</Badge>
-              <span className="text-xs text-muted-foreground">
-                Stored on the server for your company and shared with authorized users.
-              </span>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+              Where settings are stored
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex gap-3 rounded-xl border border-border/60 bg-background/80 p-4 shadow-sm">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/80 border border-border/50">
+                  <Globe className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <Badge variant="outline" className="text-[9px] uppercase tracking-wider">
+                    {DEVICE_ONLY_LABEL}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Company tab, identity, alerts, and system prefs save in this browser only.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 rounded-xl border border-primary/20 bg-primary/[0.06] p-4 shadow-sm">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 border border-primary/25">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <Badge className="text-[9px] uppercase tracking-wider">{TENANT_WIDE_LABEL}</Badge>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Access matrix, audit log, and Ethiopia tax profile sync to the server for your company.
+                  </p>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -980,171 +1061,481 @@ export default function Settings() {
 
         {canFinance && (
           <TabsContent value="ethiopia-tax" className="space-y-6">
-            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm overflow-hidden">
-              <CardHeader>
-                <CardTitle className="text-base font-semibold">Ethiopia — VAT & withholding</CardTitle>
-                <Badge className="w-fit text-[10px] uppercase tracking-wider">{TENANT_WIDE_LABEL}</Badge>
-                <CardDescription className="text-xs">
-                  Company legal profile on tax invoices and statutory CSVs. Rates are indicative — confirm with ERCA
-                  and your accountant.{" "}
-                  {!canEditEthTax && (
-                    <span className="text-amber-600 dark:text-amber-400 font-bold">Read-only (finance_viewer).</span>
+            <Card className="rounded-3xl border border-border/50 bg-card/80 shadow-lg shadow-black/[0.04] overflow-hidden backdrop-blur-sm">
+              <div className="relative border-b border-border/40 bg-gradient-to-r from-amber-500/10 via-primary/8 to-emerald-500/10 px-6 py-6 sm:px-8">
+                <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_100%_0%,hsl(var(--primary)/0.12),transparent)] pointer-events-none" />
+                <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex gap-4">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/15 border border-primary/25 shadow-inner">
+                      <Scale className="h-7 w-7 text-primary" />
+                    </div>
+                    <div className="space-y-2 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <CardTitle className="text-xl font-bold tracking-tight sm:text-2xl">
+                          Ethiopia tax profile
+                        </CardTitle>
+                        <Badge variant="secondary" className="text-[9px] uppercase tracking-wider font-semibold">
+                          {TENANT_WIDE_LABEL}
+                        </Badge>
+                      </div>
+                      <CardDescription className="text-sm leading-relaxed max-w-2xl text-muted-foreground">
+                        Legal details on printed tax invoices and statutory CSV exports. Confirm rates with ERCA and
+                        your accountant.
+                        {!canEditEthTax && (
+                          <span className="block mt-2 text-amber-600 dark:text-amber-400 font-semibold text-xs">
+                            View only — finance_viewer cannot edit.
+                          </span>
+                        )}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  {canEditEthTax && (
+                    <Button
+                      onClick={() => saveEthTax.mutate()}
+                      disabled={saveEthTax.isPending || ethTaxLoading}
+                      className="shrink-0 h-11 rounded-xl px-6 font-semibold shadow-md shadow-primary/20"
+                    >
+                      {saveEthTax.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save tax settings
+                        </>
+                      )}
+                    </Button>
                   )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+                </div>
+              </div>
+              <CardContent className="space-y-8 p-6 sm:p-8">
                 {ethTaxLoading ? (
-                  <div className="flex justify-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <div className="flex flex-col items-center justify-center gap-3 py-16">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary/60" />
+                    <p className="text-sm text-muted-foreground">Loading tax configuration…</p>
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase">Legal name</Label>
-                        <Input
-                          disabled={!canEditEthTax}
-                          value={ethForm.companyLegalName ?? ""}
-                          onChange={(e) => setEthForm((p) => ({ ...p, companyLegalName: e.target.value }))}
-                          className="rounded-xl"
-                        />
+                    <section className="space-y-4">
+                      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                        <Building2 className="h-4 w-4 text-primary" />
+                        Legal entity & invoices
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase">Company TIN</Label>
-                        <Input
-                          disabled={!canEditEthTax}
-                          value={ethForm.companyTIN ?? ""}
-                          onChange={(e) => setEthForm((p) => ({ ...p, companyTIN: e.target.value }))}
-                          className="rounded-xl font-mono"
-                        />
+                      <div className="rounded-2xl border border-border/50 bg-muted/15 p-5 sm:p-6 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-foreground/90">Legal name</Label>
+                            <Input
+                              disabled={!canEditEthTax}
+                              value={ethForm.companyLegalName ?? ""}
+                              onChange={(e) => setEthForm((p) => ({ ...p, companyLegalName: e.target.value }))}
+                              className="rounded-xl h-11 bg-background/80 border-border/60"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-foreground/90">Company TIN</Label>
+                            <Input
+                              disabled={!canEditEthTax}
+                              value={ethForm.companyTIN ?? ""}
+                              onChange={(e) => setEthForm((p) => ({ ...p, companyTIN: e.target.value }))}
+                              className="rounded-xl h-11 font-mono bg-background/80 border-border/60"
+                            />
+                          </div>
+                          <div className="space-y-2 md:col-span-2">
+                            <Label className="text-xs font-semibold text-foreground/90">Address</Label>
+                            <Textarea
+                              disabled={!canEditEthTax}
+                              value={ethForm.companyAddress ?? ""}
+                              onChange={(e) => setEthForm((p) => ({ ...p, companyAddress: e.target.value }))}
+                              className="rounded-xl min-h-[88px] bg-background/80 border-border/60 resize-y"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-foreground/90">Phone</Label>
+                            <Input
+                              disabled={!canEditEthTax}
+                              value={ethForm.companyPhone ?? ""}
+                              onChange={(e) => setEthForm((p) => ({ ...p, companyPhone: e.target.value }))}
+                              className="rounded-xl h-11 bg-background/80 border-border/60"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold text-foreground/90">Currency</Label>
+                            <Input
+                              disabled={!canEditEthTax}
+                              value={ethForm.currency ?? "ETB"}
+                              onChange={(e) => setEthForm((p) => ({ ...p, currency: e.target.value }))}
+                              className="rounded-xl h-11 font-mono bg-background/80 border-border/60"
+                            />
+                          </div>
+                        </div>
+                        <Separator className="bg-border/50" />
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                            <Hash className="h-4 w-4 text-primary" />
+                            Sales invoice numbering
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Invoice numbers are assigned on the server when you create an invoice or invoice-from-order.
+                            Next number is{" "}
+                            <span className="font-mono font-semibold text-foreground">
+                              {(ethForm.invoiceSeriesPrefix ?? "INV").replace(/[^A-Za-z0-9-]/g, "").slice(0, 20) || "INV"}
+                              -{String((ethForm.nextInvoiceSequence ?? 0) + 1).padStart(6, "0")}
+                            </span>
+                            .
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold text-foreground/90">Series prefix</Label>
+                              <Input
+                                disabled={!canEditEthTax}
+                                value={ethForm.invoiceSeriesPrefix ?? "INV"}
+                                onChange={(e) =>
+                                  setEthForm((p) => ({ ...p, invoiceSeriesPrefix: e.target.value }))
+                                }
+                                placeholder="INV"
+                                className="rounded-xl h-11 font-mono bg-background/80 border-border/60"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold text-foreground/90">
+                                Sequence counter (last used)
+                              </Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                step={1}
+                                disabled={!canEditEthTax}
+                                value={ethForm.nextInvoiceSequence ?? 0}
+                                onChange={(e) =>
+                                  setEthForm((p) => ({
+                                    ...p,
+                                    nextInvoiceSequence: Math.max(0, parseInt(e.target.value, 10) || 0),
+                                  }))
+                                }
+                                className="rounded-xl h-11 font-mono bg-background/80 border-border/60 tabular-nums"
+                              />
+                              <p className="text-[10px] text-muted-foreground">
+                                Set higher only if migrating from another system (avoid duplicates).
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <Label className="text-[10px] font-black uppercase">Address</Label>
-                        <Textarea
-                          disabled={!canEditEthTax}
-                          value={ethForm.companyAddress ?? ""}
-                          onChange={(e) => setEthForm((p) => ({ ...p, companyAddress: e.target.value }))}
-                          className="rounded-xl min-h-[72px]"
-                        />
+                    </section>
+
+                    <section className="space-y-4">
+                      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                        <Percent className="h-4 w-4 text-primary" />
+                        Default rates & basis
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase">Phone</Label>
-                        <Input
-                          disabled={!canEditEthTax}
-                          value={ethForm.companyPhone ?? ""}
-                          onChange={(e) => setEthForm((p) => ({ ...p, companyPhone: e.target.value }))}
-                          className="rounded-xl"
-                        />
+                      <div className="rounded-2xl border border-border/50 bg-gradient-to-br from-muted/25 to-muted/5 p-5 sm:p-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold">Default VAT %</Label>
+                            <Input
+                              type="number"
+                              disabled={!canEditEthTax}
+                              value={ethForm.defaultVatRatePercent ?? 15}
+                              onChange={(e) =>
+                                setEthForm((p) => ({ ...p, defaultVatRatePercent: parseFloat(e.target.value) || 0 }))
+                              }
+                              className="rounded-xl h-11 bg-background/90 tabular-nums"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold">Sales WHT %</Label>
+                            <Input
+                              type="number"
+                              disabled={!canEditEthTax}
+                              value={ethForm.salesWithholdingRatePercent ?? 0}
+                              onChange={(e) =>
+                                setEthForm((p) => ({
+                                  ...p,
+                                  salesWithholdingRatePercent: parseFloat(e.target.value) || 0,
+                                }))
+                              }
+                              className="rounded-xl h-11 bg-background/90 tabular-nums"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold">Sales WHT base</Label>
+                            <Select
+                              disabled={!canEditEthTax}
+                              value={ethForm.salesWhtBase ?? "taxable_excl_vat"}
+                              onValueChange={(v) => setEthForm((p) => ({ ...p, salesWhtBase: v }))}
+                            >
+                              <SelectTrigger className="rounded-xl h-11 bg-background/90">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="taxable_excl_vat">Taxable (excl. VAT)</SelectItem>
+                                <SelectItem value="total_incl_vat">Total (incl. VAT)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-semibold">Purchase WHT %</Label>
+                            <Input
+                              type="number"
+                              disabled={!canEditEthTax}
+                              value={ethForm.purchaseWithholdingRatePercent ?? 0}
+                              onChange={(e) =>
+                                setEthForm((p) => ({
+                                  ...p,
+                                  purchaseWithholdingRatePercent: parseFloat(e.target.value) || 0,
+                                }))
+                              }
+                              className="rounded-xl h-11 bg-background/90 tabular-nums"
+                            />
+                          </div>
+                          <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                            <Label className="text-xs font-semibold">Sales price basis</Label>
+                            <Select
+                              disabled={!canEditEthTax}
+                              value={ethForm.salesPriceBasis ?? "exclusive_vat"}
+                              onValueChange={(v) => setEthForm((p) => ({ ...p, salesPriceBasis: v }))}
+                            >
+                              <SelectTrigger className="rounded-xl h-11 bg-background/90">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="exclusive_vat">Exclusive of VAT</SelectItem>
+                                <SelectItem value="inclusive_vat">Inclusive of VAT</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase">Currency</Label>
-                        <Input
-                          disabled={!canEditEthTax}
-                          value={ethForm.currency ?? "ETB"}
-                          onChange={(e) => setEthForm((p) => ({ ...p, currency: e.target.value }))}
-                          className="rounded-xl font-mono"
-                        />
+                    </section>
+
+                    <section className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] dark:bg-amber-500/[0.08] p-5 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="space-y-1.5 max-w-xl">
+                          <Label className="text-xs font-bold uppercase tracking-wide text-amber-900/90 dark:text-amber-200/90">
+                            Seller VAT-registered
+                          </Label>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            When off, default output VAT is 0% unless you override on a specific invoice or mark the
+                            line as VAT exempt.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-xs font-medium text-muted-foreground hidden sm:inline">
+                            {ethForm.sellerVatRegistered !== false ? "Charging VAT" : "Not charging VAT"}
+                          </span>
+                          <Switch
+                            disabled={!canEditEthTax}
+                            checked={ethForm.sellerVatRegistered !== false}
+                            onCheckedChange={(c) => setEthForm((p) => ({ ...p, sellerVatRegistered: c }))}
+                            className="data-[state=checked]:bg-emerald-600"
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <Separator className="bg-white/10" />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase">Default VAT %</Label>
-                        <Input
-                          type="number"
-                          disabled={!canEditEthTax}
-                          value={ethForm.defaultVatRatePercent ?? 15}
-                          onChange={(e) =>
-                            setEthForm((p) => ({ ...p, defaultVatRatePercent: parseFloat(e.target.value) || 0 }))
-                          }
-                          className="rounded-xl"
-                        />
+                    </section>
+
+                    <section className="space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                        <div className="flex items-start gap-2">
+                          <Tags className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                          <div>
+                            <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                              WHT by category
+                            </h3>
+                            <p className="text-sm text-muted-foreground mt-1 max-w-2xl leading-relaxed">
+                              Match the <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">key</span> to
+                              Finance and AP “Tax category key”. Empty rate cells use your default sales or purchase WHT
+                              above.
+                            </p>
+                          </div>
+                        </div>
+                        {canEditEthTax && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 rounded-xl border-dashed border-primary/30 hover:bg-primary/5"
+                            onClick={() =>
+                              setEthForm((p) => ({
+                                ...p,
+                                whtCategoryRates: [
+                                  ...(p.whtCategoryRates ?? []),
+                                  { key: "", label: "", salesRatePercent: null, purchaseRatePercent: null },
+                                ],
+                              }))
+                            }
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add category
+                          </Button>
+                        )}
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase">Sales WHT %</Label>
-                        <Input
-                          type="number"
-                          disabled={!canEditEthTax}
-                          value={ethForm.salesWithholdingRatePercent ?? 0}
-                          onChange={(e) =>
-                            setEthForm((p) => ({
-                              ...p,
-                              salesWithholdingRatePercent: parseFloat(e.target.value) || 0,
-                            }))
-                          }
-                          className="rounded-xl"
-                        />
+                      <div className="rounded-2xl border border-border/50 overflow-hidden shadow-sm bg-background/40">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-b border-border/60 bg-muted/40 hover:bg-muted/40">
+                              <TableHead className="text-[10px] font-bold uppercase tracking-wider w-[22%] h-11">
+                                Key
+                              </TableHead>
+                              <TableHead className="text-[10px] font-bold uppercase tracking-wider w-[26%]">
+                                Label
+                              </TableHead>
+                              <TableHead className="text-[10px] font-bold uppercase tracking-wider w-[22%]">
+                                Sales WHT %
+                              </TableHead>
+                              <TableHead className="text-[10px] font-bold uppercase tracking-wider w-[22%]">
+                                Purchase WHT %
+                              </TableHead>
+                              {canEditEthTax && (
+                                <TableHead className="w-14 text-right text-[10px] font-bold uppercase"> </TableHead>
+                              )}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(ethForm.whtCategoryRates ?? []).length === 0 ? (
+                              <TableRow className="hover:bg-transparent">
+                                <TableCell
+                                  colSpan={canEditEthTax ? 5 : 4}
+                                  className="text-center py-14 text-muted-foreground"
+                                >
+                                  <p className="text-sm font-medium">No categories yet</p>
+                                  <p className="text-xs mt-1 max-w-md mx-auto">
+                                    Add rows for supply types that need different withholding rates than your defaults.
+                                  </p>
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              (ethForm.whtCategoryRates ?? []).map((row, i) => (
+                                <TableRow
+                                  key={i}
+                                  className="border-border/40 transition-colors hover:bg-muted/25 data-[state=selected]:bg-transparent"
+                                >
+                                  <TableCell className="p-3 align-middle">
+                                    <Input
+                                      disabled={!canEditEthTax}
+                                      className="h-10 text-xs font-mono rounded-lg"
+                                      value={row.key}
+                                      onChange={(e) =>
+                                        setEthForm((p) => {
+                                          const next = [...(p.whtCategoryRates ?? [])];
+                                          next[i] = { ...next[i], key: e.target.value };
+                                          return { ...p, whtCategoryRates: next };
+                                        })
+                                      }
+                                      placeholder="e.g. service"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="p-3 align-middle">
+                                    <Input
+                                      disabled={!canEditEthTax}
+                                      className="h-10 text-xs rounded-lg"
+                                      value={row.label ?? ""}
+                                      onChange={(e) =>
+                                        setEthForm((p) => {
+                                          const next = [...(p.whtCategoryRates ?? [])];
+                                          next[i] = { ...next[i], label: e.target.value };
+                                          return { ...p, whtCategoryRates: next };
+                                        })
+                                      }
+                                      placeholder="Display name"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="p-3 align-middle">
+                                    <Input
+                                      type="number"
+                                      disabled={!canEditEthTax}
+                                      className="h-10 text-xs tabular-nums rounded-lg"
+                                      value={row.salesRatePercent ?? ""}
+                                      onChange={(e) =>
+                                        setEthForm((p) => {
+                                          const next = [...(p.whtCategoryRates ?? [])];
+                                          const v = e.target.value;
+                                          next[i] = {
+                                            ...next[i],
+                                            salesRatePercent: v === "" ? null : parseFloat(v) || 0,
+                                          };
+                                          return { ...p, whtCategoryRates: next };
+                                        })
+                                      }
+                                      placeholder="—"
+                                    />
+                                  </TableCell>
+                                  <TableCell className="p-3 align-middle">
+                                    <Input
+                                      type="number"
+                                      disabled={!canEditEthTax}
+                                      className="h-10 text-xs tabular-nums rounded-lg"
+                                      value={row.purchaseRatePercent ?? ""}
+                                      onChange={(e) =>
+                                        setEthForm((p) => {
+                                          const next = [...(p.whtCategoryRates ?? [])];
+                                          const v = e.target.value;
+                                          next[i] = {
+                                            ...next[i],
+                                            purchaseRatePercent: v === "" ? null : parseFloat(v) || 0,
+                                          };
+                                          return { ...p, whtCategoryRates: next };
+                                        })
+                                      }
+                                      placeholder="—"
+                                    />
+                                  </TableCell>
+                                  {canEditEthTax && (
+                                    <TableCell className="p-3 align-middle text-right">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-10 w-10 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                        onClick={() =>
+                                          setEthForm((p) => ({
+                                            ...p,
+                                            whtCategoryRates: (p.whtCategoryRates ?? []).filter((_, j) => j !== i),
+                                          }))
+                                        }
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </TableCell>
+                                  )}
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase">Sales WHT base</Label>
-                        <Select
-                          disabled={!canEditEthTax}
-                          value={ethForm.salesWhtBase ?? "taxable_excl_vat"}
-                          onValueChange={(v) => setEthForm((p) => ({ ...p, salesWhtBase: v }))}
-                        >
-                          <SelectTrigger className="rounded-xl">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="taxable_excl_vat">Taxable (excl. VAT)</SelectItem>
-                            <SelectItem value="total_incl_vat">Total (incl. VAT)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase">Purchase WHT %</Label>
-                        <Input
-                          type="number"
-                          disabled={!canEditEthTax}
-                          value={ethForm.purchaseWithholdingRatePercent ?? 0}
-                          onChange={(e) =>
-                            setEthForm((p) => ({
-                              ...p,
-                              purchaseWithholdingRatePercent: parseFloat(e.target.value) || 0,
-                            }))
-                          }
-                          className="rounded-xl"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[10px] font-black uppercase">Sales price basis</Label>
-                        <Select
-                          disabled={!canEditEthTax}
-                          value={ethForm.salesPriceBasis ?? "exclusive_vat"}
-                          onValueChange={(v) => setEthForm((p) => ({ ...p, salesPriceBasis: v }))}
-                        >
-                          <SelectTrigger className="rounded-xl">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="exclusive_vat">Exclusive of VAT</SelectItem>
-                            <SelectItem value="inclusive_vat">Inclusive of VAT</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase">E-invoicing / reporting notes</Label>
+                    </section>
+
+                    <section className="space-y-3">
+                      <Label className="text-xs font-semibold text-foreground/90">E-invoicing & reporting notes</Label>
                       <Textarea
                         disabled={!canEditEthTax}
                         value={ethForm.eInvoicingNotes ?? ""}
                         onChange={(e) => setEthForm((p) => ({ ...p, eInvoicingNotes: e.target.value }))}
-                        placeholder="Internal notes when digital reporting rules stabilize…"
-                        className="rounded-xl min-h-[80px]"
+                        placeholder="Internal reminders for digital reporting, EFD integration, or accountant handoff…"
+                        className="rounded-2xl min-h-[100px] bg-muted/10 border-border/50 resize-y"
                       />
-                    </div>
+                    </section>
+
                     {canEditEthTax && (
-                      <Button
-                        onClick={() => saveEthTax.mutate()}
-                        disabled={saveEthTax.isPending}
-                        className="rounded-xl font-black uppercase text-xs"
-                      >
-                        {saveEthTax.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          "Save tax settings"
-                        )}
-                      </Button>
+                      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-2 border-t border-border/40">
+                        <p className="text-[11px] text-muted-foreground sm:mr-auto sm:self-center">
+                          Changes apply to new invoices and bills; review existing documents if you change rates.
+                        </p>
+                        <Button
+                          onClick={() => saveEthTax.mutate()}
+                          disabled={saveEthTax.isPending}
+                          className="h-11 rounded-xl px-8 font-semibold shadow-md shadow-primary/15"
+                        >
+                          {saveEthTax.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Save className="h-4 w-4 mr-2" />
+                              Save tax settings
+                            </>
+                          )}
+                        </Button>
+                      </div>
                     )}
                   </>
                 )}

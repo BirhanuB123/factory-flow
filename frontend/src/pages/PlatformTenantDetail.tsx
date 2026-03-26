@@ -117,6 +117,15 @@ export default function PlatformTenantDetail() {
   const [stepUpDesc, setStepUpDesc] = useState("Re-enter your password to continue.");
   const [stepUpAction, setStepUpAction] = useState<null | (() => Promise<void>)>(null);
 
+  // Status Change Dialog State
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [statusTargetValue, setStatusTargetValue] = useState("");
+  const [statusReasonInput, setStatusReasonInput] = useState("");
+
+  // Trial Extension Dialog State
+  const [trialDialogOpen, setTrialDialogOpen] = useState(false);
+  const [trialDaysInput, setTrialDaysInput] = useState("7");
+
   const detailQ = useQuery({
     queryKey: ["platform-tenant", tenantId],
     queryFn: () => platformApi.getTenantDetail(tenantId!),
@@ -348,20 +357,21 @@ export default function PlatformTenantDetail() {
               value={t.status}
               onValueChange={(status) => {
                 const requiresReason = status === "suspended" || status === "archived";
-                const defaultReason = t.statusReason || "";
-                const statusReason = requiresReason
-                  ? window.prompt(`Reason for marking "${t.displayName || t.key}" as ${status}:`, defaultReason) ??
-                    defaultReason
-                  : "";
-                requestStepUp(
-                  async () => {
-                    await statusMut.mutateAsync({ id: t._id, status, statusReason });
-                  },
-                  {
-                    title: "Confirm company status change",
-                    description: "Re-enter your password to update this company's lifecycle status.",
-                  }
-                );
+                if (requiresReason) {
+                  setStatusTargetValue(status);
+                  setStatusReasonInput(t.statusReason || "");
+                  setStatusDialogOpen(true);
+                } else {
+                  requestStepUp(
+                    async () => {
+                      await statusMut.mutateAsync({ id: t._id, status, statusReason: "" });
+                    },
+                    {
+                      title: "Confirm company status change",
+                      description: `Update "${t.displayName || t.key}" status to ${status}.`,
+                    }
+                  );
+                }
               }}
               disabled={statusMut.isPending}
             >
@@ -401,18 +411,8 @@ export default function PlatformTenantDetail() {
                 variant="outline"
                 disabled={trialMut.isPending}
                 onClick={() => {
-                  const raw = window.prompt(`Extend trial for "${t.displayName || t.key}" by days:`, "7");
-                  if (!raw) return;
-                  const days = Math.min(Math.max(parseInt(raw, 10) || 0, 1), 3650);
-                  requestStepUp(
-                    async () => {
-                      await trialMut.mutateAsync({ id: t._id, extendDays: days });
-                    },
-                    {
-                      title: "Confirm trial extension",
-                      description: "Re-enter your password to extend this tenant trial.",
-                    }
-                  );
+                  setTrialDaysInput("7");
+                  setTrialDialogOpen(true);
                 }}
               >
                 <CalendarClock className="h-3.5 w-3.5 mr-1" />
@@ -630,58 +630,76 @@ export default function PlatformTenantDetail() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Employees</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Employees</CardTitle>
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <Users className="h-4 w-4 text-blue-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{counts.employees}</div>
+            <div className="text-3xl font-black tracking-tighter">{counts.employees}</div>
+            <p className="text-xs text-muted-foreground mt-2 font-medium">Active staff members</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Products</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Products</CardTitle>
+            <div className="p-2 bg-orange-500/10 rounded-lg">
+              <Package className="h-4 w-4 text-orange-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{counts.products}</div>
+            <div className="text-3xl font-black tracking-tighter">{counts.products}</div>
+            <p className="text-xs text-muted-foreground mt-2 font-medium">Inventory items logged</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Orders</CardTitle>
+            <div className="p-2 bg-green-500/10 rounded-lg">
+              <ShoppingCart className="h-4 w-4 text-green-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{counts.orders}</div>
+            <div className="text-3xl font-black tracking-tighter">{counts.orders}</div>
+            <p className="text-xs text-muted-foreground mt-2 font-medium">Sales orders processed</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Clients</CardTitle>
-            <UserCircle className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Clients</CardTitle>
+            <div className="p-2 bg-pink-500/10 rounded-lg">
+              <UserCircle className="h-4 w-4 text-pink-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{counts.clients}</div>
+            <div className="text-3xl font-black tracking-tighter">{counts.clients}</div>
+            <p className="text-xs text-muted-foreground mt-2 font-medium">Customer accounts</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Invoices</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Invoices</CardTitle>
+            <div className="p-2 bg-indigo-500/10 rounded-lg">
+              <FileText className="h-4 w-4 text-indigo-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{counts.invoices}</div>
+            <div className="text-3xl font-black tracking-tighter">{counts.invoices}</div>
+            <p className="text-xs text-muted-foreground mt-2 font-medium">Financial documents</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Purchase orders</CardTitle>
-            <Truck className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Purchase orders</CardTitle>
+            <div className="p-2 bg-teal-500/10 rounded-lg">
+              <Truck className="h-4 w-4 text-teal-500" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{counts.purchaseOrders}</div>
+            <div className="text-3xl font-black tracking-tighter">{counts.purchaseOrders}</div>
+            <p className="text-xs text-muted-foreground mt-2 font-medium">Procurement cycle count</p>
           </CardContent>
         </Card>
       </div>
@@ -701,14 +719,14 @@ export default function PlatformTenantDetail() {
             <p className="text-sm text-muted-foreground">No employees found for this tenant.</p>
           ) : (
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Employee ID</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Email</TableHead>
+              <TableHeader className="bg-secondary/30">
+                <TableRow className="hover:bg-transparent border-b border-border/40">
+                  <TableHead className="font-bold py-3">Staff Name</TableHead>
+                  <TableHead className="font-bold py-3">Employee ID</TableHead>
+                  <TableHead className="font-bold py-3">System Role</TableHead>
+                  <TableHead className="font-bold py-3">Department</TableHead>
+                  <TableHead className="font-bold py-3">Status</TableHead>
+                  <TableHead className="font-bold py-3 text-right">Email Contact</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -718,20 +736,20 @@ export default function PlatformTenantDetail() {
                     ref={(el) => {
                       if (u._id) userRowRefs.current[String(u._id)] = el;
                     }}
-                    className={
+                    className={`group transition-colors hover:bg-muted/30 border-b border-border/20 ${
                       highlightUserId && u._id && String(u._id) === highlightUserId
-                        ? "bg-muted/70 ring-1 ring-primary/40"
-                        : undefined
-                    }
+                        ? "bg-primary/5 ring-1 ring-primary/20"
+                        : ""
+                    }`}
                   >
-                    <TableCell className="font-medium">{u.name}</TableCell>
-                    <TableCell className="font-mono text-xs">{u.employeeId}</TableCell>
-                    <TableCell>{u.role}</TableCell>
+                    <TableCell className="font-medium py-4">{u.name}</TableCell>
+                    <TableCell className="font-mono text-[11px]">{u.employeeId}</TableCell>
+                    <TableCell className="text-sm">{u.role}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{u.department || "—"}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{u.status}</Badge>
+                      <Badge variant="outline" className="font-semibold uppercase text-[10px] tracking-wider px-2 py-0.5">{u.status}</Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{u.email || "—"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground text-right">{u.email || "—"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -760,6 +778,95 @@ export default function PlatformTenantDetail() {
           await stepUpAction();
         }}
       />
+
+      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update status reason</DialogTitle>
+            <DialogDescription>
+              Provide a reason for marking <strong>{t.displayName || t.key}</strong> as <strong>{statusTargetValue}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="status-reason-input">Reason / Note</Label>
+              <Input
+                id="status-reason-input"
+                placeholder="e.g. Non-payment, user requested archiving..."
+                value={statusReasonInput}
+                onChange={(e) => setStatusReasonInput(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                setStatusDialogOpen(false);
+                requestStepUp(
+                  async () => {
+                    await statusMut.mutateAsync({
+                      id: t._id,
+                      status: statusTargetValue,
+                      statusReason: statusReasonInput,
+                    });
+                  },
+                  {
+                    title: "Confirm company status change",
+                    description: `Setting status to ${statusTargetValue} with provided reason.`,
+                  }
+                );
+              }}
+            >
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={trialDialogOpen} onOpenChange={setTrialDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Extend trial window</DialogTitle>
+            <DialogDescription>
+              How many days would you like to extend the trial for <strong>{t.displayName || t.key}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="trial-days-input">Days to extend</Label>
+              <Input
+                id="trial-days-input"
+                type="number"
+                min="1"
+                max="3650"
+                value={trialDaysInput}
+                onChange={(e) => setTrialDaysInput(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTrialDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                const days = Math.min(Math.max(parseInt(trialDaysInput, 10) || 0, 1), 3650);
+                setTrialDialogOpen(false);
+                requestStepUp(
+                  async () => {
+                    await trialMut.mutateAsync({ id: t._id, extendDays: days });
+                  },
+                  {
+                    title: "Confirm trial extension",
+                    description: `Extending trial by ${days} days.`,
+                  }
+                );
+              }}
+            >
+              Extend Trial
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

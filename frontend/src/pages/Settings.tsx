@@ -97,51 +97,71 @@ function AuditLogPanel() {
   }
   const rows = data?.data ?? [];
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
-        Requires <code className="text-primary">AUDIT_LOG_ENABLED=true</code> on the server for new entries.
-        Total rows: {data?.total ?? 0}
-      </p>
-      <div className="rounded-xl border border-white/10 overflow-x-auto max-h-[480px] overflow-y-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-[10px] uppercase">When</TableHead>
-              <TableHead className="text-[10px] uppercase">Action</TableHead>
-              <TableHead className="text-[10px] uppercase">Entity</TableHead>
-              <TableHead className="text-[10px] uppercase">Actor</TableHead>
-              <TableHead className="text-[10px] uppercase">Summary</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-12">
-                  No audit entries yet.
-                </TableCell>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between px-2">
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          System activity stream
+        </p>
+        <Badge variant="outline" className="text-[9px] font-mono border-border/40">
+          Source: {data?.total ?? 0} total records
+        </Badge>
+      </div>
+      <div className="rounded-2xl border border-border/40 bg-background/40 overflow-hidden shadow-sm">
+        <div className="max-h-[520px] overflow-y-auto overflow-x-auto custom-scrollbar">
+          <Table>
+            <TableHeader className="bg-secondary/30 sticky top-0 z-10">
+              <TableRow className="hover:bg-transparent border-b border-border/40">
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider py-3 px-4">Timestamp</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider py-3 px-4">Operation</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider py-3 px-4">Resource</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider py-3 px-4">Subject</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-wider py-3 px-4">Narrative</TableHead>
               </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row._id}>
-                  <TableCell className="text-xs whitespace-nowrap">
-                    {row.at ? new Date(row.at).toLocaleString() : "—"}
-                  </TableCell>
-                  <TableCell className="text-xs font-mono">{row.action}</TableCell>
-                  <TableCell className="text-xs">
-                    {row.entityType}
-                    {row.entityId ? ` · ${String(row.entityId).slice(0, 12)}` : ""}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {row.actor?.name ?? "—"} {row.actor?.role ? `(${row.actor.role})` : ""}
-                  </TableCell>
-                  <TableCell className="text-xs max-w-[280px] truncate" title={row.summary}>
-                    {row.summary}
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-24 bg-background/20">
+                    <div className="flex flex-col items-center gap-2">
+                      <ListTree className="h-8 w-8 opacity-20" />
+                      <p className="text-sm font-medium">No audit entries found</p>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                rows.map((row) => (
+                  <TableRow key={row._id} className="group transition-colors hover:bg-muted/30 border-b border-border/20">
+                    <TableCell className="text-[11px] font-medium py-3 px-4 whitespace-nowrap text-muted-foreground">
+                      {row.at ? new Date(row.at).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) : "—"}
+                    </TableCell>
+                    <TableCell className="py-3 px-4">
+                      <Badge variant="outline" className="text-[10px] font-mono font-bold bg-background/50 border-border/40">
+                        {row.action}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-[11px] font-medium py-3 px-4">
+                      <div className="flex flex-col">
+                        <span className="text-foreground">{row.entityType}</span>
+                        {row.entityId ? <span className="text-[10px] text-muted-foreground font-mono">{String(row.entityId).slice(0, 12)}...</span> : ""}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-[11px] py-3 px-4">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 rounded-full bg-secondary/50 flex items-center justify-center text-[10px] font-bold border border-border/40">
+                          {row.actor?.name?.charAt(0) ?? "?"}
+                        </div>
+                        <span className="font-semibold text-foreground/90">{row.actor?.name ?? "System"}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-[11px] py-3 px-4 text-muted-foreground leading-relaxed max-w-[320px] truncate group-hover:whitespace-normal group-hover:overflow-visible" title={row.summary}>
+                      {row.summary}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );
@@ -233,17 +253,17 @@ export default function Settings() {
       sellerVatRegistered: ethTax.sellerVatRegistered !== false,
       whtCategoryRates: Array.isArray(ethTax.whtCategoryRates)
         ? ethTax.whtCategoryRates.map((r) => ({
-            key: r.key ?? "",
-            label: r.label ?? "",
-            salesRatePercent:
-              r.salesRatePercent === undefined || r.salesRatePercent === null
-                ? null
-                : Number(r.salesRatePercent),
-            purchaseRatePercent:
-              r.purchaseRatePercent === undefined || r.purchaseRatePercent === null
-                ? null
-                : Number(r.purchaseRatePercent),
-          }))
+          key: r.key ?? "",
+          label: r.label ?? "",
+          salesRatePercent:
+            r.salesRatePercent === undefined || r.salesRatePercent === null
+              ? null
+              : Number(r.salesRatePercent),
+          purchaseRatePercent:
+            r.purchaseRatePercent === undefined || r.purchaseRatePercent === null
+              ? null
+              : Number(r.purchaseRatePercent),
+        }))
         : [],
     });
   }, [ethTax]);
@@ -255,14 +275,14 @@ export default function Settings() {
           label: String(r.label ?? "").trim(),
           salesRatePercent:
             r.salesRatePercent === null ||
-            r.salesRatePercent === undefined ||
-            String(r.salesRatePercent) === ""
+              r.salesRatePercent === undefined ||
+              String(r.salesRatePercent) === ""
               ? null
               : Math.max(0, Number(r.salesRatePercent)),
           purchaseRatePercent:
             r.purchaseRatePercent === null ||
-            r.purchaseRatePercent === undefined ||
-            String(r.purchaseRatePercent) === ""
+              r.purchaseRatePercent === undefined ||
+              String(r.purchaseRatePercent) === ""
               ? null
               : Math.max(0, Number(r.purchaseRatePercent)),
         }))
@@ -279,17 +299,17 @@ export default function Settings() {
         sellerVatRegistered: d.sellerVatRegistered !== false,
         whtCategoryRates: Array.isArray(d.whtCategoryRates)
           ? d.whtCategoryRates.map((r) => ({
-              key: r.key ?? "",
-              label: r.label ?? "",
-              salesRatePercent:
-                r.salesRatePercent === undefined || r.salesRatePercent === null
-                  ? null
-                  : Number(r.salesRatePercent),
-              purchaseRatePercent:
-                r.purchaseRatePercent === undefined || r.purchaseRatePercent === null
-                  ? null
-                  : Number(r.purchaseRatePercent),
-            }))
+            key: r.key ?? "",
+            label: r.label ?? "",
+            salesRatePercent:
+              r.salesRatePercent === undefined || r.salesRatePercent === null
+                ? null
+                : Number(r.salesRatePercent),
+            purchaseRatePercent:
+              r.purchaseRatePercent === undefined || r.purchaseRatePercent === null
+                ? null
+                : Number(r.purchaseRatePercent),
+          }))
           : [],
       });
       qcEth.invalidateQueries({ queryKey: ["ethiopia-tax-settings"] });
@@ -452,63 +472,69 @@ export default function Settings() {
 
   return (
     <ModuleDashboardLayout
-      className="max-w-[1400px]"
+      className="max-w-[1600px]"
       title="Control Center"
-      description="Manage company profile, regional preferences, notifications, and policy settings."
+      description="Manage enterprise identity, regional preferences, and security policies"
       icon={SettingsIcon}
       healthStats={[
-        { label: "Core build", value: "1.2.0", accent: "text-primary" },
-        { label: "Timezone", value: timezone.split("/").pop() ?? timezone },
-        { label: "Currency", value: currency },
+        { label: "Core Build", value: "1.2.0", accent: "text-primary" },
+        { label: "Regional", value: timezone.split("/").pop() ?? timezone, accent: "text-blue-500" },
+        { label: "Currency", value: currency, accent: "text-emerald-500" },
       ]}
       actions={
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="outline"
             onClick={handleExport}
-            className="h-11 rounded-xl font-black uppercase text-[10px] tracking-widest border-border/60"
+            className="h-11 rounded-xl font-black uppercase text-[10px] tracking-widest border-border/60 bg-background/50 backdrop-blur-sm"
           >
-            Export
+            <Globe className="mr-2 h-3.5 w-3.5" />
+            Export Data
           </Button>
           <Button
             onClick={handleSave}
-            className="h-11 rounded-xl px-6 font-semibold text-sm gap-2"
+            className="h-11 rounded-xl px-8 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20"
           >
-            <Save className="h-4 w-4" />
-            Save
+            <Save className="mr-2 h-4 w-4" />
+            Commit Changes
           </Button>
         </div>
       }
     >
       <Tabs defaultValue="shop" className="space-y-6">
-        <Card className="rounded-2xl border-border/50 bg-gradient-to-br from-card via-card to-muted/20 shadow-md shadow-black/5 overflow-hidden">
-          <div className="h-1 w-full bg-gradient-to-r from-primary/60 via-primary to-primary/40" />
-          <CardContent className="pt-5 pb-5">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-              Where settings are stored
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex gap-3 rounded-xl border border-border/60 bg-background/80 p-4 shadow-sm">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted/80 border border-border/50">
-                  <Globe className="h-5 w-5 text-muted-foreground" />
+        <Card className="rounded-2xl border border-border/40 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm overflow-hidden">
+          <div className="h-1 w-full bg-gradient-to-r from-primary/40 via-primary to-primary/40" />
+          <CardContent className="pt-6 pb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                Data Sovereignty & Persistence
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="group flex gap-4 rounded-2xl border border-border/60 bg-background/40 p-5 transition-all hover:border-primary/20 hover:bg-background/60">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary/50 border border-border/40 group-hover:text-primary group-hover:border-primary/30 transition-colors">
+                  <Globe className="h-6 w-6" />
                 </div>
-                <div className="min-w-0 space-y-1">
-                  <Badge variant="outline" className="text-[9px] uppercase tracking-wider">
+                <div className="min-w-0 space-y-1.5">
+                  <Badge variant="secondary" className="text-[9px] uppercase tracking-widest font-black px-2 py-0.5 border-border/40">
                     {DEVICE_ONLY_LABEL}
                   </Badge>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Company tab, identity, alerts, and system prefs save in this browser only.
+                  <p className="text-xs text-muted-foreground leading-relaxed pr-4">
+                    Identity, notifications, and local preferences are stored in this browser's secure cache.
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3 rounded-xl border border-primary/20 bg-primary/[0.06] p-4 shadow-sm">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 border border-primary/25">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
+              <div className="group flex gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-5 transition-all hover:bg-primary/10">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
+                  <ShieldCheck className="h-6 w-6" />
                 </div>
-                <div className="min-w-0 space-y-1">
-                  <Badge className="text-[9px] uppercase tracking-wider">{TENANT_WIDE_LABEL}</Badge>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Access matrix, audit log, and Ethiopia tax profile sync to the server for your company.
+                <div className="min-w-0 space-y-1.5">
+                  <Badge variant="default" className="text-[9px] uppercase tracking-widest font-black px-2 py-0.5 shadow-sm">
+                    {TENANT_WIDE_LABEL}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground leading-relaxed pr-4">
+                    Access roles, compliance logs, and tax profiles are synchronized across all company nodes.
                   </p>
                 </div>
               </div>
@@ -516,37 +542,37 @@ export default function Settings() {
           </CardContent>
         </Card>
         <StickyModuleTabs>
-          <TabsList className={moduleTabsListClassName()}>
-            <TabsTrigger value="shop" className={moduleTabsTriggerClassName()}>
-              <Factory className="h-4 w-4 shrink-0" />
+          <TabsList className="bg-secondary/10 backdrop-blur-lg border border-border/40 p-1 mb-8 self-start">
+            <TabsTrigger value="shop" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+              <Factory className="mr-2 h-4 w-4" />
               Company
             </TabsTrigger>
-            <TabsTrigger value="user" className={moduleTabsTriggerClassName()}>
-              <User className="h-4 w-4 shrink-0" />
+            <TabsTrigger value="user" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+              <User className="mr-2 h-4 w-4" />
               Identity
             </TabsTrigger>
-            <TabsTrigger value="notifications" className={moduleTabsTriggerClassName()}>
-              <Bell className="h-4 w-4 shrink-0" />
+            <TabsTrigger value="notifications" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+              <Bell className="mr-2 h-4 w-4" />
               Alerts
             </TabsTrigger>
-            <TabsTrigger value="system" className={moduleTabsTriggerClassName()}>
-              <Shield className="h-4 w-4 shrink-0" />
+            <TabsTrigger value="system" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+              <Sliders className="mr-2 h-4 w-4" />
               System
             </TabsTrigger>
-            <TabsTrigger value="access" className={moduleTabsTriggerClassName()}>
-              <ShieldCheck className="h-4 w-4 shrink-0" />
-              Access (Phase 3)
+            <TabsTrigger value="access" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Access
             </TabsTrigger>
             {canAudit && (
-              <TabsTrigger value="audit" className={moduleTabsTriggerClassName()}>
-                <ListTree className="h-4 w-4 shrink-0" />
-                Audit log
+              <TabsTrigger value="audit" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+                <ListTree className="mr-2 h-4 w-4" />
+                Audit Log
               </TabsTrigger>
             )}
             {canFinance && (
-              <TabsTrigger value="ethiopia-tax" className={moduleTabsTriggerClassName()}>
-                <Scale className="h-4 w-4 shrink-0" />
-                Ethiopia tax
+              <TabsTrigger value="ethiopia-tax" className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-6 py-2 transition-all">
+                <Scale className="mr-2 h-4 w-4" />
+                Tax Profile
               </TabsTrigger>
             )}
           </TabsList>
@@ -555,102 +581,111 @@ export default function Settings() {
         {/* Shop Configuration */}
         <TabsContent value="shop" className="space-y-4">
           {tenantSubscription && user?.platformRole !== "super_admin" && (
-            <Card className="rounded-2xl border-primary/25 bg-gradient-to-br from-primary/[0.10] via-primary/[0.04] to-transparent shadow-lg shadow-primary/10">
+            <Card className="rounded-2xl border-primary/25 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent shadow-lg shadow-primary/5 backdrop-blur-sm overflow-hidden">
+              <div className="h-1.5 w-full bg-gradient-to-r from-primary/40 via-primary to-primary/40" />
               <CardContent className="pt-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="space-y-2">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-lg bg-primary/15 border border-primary/20 flex items-center justify-center text-primary">
-                        <Zap className="h-4 w-4" />
+                      <div className="p-2 bg-primary/15 rounded-xl border border-primary/20">
+                        <Zap className="h-5 w-5 text-primary" />
                       </div>
-                      <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-                        Subscription status
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge
-                        variant={subscriptionBadgeVariant(tenantSubscription.status)}
-                        className="px-2.5 py-1"
-                      >
-                        {subscriptionStatusLabel(tenantSubscription.status)}
-                      </Badge>
-                      <span className="text-sm font-semibold">{tenantSubscription.displayName || shopName}</span>
+                      <div className="space-y-0.5">
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                          Subscription
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={subscriptionBadgeVariant(tenantSubscription.status)}
+                            className="px-2.5 py-0.5 font-bold uppercase text-[10px] tracking-wider"
+                          >
+                            {subscriptionStatusLabel(tenantSubscription.status)}
+                          </Badge>
+                          <span className="text-lg font-black tracking-tight">{tenantSubscription.displayName || shopName}</span>
+                        </div>
+                      </div>
                     </div>
                     {isSuspendedOrArchived && tenantSubscription.statusReason ? (
-                      <p className="text-xs text-destructive inline-flex items-center gap-1.5">
-                        <Ban className="h-3.5 w-3.5" />
+                      <p className="text-xs text-destructive font-medium bg-destructive/10 px-3 py-1.5 rounded-lg border border-destructive/20 inline-flex items-center gap-2">
+                        <Ban className="h-4 w-4" />
                         {tenantSubscription.statusReason}
                       </p>
                     ) : null}
                   </div>
 
-                  <div className="grid gap-2 text-xs">
-                    <div className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/60 px-3 py-2">
-                      <span className="text-muted-foreground">Plan</span>
-                      <span className="font-semibold uppercase tracking-wide text-foreground">
-                        {tenantSubscription.plan || "starter"}
-                      </span>
-                    </div>
-                    <div className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/60 px-3 py-2">
-                      <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">Trial ends</span>
-                      <span className="font-semibold text-foreground">
-                        {trialDate ? trialDate.toLocaleDateString() : "—"}
-                      </span>
-                    </div>
-                    <div className="inline-flex items-center gap-1.5 text-muted-foreground">
-                      {tenantSubscription.status === "active" ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                      ) : (
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                      )}
-                      {tenantSubscription.status === "trial" && trialDaysLeft != null ? (
-                        <span>
-                          {isTrialExpired ? "Trial expired" : `${Math.max(0, trialDaysLeft)} day(s) left in trial`}
+                  <div className="flex flex-wrap items-center gap-4 text-xs">
+                    <div className="grid grid-cols-2 lg:flex lg:items-center gap-3">
+                      <div className="flex flex-col gap-1 rounded-xl border border-border/60 bg-background/50 px-4 py-2 min-w-[120px]">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Level</span>
+                        <span className="font-black text-foreground text-sm uppercase">
+                          {tenantSubscription.plan || "starter"}
                         </span>
-                      ) : tenantSubscription.status === "active" ? (
-                        <span>Subscription is in good standing</span>
-                      ) : (
-                        <span>Review with your platform administrator</span>
-                      )}
+                      </div>
+                      <div className="flex flex-col gap-1 rounded-xl border border-border/60 bg-background/50 px-4 py-2 min-w-[140px]">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Renewal</span>
+                        <span className="font-bold text-foreground text-sm">
+                          {trialDate ? trialDate.toLocaleDateString() : "—"}
+                        </span>
+                      </div>
                     </div>
-                    {canSelfPaySubscription ? (
-                      <Button
-                        onClick={handlePayWithChapa}
-                        disabled={startChapaCheckout.isPending || verifyChapaCheckout.isPending}
-                        className="h-8 rounded-lg text-[11px] font-bold uppercase tracking-wider"
-                        variant="default"
-                      >
-                        {startChapaCheckout.isPending || verifyChapaCheckout.isPending ? (
-                          <>
-                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                            Processing
-                          </>
+
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/30 border border-border/40">
+                        {tenantSubscription.status === "active" ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 fill-emerald-500/20" />
                         ) : (
-                          "Pay with Chapa"
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-500 fill-amber-500/20" />
                         )}
-                      </Button>
-                    ) : null}
+                        <span className="font-semibold text-muted-foreground text-[11px]">
+                          {tenantSubscription.status === "trial" && trialDaysLeft != null ? (
+                            isTrialExpired ? "Trial expired" : `${Math.max(0, trialDaysLeft)} day(s) remaining`
+                          ) : tenantSubscription.status === "active" ? (
+                            "In good standing"
+                          ) : (
+                            "Review account"
+                          )}
+                        </span>
+                      </div>
+
+                      {canSelfPaySubscription ? (
+                        <Button
+                          onClick={handlePayWithChapa}
+                          disabled={startChapaCheckout.isPending || verifyChapaCheckout.isPending}
+                          className="h-10 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20"
+                          variant="default"
+                        >
+                          {startChapaCheckout.isPending || verifyChapaCheckout.isPending ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            "Settle Balance (Chapa)"
+                          )}
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm xl:col-span-2">
-              <CardHeader className="p-6 pb-3">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
-                    <Factory className="h-4 w-4" />
+            <Card className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-md shadow-sm xl:col-span-2 overflow-hidden">
+              <CardHeader className="p-6 pb-4 border-b border-border/40">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
+                      <Factory className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <CardTitle className="text-lg font-bold tracking-tight">Company Profile</CardTitle>
+                      <CardDescription className="text-[11px]">Identity and contact ledger</CardDescription>
+                    </div>
                   </div>
-                  <CardTitle className="text-base font-semibold">Company Profile</CardTitle>
+                  <Badge variant="secondary" className="text-[9px] uppercase tracking-widest font-black px-2 py-0.5 border-border/40">
+                    {DEVICE_ONLY_LABEL}
+                  </Badge>
                 </div>
-                <Badge className="w-fit text-[10px] uppercase tracking-wider">{DEVICE_ONLY_LABEL}</Badge>
-                <CardDescription className="text-xs text-muted-foreground">
-                  Local profile details used on this device.
-                </CardDescription>
               </CardHeader>
-              <CardContent className="p-6 pt-0 space-y-4">
+              <CardContent className="p-8 space-y-8">
                 <div className="grid gap-6">
                   <div className="space-y-2">
                     <Label className="text-[11px] font-medium text-muted-foreground">Company name</Label>
@@ -675,17 +710,24 @@ export default function Settings() {
             </Card>
 
             <div className="space-y-6 xl:col-span-1">
-              <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
-                <CardHeader className="p-6 pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-500">
-                      <Globe className="h-4 w-4" />
+              <Card className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-md shadow-sm overflow-hidden">
+                <CardHeader className="p-6 pb-4 border-b border-border/40">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-500 shadow-inner">
+                        <Globe className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <CardTitle className="text-lg font-bold tracking-tight">Regional</CardTitle>
+                        <CardDescription className="text-[11px]">Localization prefences</CardDescription>
+                      </div>
                     </div>
-                    <span className="text-base font-semibold">Regional Settings</span>
+                    <Badge variant="secondary" className="text-[9px] uppercase tracking-widest font-black px-2 py-0.5 border-border/40">
+                      {DEVICE_ONLY_LABEL}
+                    </Badge>
                   </div>
-                <Badge className="w-fit text-[10px] uppercase tracking-wider">{DEVICE_ONLY_LABEL}</Badge>
                 </CardHeader>
-                <CardContent className="p-6 pt-0 space-y-6">
+                <CardContent className="p-6 space-y-6 pt-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label className="text-[11px] font-medium text-muted-foreground">Timezone</Label>
@@ -777,18 +819,24 @@ export default function Settings() {
         {/* User Preferences */}
         <TabsContent value="user" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
-              <CardHeader className="p-6 pb-3">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
-                    <User className="h-4 w-4" />
+            <Card className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-md shadow-sm overflow-hidden">
+              <CardHeader className="p-6 pb-4 border-b border-border/40">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
+                      <User className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <CardTitle className="text-lg font-bold tracking-tight">Identity Profile</CardTitle>
+                      <CardDescription className="text-[11px]">Personal access ledger</CardDescription>
+                    </div>
                   </div>
-                  <CardTitle className="text-base font-semibold">Identity Profile</CardTitle>
+                  <Badge variant="secondary" className="text-[9px] uppercase tracking-widest font-black px-2 py-0.5 border-border/40">
+                    {DEVICE_ONLY_LABEL}
+                  </Badge>
                 </div>
-                <Badge className="w-fit text-[10px] uppercase tracking-wider">{DEVICE_ONLY_LABEL}</Badge>
-                <CardDescription className="text-xs text-muted-foreground">Local profile preferences on this device.</CardDescription>
               </CardHeader>
-              <CardContent className="p-6 pt-0 space-y-4">
+              <CardContent className="p-8 space-y-6 pt-8">
                 <div className="grid gap-6">
                   <div className="space-y-2">
                     <Label className="text-[11px] font-medium text-muted-foreground">Display name</Label>
@@ -802,18 +850,24 @@ export default function Settings() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
-              <CardHeader className="p-6 pb-3">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-500">
-                    <Palette className="h-4 w-4" />
+            <Card className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-md shadow-sm overflow-hidden">
+              <CardHeader className="p-6 pb-4 border-b border-border/40">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-500 shadow-inner">
+                      <Palette className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <CardTitle className="text-lg font-bold tracking-tight">Interface</CardTitle>
+                      <CardDescription className="text-[11px]">Display and density prefences</CardDescription>
+                    </div>
                   </div>
-                  <CardTitle className="text-base font-semibold">Interface Preferences</CardTitle>
+                  <Badge variant="secondary" className="text-[9px] uppercase tracking-widest font-black px-2 py-0.5 border-border/40">
+                    {DEVICE_ONLY_LABEL}
+                  </Badge>
                 </div>
-                <Badge className="w-fit text-[10px] uppercase tracking-wider">{DEVICE_ONLY_LABEL}</Badge>
-                <CardDescription className="text-xs text-muted-foreground">Display and layout behavior for this browser.</CardDescription>
               </CardHeader>
-              <CardContent className="p-6 pt-0 space-y-6">
+              <CardContent className="p-6 space-y-6 pt-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-[11px] font-medium text-muted-foreground">Date format</Label>
@@ -863,17 +917,19 @@ export default function Settings() {
         {/* Notifications */}
         <TabsContent value="notifications" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
-              <CardHeader className="p-6 pb-3">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-8 w-8 rounded-lg bg-amber-500/10 flex items-center justify-center border border-white/10 text-amber-500">
-                    <Zap className="h-4 w-4" />
+            <Card className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-md shadow-sm overflow-hidden">
+              <CardHeader className="p-6 pb-4 border-b border-border/40">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 text-amber-500 shadow-inner">
+                    <Zap className="h-5 w-5" />
                   </div>
-                  <CardTitle className="text-base font-semibold">Notification Channels</CardTitle>
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-lg font-bold tracking-tight">Channels</CardTitle>
+                    <CardDescription className="text-[11px]">Alert delivery hubs</CardDescription>
+                  </div>
                 </div>
-                <CardDescription className="text-xs text-muted-foreground">Choose where alerts are delivered.</CardDescription>
               </CardHeader>
-              <CardContent className="p-6 pt-0 space-y-4">
+              <CardContent className="p-6 space-y-4 pt-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-muted/20">
                     <div className="space-y-0.5">
@@ -893,17 +949,19 @@ export default function Settings() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
-              <CardHeader className="p-6 pb-3">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-white/10 text-primary">
-                    <Sliders className="h-4 w-4" />
+            <Card className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-md shadow-sm overflow-hidden">
+              <CardHeader className="p-6 pb-4 border-b border-border/40">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
+                    <Sliders className="h-5 w-5" />
                   </div>
-                  <CardTitle className="text-base font-semibold">Operational Alerts</CardTitle>
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-lg font-bold tracking-tight">Operational Alerts</CardTitle>
+                    <CardDescription className="text-[11px]">Module-specific criticality triggers</CardDescription>
+                  </div>
                 </div>
-                <CardDescription className="text-xs text-muted-foreground">Enable module-specific operational warnings.</CardDescription>
               </CardHeader>
-              <CardContent className="p-6 pt-0 space-y-4">
+              <CardContent className="p-6 space-y-4 pt-6">
                 <div className="space-y-4">
                   {[
                     { label: "Inventory Criticality", sub: "Low stock/reorder point alerts", checked: lowStockAlerts, setter: setLowStockAlerts },
@@ -927,17 +985,19 @@ export default function Settings() {
         {/* System */}
         <TabsContent value="system" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
-              <CardHeader className="p-6 pb-3">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-white/10 text-primary">
-                    <ShieldCheck className="h-4 w-4" />
+            <Card className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-md shadow-sm overflow-hidden">
+              <CardHeader className="p-6 pb-4 border-b border-border/40">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
+                    <ShieldCheck className="h-5 w-5" />
                   </div>
-                  <CardTitle className="text-base font-semibold">Data & Backup</CardTitle>
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-lg font-bold tracking-tight">Security & Backups</CardTitle>
+                    <CardDescription className="text-[11px]">Local data integrity controls</CardDescription>
+                  </div>
                 </div>
-                <CardDescription className="text-xs text-muted-foreground">Backup and export controls for local settings.</CardDescription>
               </CardHeader>
-              <CardContent className="p-6 pt-0 space-y-4">
+              <CardContent className="p-6 space-y-4 pt-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-muted/20">
                     <div className="space-y-0.5">
@@ -958,16 +1018,19 @@ export default function Settings() {
             </Card>
 
             <div className="space-y-6">
-              <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm">
-                <CardHeader className="p-6 pb-3">
+              <Card className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-md shadow-sm overflow-hidden">
+                <CardHeader className="p-6 pb-4 border-b border-border/40">
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
-                      <Sparkles className="h-4 w-4" />
+                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
+                      <Sparkles className="h-5 w-5" />
                     </div>
-                    <span className="text-base font-semibold">Environment</span>
+                    <div className="space-y-0.5">
+                      <CardTitle className="text-lg font-bold tracking-tight">Environment</CardTitle>
+                      <CardDescription className="text-[11px]">System and runtime metadata</CardDescription>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6 pt-0">
+                <CardContent className="p-6 space-y-4 pt-6">
                   <div className="grid grid-cols-2 gap-y-3 text-xs">
                     <p className="text-muted-foreground">Core revision</p>
                     <p className="text-primary text-right font-medium">1.2.0-F_FLOW</p>
@@ -979,19 +1042,24 @@ export default function Settings() {
                 </CardContent>
               </Card>
 
-              <Card className="rounded-2xl border border-rose-500/30 bg-rose-500/[0.04] shadow-sm">
-                <CardHeader className="p-6 pb-3">
-                  <CardTitle className="text-base font-semibold text-rose-600 dark:text-rose-400">Reset local settings</CardTitle>
-                  <CardDescription className="text-xs text-rose-700/80 dark:text-rose-300/80">
-                    Clears device-only settings and restores defaults.
-                  </CardDescription>
+              <Card className="rounded-2xl border border-rose-500/30 bg-rose-500/5 shadow-sm overflow-hidden">
+                <CardHeader className="p-6 pb-4 border-b border-rose-500/20 bg-rose-500/5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-500 shadow-inner">
+                      <AlertTriangle className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <CardTitle className="text-lg font-bold text-rose-600 dark:text-rose-400 tracking-tight">Danger Zone</CardTitle>
+                      <CardDescription className="text-[11px] text-rose-700/70 dark:text-rose-300/70">Destructive actions for local data</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent className="p-6 pt-0 flex items-center justify-between gap-4">
-                  <p className="text-xs text-rose-700/80 dark:text-rose-300/80 max-w-[320px]">
-                    This action affects only this browser profile.
+                <CardContent className="p-6 flex items-center justify-between gap-6">
+                  <p className="text-xs text-rose-700/80 dark:text-rose-300/80 max-w-[280px] leading-relaxed">
+                    Clears device-only settings and restores system defaults for this browser profile.
                   </p>
-                  <Button variant="destructive" size="sm" onClick={handleReset} className="h-10 rounded-xl px-6">
-                    Reset
+                  <Button variant="destructive" size="sm" onClick={handleReset} className="h-11 rounded-xl px-8 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-rose-500/20">
+                    Reset local
                   </Button>
                 </CardContent>
               </Card>
@@ -1000,42 +1068,73 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="access" className="space-y-6">
-          <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm overflow-hidden">
-            <CardHeader>
-              <CardTitle className="text-base font-semibold">Role permissions</CardTitle>
-              <CardDescription className="text-xs">
-                {permDoc?.matrix?.note} Seeded logins:{" "}
-                <code className="text-primary">buyer@integracnc.com</code>,{" "}
-                <code className="text-primary">warehouse@integracnc.com</code> (password123).
-              </CardDescription>
+          <Card className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-md shadow-sm overflow-hidden">
+            <CardHeader className="p-6 pb-4 border-b border-border/40 font-bold">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div className="space-y-0.5">
+                  <CardTitle className="text-lg font-bold tracking-tight">Access Matrix</CardTitle>
+                  <CardDescription className="text-[11px]">System-wide role-based access control</CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-6 space-y-6 pt-6">
               {permDoc && (
                 <>
-                  <div className="rounded-xl border border-border/60 p-4 text-sm">
-                    <span className="text-muted-foreground">Your role:</span>{" "}
-                    <span className="font-black">{permDoc.role}</span>
-                    <br />
-                    <span className="text-muted-foreground">Permissions:</span>{" "}
-                    <span className="font-mono text-xs">{(permDoc.permissions || []).join(", ") || "—"}</span>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="rounded-2xl border border-border/50 bg-muted/20 p-5 space-y-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current Session</p>
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-black border border-primary/20">
+                          {permDoc.role.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold truncate">{permDoc.role}</p>
+                          <p className="text-[10px] text-muted-foreground font-mono">Active authorization</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-border/50 bg-muted/20 p-5 space-y-2 overflow-hidden">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Scopes</p>
+                      <p className="font-mono text-[10px] leading-relaxed text-foreground/80 line-clamp-2">
+                        {(permDoc.permissions || []).join(" · ") || "No global scopes assigned"}
+                      </p>
+                    </div>
                   </div>
-                  <div className="overflow-x-auto rounded-xl border border-border/60">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-border/60 bg-muted/30">
-                          <th className="text-left p-3 font-semibold uppercase text-[11px]">Role</th>
-                          <th className="text-left p-3 font-semibold uppercase text-[11px]">Granted actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(permDoc.matrix?.roles || []).map((r) => (
-                          <tr key={r.role} className="border-b border-border/40">
-                            <td className="p-3 font-bold align-top whitespace-nowrap">{r.role}</td>
-                            <td className="p-3 text-muted-foreground">{r.grants.join(" · ")}</td>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Permissions Map</p>
+                      <span className="text-[10px] text-muted-foreground bg-primary/5 px-2 py-0.5 rounded-full border border-primary/10">Read Only View</span>
+                    </div>
+                    <div className="overflow-x-auto rounded-2xl border border-border/40 bg-background/40 shadow-sm">
+                      <table className="w-full text-xs">
+                        <thead className="bg-secondary/30">
+                          <tr className="border-b border-border/40 hover:bg-transparent">
+                            <th className="text-left py-4 px-5 font-black uppercase tracking-widest text-[10px] text-muted-foreground">System Role</th>
+                            <th className="text-left py-4 px-5 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Capability Set</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-border/20">
+                          {(permDoc.matrix?.roles || []).map((r) => (
+                            <tr key={r.role} className="group transition-colors hover:bg-muted/30">
+                              <td className="py-4 px-5 font-bold align-top whitespace-nowrap text-foreground">{r.role}</td>
+                              <td className="py-4 px-5 text-muted-foreground leading-relaxed font-medium">
+                                <div className="flex flex-wrap gap-1.5">
+                                  {r.grants.map((grant, idx) => (
+                                    <span key={idx} className="bg-secondary/20 border border-border/40 px-2 py-0.5 rounded-md text-[11px] whitespace-nowrap">
+                                      {grant}
+                                    </span>
+                                  ))}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </>
               )}
@@ -1045,14 +1144,19 @@ export default function Settings() {
 
         {canAudit && (
           <TabsContent value="audit" className="space-y-6">
-            <Card className="rounded-2xl border border-border/60 bg-background/80 shadow-sm overflow-hidden">
-              <CardHeader>
-                <CardTitle className="text-base font-semibold">Audit trail</CardTitle>
-                <CardDescription className="text-xs">
-                  Compliance-friendly read-only log (SOX-style roles use finance_viewer + this tab).
-                </CardDescription>
+            <Card className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-md shadow-sm overflow-hidden">
+              <CardHeader className="p-6 pb-4 border-b border-border/40 font-bold">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
+                    <ListTree className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <CardTitle className="text-lg font-bold tracking-tight">Audit Trail</CardTitle>
+                    <CardDescription className="text-[11px]">Compliance-ready immutable activity log</CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6 pt-6">
                 <AuditLogPanel />
               </CardContent>
             </Card>
@@ -1061,8 +1165,8 @@ export default function Settings() {
 
         {canFinance && (
           <TabsContent value="ethiopia-tax" className="space-y-6">
-            <Card className="rounded-3xl border border-border/50 bg-card/80 shadow-lg shadow-black/[0.04] overflow-hidden backdrop-blur-sm">
-              <div className="relative border-b border-border/40 bg-gradient-to-r from-amber-500/10 via-primary/8 to-emerald-500/10 px-6 py-6 sm:px-8">
+            <Card className="rounded-2xl border border-border/60 bg-gradient-to-br from-background/80 to-background/40 backdrop-blur-md shadow-sm overflow-hidden">
+              <div className="relative border-b border-border/40 bg-gradient-to-r from-amber-500/10 via-primary/8 to-emerald-500/10 px-6 py-8 sm:px-8">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_100%_0%,hsl(var(--primary)/0.12),transparent)] pointer-events-none" />
                 <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex gap-4">
@@ -1407,7 +1511,7 @@ export default function Settings() {
                               (ethForm.whtCategoryRates ?? []).map((row, i) => (
                                 <TableRow
                                   key={i}
-                                  className="border-border/40 transition-colors hover:bg-muted/25 data-[state=selected]:bg-transparent"
+                                  className="group border-border/40 transition-colors hover:bg-muted/30 data-[state=selected]:bg-transparent"
                                 >
                                   <TableCell className="p-3 align-middle">
                                     <Input
@@ -1524,7 +1628,7 @@ export default function Settings() {
                         <Button
                           onClick={() => saveEthTax.mutate()}
                           disabled={saveEthTax.isPending}
-                          className="h-11 rounded-xl px-8 font-semibold shadow-md shadow-primary/15"
+                          className="h-11 rounded-xl px-8 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20"
                         >
                           {saveEthTax.isPending ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

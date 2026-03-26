@@ -99,10 +99,11 @@ function formatDateOrDash(iso?: string | null): string {
 
 function statusBadgeVariant(
   status?: string
-): "default" | "secondary" | "destructive" | "outline" {
+): "default" | "secondary" | "destructive" | "outline" | "success" | "warning" {
   if (status === "active") return "default";
   if (status === "trial") return "secondary";
-  if (status === "suspended" || status === "archived") return "destructive";
+  if (status === "suspended") return "destructive";
+  if (status === "archived") return "outline";
   return "outline";
 }
 
@@ -166,6 +167,17 @@ export default function PlatformAdmin() {
   const [auditPage, setAuditPage] = useState(0);
   const [auditExporting, setAuditExporting] = useState(false);
   const auditPageSize = 50;
+
+  // Status Change Dialog State
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [statusTargetTenant, setStatusTargetTenant] = useState<PlatformTenant | null>(null);
+  const [statusTargetValue, setStatusTargetValue] = useState("");
+  const [statusReasonInput, setStatusReasonInput] = useState("");
+
+  // Trial Extension Dialog State
+  const [trialDialogOpen, setTrialDialogOpen] = useState(false);
+  const [trialTargetTenant, setTrialTargetTenant] = useState<PlatformTenant | null>(null);
+  const [trialDaysInput, setTrialDaysInput] = useState("7");
 
   const metricsQ = useQuery({
     queryKey: ["platform-metrics"],
@@ -429,81 +441,122 @@ export default function PlatformAdmin() {
           ) : (
             <>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Card className="border-border/60 bg-card/70 backdrop-blur-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Tenants</CardTitle>
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
+              <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Tenants</CardTitle>
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Building2 className="h-4 w-4 text-primary" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{metrics?.tenants.total ?? 0}</div>
-                  <p className="text-xs text-muted-foreground mt-2 flex flex-wrap gap-x-2 gap-y-1">
+                  <div className="text-3xl font-black tracking-tighter">{metrics?.tenants.total ?? 0}</div>
+                  <div className="flex flex-wrap gap-2 mt-4">
                     {Object.entries(metrics?.tenants.byStatus ?? {}).map(([k, v]) => (
-                      <Badge key={k} variant={statusBadgeVariant(k)} className="font-normal">
-                        {k}: <strong className="ml-1">{v}</strong>
+                      <Badge 
+                        key={k} 
+                        variant={statusBadgeVariant(k)} 
+                        className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                      >
+                        {k}: {v}
                       </Badge>
                     ))}
-                  </p>
+                  </div>
                 </CardContent>
               </Card>
-              <Card className="border-border/60 bg-card/70 backdrop-blur-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Employees</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
+
+              <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Employees</CardTitle>
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <Users className="h-4 w-4 text-blue-500" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{metrics?.employees ?? 0}</div>
-                  <p className="text-xs text-muted-foreground">All tenants (global count)</p>
+                  <div className="text-3xl font-black tracking-tighter">{metrics?.employees ?? 0}</div>
+                  <p className="text-xs text-muted-foreground mt-2 font-medium">Across all active tenants</p>
                 </CardContent>
               </Card>
-              <Card className="border-border/60 bg-card/70 backdrop-blur-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Products</CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
+
+              <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Environment</CardTitle>
+                  <div className="p-2 bg-purple-500/10 rounded-lg">
+                    <Activity className="h-4 w-4 text-purple-500" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{metrics?.products ?? 0}</div>
+                  <div className="text-3xl font-black tracking-tighter">Live</div>
+                  <p className="text-xs text-muted-foreground mt-2 font-medium">Production platform backend</p>
                 </CardContent>
               </Card>
-              <Card className="border-border/60 bg-card/70 backdrop-blur-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Orders</CardTitle>
-                  <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+
+              <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Inventory</CardTitle>
+                  <div className="p-2 bg-orange-500/10 rounded-lg">
+                    <Package className="h-4 w-4 text-orange-500" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{metrics?.orders ?? 0}</div>
+                  <div className="text-3xl font-black tracking-tighter">{metrics?.products ?? 0}</div>
+                  <p className="text-xs text-muted-foreground mt-2 font-medium">Total registered products</p>
                 </CardContent>
               </Card>
-              <Card className="border-border/60 bg-card/70 backdrop-blur-sm">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Invoices</CardTitle>
-                  <FileText className="h-4 w-4 text-muted-foreground" />
+
+              <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Sales Activity</CardTitle>
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <ShoppingCart className="h-4 w-4 text-green-500" />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{metrics?.invoices ?? 0}</div>
+                  <div className="text-3xl font-black tracking-tighter">{metrics?.orders ?? 0}</div>
+                  <p className="text-xs text-muted-foreground mt-2 font-medium">Orders processed to date</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                  <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Financials</CardTitle>
+                  <div className="p-2 bg-indigo-500/10 rounded-lg">
+                    <FileText className="h-4 w-4 text-indigo-500" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-black tracking-tighter">{metrics?.invoices ?? 0}</div>
+                  <p className="text-xs text-muted-foreground mt-2 font-medium">Invoices generated globally</p>
                 </CardContent>
               </Card>
             </div>
-            <Card className="border-border/60 bg-card/80">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-primary" />
-                  Global announcement banner
-                </CardTitle>
-                <CardDescription>
-                  Shows for all tenants unless that tenant has its own announcement.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <div className="flex items-center gap-2">
+            <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm">
+              <CardHeader className="border-b border-border/40 pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="flex items-center gap-2 text-xl font-bold tracking-tight">
+                      <Activity className="h-5 w-5 text-primary" />
+                      Global Announcement Banner
+                    </CardTitle>
+                    <CardDescription>
+                      Broadcast maintenance or updates to all active tenants on the platform.
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-3 px-4 py-2 bg-secondary/30 rounded-xl border border-border/40">
                     <Switch
                       checked={globalAnnouncementEnabled}
                       onCheckedChange={setGlobalAnnouncementEnabled}
                       disabled={globalAnnouncementMut.isPending || globalAnnouncementQ.isLoading}
                     />
-                    <Label>Enabled</Label>
+                    <Label className="font-bold text-xs uppercase tracking-widest cursor-pointer">
+                      {globalAnnouncementEnabled ? "Active" : "Disabled"}
+                    </Label>
                   </div>
-                  <div className="w-full sm:w-[220px]">
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-6">
+                <div className="grid gap-6 sm:grid-cols-4">
+                  <div className="sm:col-span-1 space-y-2">
+                    <Label className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Alert Level</Label>
                     <Select
                       value={globalAnnouncementLevel}
                       onValueChange={(v) =>
@@ -511,29 +564,32 @@ export default function PlatformAdmin() {
                       }
                       disabled={globalAnnouncementMut.isPending}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-background/50 border-border/40">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="info">info</SelectItem>
-                        <SelectItem value="warning">warning</SelectItem>
-                        <SelectItem value="maintenance">maintenance</SelectItem>
+                        <SelectItem value="info">Information (Blue)</SelectItem>
+                        <SelectItem value="warning">Warning (Yellow)</SelectItem>
+                        <SelectItem value="maintenance">Maintenance (Purple)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="sm:col-span-3 space-y-2">
+                    <Label htmlFor="global-announcement-message" className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Banner Message</Label>
+                    <Input
+                      id="global-announcement-message"
+                      value={globalAnnouncementMessage}
+                      onChange={(e) => setGlobalAnnouncementMessage(e.target.value)}
+                      placeholder="e.g. System maintenance scheduled for tonight at 22:00 UTC."
+                      className="bg-background/50 border-border/40 focus:bg-background transition-colors"
+                      disabled={globalAnnouncementMut.isPending}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="global-announcement-message">Message</Label>
-                  <Input
-                    id="global-announcement-message"
-                    value={globalAnnouncementMessage}
-                    onChange={(e) => setGlobalAnnouncementMessage(e.target.value)}
-                    placeholder="We will perform maintenance tonight 22:00-23:00 UTC."
-                    disabled={globalAnnouncementMut.isPending}
-                  />
-                </div>
-                <div className="flex justify-end">
+                <div className="flex justify-end pt-2">
                   <Button
+                    size="lg"
+                    className="px-8 shadow-lg shadow-primary/20"
                     onClick={() =>
                       requestStepUp(
                         async () => {
@@ -550,7 +606,7 @@ export default function PlatformAdmin() {
                     {globalAnnouncementMut.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : null}
-                    Save announcement
+                    Update Global Banner
                   </Button>
                 </div>
               </CardContent>
@@ -563,51 +619,60 @@ export default function PlatformAdmin() {
           <Card className="border-dashed border-border/80 bg-secondary/20">
             <CardContent className="pt-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="w-full max-w-2xl space-y-2">
-                  <p className="text-sm font-medium">Create and manage companies</p>
-                  <p className="text-xs text-muted-foreground">
-                    Update lifecycle status, trial windows, and tenant-scoped admins.
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Find company by key or name..."
-                      value={tenantSearchInput}
-                      onChange={(e) => setTenantSearchInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          setTenantSearchQuery(tenantSearchInput.trim());
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => setTenantSearchQuery(tenantSearchInput.trim())}
-                    >
-                      <Search className="h-4 w-4 mr-1" />
-                      Search
-                    </Button>
-                    {(tenantSearchQuery || tenantSearchInput) && (
+                <div className="w-full max-w-3xl space-y-4">
+                  <div className="space-y-1">
+                    <p className="text-lg font-bold tracking-tight">Company Management</p>
+                    <p className="text-sm text-muted-foreground">
+                      Manage lifecycle, trial windows, and administrative access for all platform tenants.
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by key, legal name or display name..."
+                        className="pl-9 h-11 bg-background/50 border-border/40 focus:bg-background transition-colors"
+                        value={tenantSearchInput}
+                        onChange={(e) => setTenantSearchInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            setTenantSearchQuery(tenantSearchInput.trim());
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="flex gap-2">
                       <Button
                         type="button"
-                        variant="ghost"
-                        onClick={() => {
-                          setTenantSearchInput("");
-                          setTenantSearchQuery("");
-                        }}
+                        size="lg"
+                        className="px-6"
+                        onClick={() => setTenantSearchQuery(tenantSearchInput.trim())}
                       >
-                        Clear
+                        Search
                       </Button>
-                    )}
+                      {(tenantSearchQuery || tenantSearchInput) && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="lg"
+                          onClick={() => {
+                            setTenantSearchInput("");
+                            setTenantSearchQuery("");
+                          }}
+                        >
+                          Reset
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-end">
                   <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                     <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        New company
-                      </Button>
+                        <Button size="lg" className="shadow-lg shadow-primary/20">
+                          <Plus className="h-5 w-5 mr-2" />
+                          New Company
+                        </Button>
                     </DialogTrigger>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -700,23 +765,23 @@ export default function PlatformAdmin() {
               </CardHeader>
               <CardContent className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Key</TableHead>
-                      <TableHead>Display</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>Last activity</TableHead>
-                      <TableHead>Health</TableHead>
-                      <TableHead>Trial end</TableHead>
-                      <TableHead>Plan</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                  <TableHeader className="bg-secondary/30">
+                    <TableRow className="hover:bg-transparent border-b border-border/40">
+                      <TableHead className="font-bold py-4">Key</TableHead>
+                      <TableHead className="font-bold py-4">Display Name</TableHead>
+                      <TableHead className="font-bold py-4">Status</TableHead>
+                      <TableHead className="font-bold py-4">Status Note</TableHead>
+                      <TableHead className="font-bold py-4">Activity</TableHead>
+                      <TableHead className="font-bold py-4">Health & Scale</TableHead>
+                      <TableHead className="font-bold py-4">Trial Status</TableHead>
+                      <TableHead className="font-bold py-4">Plan</TableHead>
+                      <TableHead className="text-right font-bold py-4">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {tenants.map((t) => (
-                      <TableRow key={t._id}>
-                        <TableCell className="font-mono text-xs">
+                      <TableRow key={t._id} className="group transition-colors hover:bg-muted/30 border-b border-border/20">
+                        <TableCell className="font-mono text-[11px] py-4">
                           <Link
                             to={`/platform/tenants/${t._id}`}
                             className="text-primary hover:underline font-medium"
@@ -730,23 +795,22 @@ export default function PlatformAdmin() {
                             value={t.status}
                             onValueChange={(status) => {
                               const requiresReason = status === "suspended" || status === "archived";
-                              const defaultReason = t.statusReason || t.health?.statusReason || "";
-                              const statusReason = requiresReason
-                                ? window.prompt(
-                                    `Reason for marking "${t.displayName || t.key}" as ${status}:`,
-                                    defaultReason
-                                  ) ?? defaultReason
-                                : "";
-                              requestStepUp(
-                                async () => {
-                                  await statusMut.mutateAsync({ id: t._id, status, statusReason });
-                                },
-                                {
-                                  title: "Confirm company status change",
-                                  description:
-                                    "Re-enter your password to update this company's lifecycle status.",
-                                }
-                              );
+                              if (requiresReason) {
+                                setStatusTargetTenant(t);
+                                setStatusTargetValue(status);
+                                setStatusReasonInput(t.statusReason || t.health?.statusReason || "");
+                                setStatusDialogOpen(true);
+                              } else {
+                                requestStepUp(
+                                  async () => {
+                                    await statusMut.mutateAsync({ id: t._id, status, statusReason: "" });
+                                  },
+                                  {
+                                    title: "Confirm company status change",
+                                    description: `Update "${t.displayName || t.key}" status to ${status}.`,
+                                  }
+                                );
+                              }
                             }}
                             disabled={statusMut.isPending}
                           >
@@ -816,21 +880,9 @@ export default function PlatformAdmin() {
                               size="sm"
                               disabled={trialMut.isPending}
                               onClick={() => {
-                                const raw = window.prompt(
-                                  `Extend trial for "${t.displayName || t.key}" by days:`,
-                                  "7"
-                                );
-                                if (!raw) return;
-                                const days = Math.min(Math.max(parseInt(raw, 10) || 0, 1), 3650);
-                                requestStepUp(
-                                  async () => {
-                                    await trialMut.mutateAsync({ tenantId: t._id, extendDays: days });
-                                  },
-                                  {
-                                    title: "Confirm trial extension",
-                                    description: "Re-enter your password to extend this tenant trial.",
-                                  }
-                                );
+                                setTrialTargetTenant(t);
+                                setTrialDaysInput("7");
+                                setTrialDialogOpen(true);
                               }}
                             >
                               <CalendarClock className="h-3.5 w-3.5 mr-1" />
@@ -896,15 +948,15 @@ export default function PlatformAdmin() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
-                  <div className="space-y-2 min-w-[200px]">
-                    <Label>Action</Label>
+                <div className="bg-secondary/10 p-4 rounded-xl border border-border/40 flex flex-col gap-4 lg:flex-row lg:items-end">
+                  <div className="space-y-1.5 flex-1">
+                    <Label className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground px-0.5">Filter by Action</Label>
                     <Select value={auditAction} onValueChange={setAuditAction}>
-                      <SelectTrigger className="w-full lg:w-[240px]">
+                      <SelectTrigger className="w-full bg-background/50 border-border/40">
                         <SelectValue placeholder="All actions" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All actions</SelectItem>
+                        <SelectItem value="all">All actions available</SelectItem>
                         {auditActionOptions.map((a) => (
                           <SelectItem key={a} value={a}>
                             {a}
@@ -913,30 +965,30 @@ export default function PlatformAdmin() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="audit-from">From (UTC date)</Label>
+                  <div className="space-y-1.5 min-w-[160px]">
+                    <Label htmlFor="audit-from" className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground px-0.5">From Date</Label>
                     <Input
                       id="audit-from"
                       type="date"
                       value={auditDateFrom}
                       onChange={(e) => setAuditDateFrom(e.target.value)}
-                      className="w-full lg:w-[160px]"
+                      className="bg-background/50 border-border/40"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="audit-to">To (UTC date)</Label>
+                  <div className="space-y-1.5 min-w-[160px]">
+                    <Label htmlFor="audit-to" className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground px-0.5">To Date</Label>
                     <Input
                       id="audit-to"
                       type="date"
                       value={auditDateTo}
                       onChange={(e) => setAuditDateTo(e.target.value)}
-                      className="w-full lg:w-[160px]"
+                      className="bg-background/50 border-border/40"
                     />
                   </div>
                   <Button
                     type="button"
-                    variant="secondary"
-                    className="lg:mb-0.5"
+                    variant="outline"
+                    className="bg-background/50 border-border/40 hover:bg-background transition-colors"
                     disabled={auditExporting}
                     onClick={() => void handleAuditExportCsv()}
                   >
@@ -945,7 +997,7 @@ export default function PlatformAdmin() {
                     ) : (
                       <Download className="h-4 w-4 mr-2" />
                     )}
-                    Export CSV
+                    Export Logs
                   </Button>
                 </div>
 
@@ -988,13 +1040,13 @@ export default function PlatformAdmin() {
 
                 <div className="rounded-md border border-border/70 max-h-[560px] overflow-auto">
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>When</TableHead>
-                        <TableHead>Action</TableHead>
-                        <TableHead>Actor</TableHead>
-                        <TableHead>Resource</TableHead>
-                        <TableHead>Details</TableHead>
+                    <TableHeader className="bg-secondary/30">
+                      <TableRow className="hover:bg-transparent border-b border-border/40">
+                        <TableHead className="font-bold py-3">Timestamp</TableHead>
+                        <TableHead className="font-bold py-3">Operation</TableHead>
+                        <TableHead className="font-bold py-3">Actor</TableHead>
+                        <TableHead className="font-bold py-3">Resource Target</TableHead>
+                        <TableHead className="font-bold py-3">Change Details</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1077,6 +1129,97 @@ export default function PlatformAdmin() {
           await stepUpAction();
         }}
       />
+
+      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update status reason</DialogTitle>
+            <DialogDescription>
+              Provide a reason for marking <strong>{statusTargetTenant?.displayName || statusTargetTenant?.key}</strong> as <strong>{statusTargetValue}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="status-reason-input">Reason / Note</Label>
+              <Input
+                id="status-reason-input"
+                placeholder="e.g. Non-payment, user requested archiving..."
+                value={statusReasonInput}
+                onChange={(e) => setStatusReasonInput(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!statusTargetTenant) return;
+                setStatusDialogOpen(false);
+                requestStepUp(
+                  async () => {
+                    await statusMut.mutateAsync({
+                      id: statusTargetTenant._id,
+                      status: statusTargetValue,
+                      statusReason: statusReasonInput,
+                    });
+                  },
+                  {
+                    title: "Confirm company status change",
+                    description: `Setting status to ${statusTargetValue} with provided reason.`,
+                  }
+                );
+              }}
+            >
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={trialDialogOpen} onOpenChange={setTrialDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Extend trial window</DialogTitle>
+            <DialogDescription>
+              How many days would you like to extend the trial for <strong>{trialTargetTenant?.displayName || trialTargetTenant?.key}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="trial-days-input">Days to extend</Label>
+              <Input
+                id="trial-days-input"
+                type="number"
+                min="1"
+                max="3650"
+                value={trialDaysInput}
+                onChange={(e) => setTrialDaysInput(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTrialDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!trialTargetTenant) return;
+                const days = Math.min(Math.max(parseInt(trialDaysInput, 10) || 0, 1), 3650);
+                setTrialDialogOpen(false);
+                requestStepUp(
+                  async () => {
+                    await trialMut.mutateAsync({ tenantId: trialTargetTenant._id, extendDays: days });
+                  },
+                  {
+                    title: "Confirm trial extension",
+                    description: `Extending trial by ${days} days.`,
+                  }
+                );
+              }}
+            >
+              Extend Trial
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

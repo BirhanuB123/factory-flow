@@ -21,7 +21,9 @@
     { "key": "reservationId", "value": "" },
     { "key": "notificationId", "value": "" },
     { "key": "jobId", "value": "" },
-    { "key": "bomId", "value": "" }
+    { "key": "bomId", "value": "" },
+    { "key": "platformTenantId", "value": "" },
+    { "key": "platformEmployeeId", "value": "" }
   ],
   "auth": {
     "type": "bearer",
@@ -818,6 +820,138 @@
         {
           "name": "QuickBooks expenses CSV",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/integrations/qb/expenses.csv" }
+        }
+      ]
+    },
+    {
+      "name": "Platform (Super Admin)",
+      "item": [
+        {
+          "name": "Get platform metrics",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/platform/metrics" }
+        },
+        {
+          "name": "List tenants",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/platform/tenants" }
+        },
+        {
+          "name": "Search tenants",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/platform/tenants?q=integra" }
+        },
+        {
+          "name": "Create tenant",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"integra-demo\",\n  \"legalName\": \"Integra Demo Manufacturing PLC\",\n  \"displayName\": \"Integra Demo\",\n  \"status\": \"trial\"\n}"
+            },
+            "url": "{{baseUrl}}/api/platform/tenants"
+          }
+        },
+        {
+          "name": "Get tenant detail",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/platform/tenants/{{platformTenantId}}" }
+        },
+        {
+          "name": "Patch tenant profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"displayName\": \"Integra Demo Updated\",\n  \"plan\": \"starter\",\n  \"billingProvider\": \"manual\"\n}"
+            },
+            "url": "{{baseUrl}}/api/platform/tenants/{{platformTenantId}}"
+          }
+        },
+        {
+          "name": "Update tenant status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"suspended\",\n  \"statusReason\": \"Payment pending\"\n}"
+            },
+            "url": "{{baseUrl}}/api/platform/tenants/{{platformTenantId}}/status"
+          }
+        },
+        {
+          "name": "Extend tenant trial",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"extendDays\": 7\n}" },
+            "url": "{{baseUrl}}/api/platform/tenants/{{platformTenantId}}/trial"
+          }
+        },
+        {
+          "name": "Create tenant admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"employeeId\": \"TEN-ADMIN-001\",\n  \"name\": \"Tenant Admin\",\n  \"email\": \"tenant.admin@example.com\",\n  \"onboardingMode\": \"temp_password\"\n}"
+            },
+            "url": "{{baseUrl}}/api/platform/tenants/{{platformTenantId}}/admin"
+          }
+        },
+        {
+          "name": "Reset tenant admin access",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"onboardingMode\": \"temp_password\"\n}"
+            },
+            "url": "{{baseUrl}}/api/platform/tenants/{{platformTenantId}}/admins/{{platformEmployeeId}}/reset-access"
+          }
+        },
+        {
+          "name": "Get global announcement",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/platform/announcement" }
+        },
+        {
+          "name": "Update global announcement (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabled\": true,\n  \"level\": \"maintenance\",\n  \"message\": \"Planned maintenance at 22:00 UTC\"\n}"
+            },
+            "url": "{{baseUrl}}/api/platform/announcement"
+          }
+        },
+        {
+          "name": "Update global announcement (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enabled\": false,\n  \"level\": \"info\",\n  \"message\": \"\"\n}"
+            },
+            "url": "{{baseUrl}}/api/platform/announcement"
+          }
+        },
+        {
+          "name": "List platform audit logs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/platform/audit-logs?limit=50&skip=0&action=all"
+          }
+        },
+        {
+          "name": "Export platform audit logs CSV",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/platform/audit-logs/export?maxRows=5000"
+          }
         }
       ]
     },

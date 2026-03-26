@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { CreateTenantAdminDialog } from "@/components/CreateTenantAdminDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -185,8 +185,8 @@ export default function PlatformAdmin() {
   });
 
   const tenantsQ = useQuery({
-    queryKey: ["platform-tenants", tenantSearchQuery],
-    queryFn: () => platformApi.listTenants({ q: tenantSearchQuery || undefined }),
+    queryKey: ["platform-tenants"],
+    queryFn: () => platformApi.listTenants(),
   });
   const globalAnnouncementQ = useQuery({
     queryKey: ["platform-global-announcement"],
@@ -215,9 +215,9 @@ export default function PlatformAdmin() {
   // Handle browser navigation changes (back/forward) for tenant search.
   useEffect(() => {
     const fromUrl = searchParams.get("tenantSearch")?.trim() || "";
-    if (fromUrl !== tenantSearchInput) setTenantSearchInput(fromUrl);
-    if (fromUrl !== tenantSearchQuery) setTenantSearchQuery(fromUrl);
-  }, [searchParams, tenantSearchInput, tenantSearchQuery]);
+    setTenantSearchInput((prev) => (prev === fromUrl ? prev : fromUrl));
+    setTenantSearchQuery((prev) => (prev === fromUrl ? prev : fromUrl));
+  }, [searchParams]);
 
   useEffect(() => {
     setAuditPage(0);
@@ -381,6 +381,16 @@ export default function PlatformAdmin() {
 
   const metrics = metricsQ.data?.data;
   const tenants = tenantsQ.data?.data ?? [];
+  const filteredTenants = useMemo(() => {
+    const q = tenantSearchQuery.trim().toLowerCase();
+    if (!q) return tenants;
+    return tenants.filter((tenant) => {
+      const key = String(tenant.key || "").toLowerCase();
+      const legalName = String(tenant.legalName || "").toLowerCase();
+      const displayName = String(tenant.displayName || "").toLowerCase();
+      return key.includes(q) || legalName.includes(q) || displayName.includes(q);
+    });
+  }, [tenants, tenantSearchQuery]);
 
   const requestStepUp = (
     action: () => Promise<void>,
@@ -779,7 +789,7 @@ export default function PlatformAdmin() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {tenants.map((t) => (
+                    {filteredTenants.map((t) => (
                       <TableRow key={t._id} className="group transition-colors hover:bg-muted/30 border-b border-border/20">
                         <TableCell className="font-mono text-[11px] py-4">
                           <Link
@@ -912,6 +922,13 @@ export default function PlatformAdmin() {
                         </TableCell>
                       </TableRow>
                     ))}
+                    {!filteredTenants.length ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
+                          No companies found for your current search.
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
                   </TableBody>
                 </Table>
               </CardContent>

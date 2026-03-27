@@ -79,10 +79,10 @@ export function ModuleDashboardLayout({
 }
 
 const tabsListClass =
-  "bg-secondary/50 border p-1 h-auto flex-wrap gap-1 rounded-xl w-full justify-start md:w-auto";
+  "bg-secondary/20 backdrop-blur-md border border-border/10 p-1.5 h-auto flex-wrap gap-2 rounded-[1.5rem] w-full justify-start md:w-auto shadow-inner";
 
 const tabsTriggerClass =
-  "gap-2 px-5 py-2.5 rounded-lg transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg shadow-primary/20 font-bold tracking-tight text-xs sm:text-sm";
+  "gap-3 px-8 py-3.5 rounded-[1.2rem] transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xl shadow-black/10 font-black uppercase tracking-[0.2em] text-[10px]";
 
 type StickyModuleTabsProps = {
   children: React.ReactNode;

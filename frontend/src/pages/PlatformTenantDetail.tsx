@@ -51,6 +51,19 @@ import {
   SlidersHorizontal,
   CalendarClock,
   ExternalLink,
+  Activity,
+  ShieldCheck,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  ClipboardList,
+  Globe,
+  Radio,
+  Settings2,
+  Cpu,
+  Database,
+  Layers,
+  Zap,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -305,83 +318,90 @@ export default function PlatformTenantDetail() {
   const updated = t.updatedAt ? new Date(t.updatedAt) : null;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-20">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between bg-gradient-to-br from-secondary/40 to-background p-8 rounded-[2.5rem] border border-border/20 shadow-xl shadow-black/5">
-        <div className="space-y-4">
-          <Button variant="ghost" size="sm" className="mb-2 -ml-2 h-9 rounded-xl text-muted-foreground/60 hover:text-primary hover:bg-primary/5 transition-all" asChild>
-            <Link to="/platform">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              <span className="font-bold text-[10px] uppercase tracking-[0.2em]">Infrastructure Map</span>
+    <div className="max-w-6xl mx-auto space-y-10 pb-24">
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between bg-card/40 backdrop-blur-xl p-10 rounded-[2.5rem] border border-border/10 shadow-2xl shadow-black/5">
+        <div className="space-y-6">
+          <Button variant="ghost" size="sm" className="mb-2 -ml-3 h-10 rounded-xl text-muted-foreground/40 hover:text-primary hover:bg-primary/5 transition-all group" asChild>
+            <Link to="/platform" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+              <span className="font-black text-[10px] uppercase tracking-[0.3em]">Infrastructure Map</span>
             </Link>
           </Button>
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-primary rounded-2xl shadow-lg shadow-primary/20">
-                <Building2 className="h-8 w-8 text-primary-foreground stroke-[2.5]" />
-              </div>
-              <div className="space-y-0.5">
-                <h1 className="text-3xl font-black tracking-tighter text-foreground/90 leading-none">
-                  {t.displayName || t.legalName}
-                </h1>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="font-mono text-[10px] font-bold tracking-widest bg-background/50 border-none px-2 py-0.5 shadow-sm uppercase">
-                    ID: {t.key}
-                  </Badge>
-                  <div className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest opacity-60 italic">{t.legalName}</p>
-                </div>
+          <div className="flex items-center gap-5">
+            <div className="p-5 bg-primary rounded-3xl shadow-2xl shadow-primary/30 rotate-[-2deg]">
+              <Building2 className="h-10 w-10 text-primary-foreground stroke-[2.5]" />
+            </div>
+            <div className="space-y-1.5">
+              <h1 className="text-4xl font-black tracking-tighter text-foreground leading-none uppercase italic">
+                {t.displayName || t.legalName}
+              </h1>
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="font-mono text-[10px] font-black tracking-[0.2em] bg-background/50 border-border/10 px-3 py-1 shadow-sm uppercase">
+                  NODE: {t.key}
+                </Badge>
+                <div className="h-1.5 w-1.5 rounded-full bg-primary/30" />
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-40 italic">{t.legalName}</p>
               </div>
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-3 shrink-0">
+        <div className="flex flex-wrap gap-4 shrink-0 mt-4 lg:mt-0">
           <Button
-            className="h-12 px-6 rounded-2xl bg-foreground text-background hover:bg-foreground/90 font-bold shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+            className="h-16 px-10 rounded-[2rem] bg-foreground text-background hover:bg-foreground/90 font-black text-sm uppercase tracking-widest shadow-2xl shadow-black/10 hover:scale-[1.02] active:scale-[0.98] transition-all group"
             onClick={() => {
               setActAsTenantId(t._id);
               toast.success("Company context set for ERP API");
               navigate("/");
             }}
           >
-            <ExternalLink className="h-4 w-4 mr-2 stroke-[2.5]" />
+            <ExternalLink className="h-5 w-5 mr-3 stroke-[3] group-hover:scale-110 transition-transform" />
             Impersonate Entity
           </Button>
           <Button
             variant="secondary"
-            className="h-12 px-6 rounded-2xl font-bold bg-background shadow-sm border-none hover:bg-background/90"
+            className="h-16 px-8 rounded-[2rem] font-black text-xs uppercase tracking-widest bg-background/50 backdrop-blur-sm border border-border/10 hover:bg-background transition-all"
             onClick={() => setAdminOpen(true)}
           >
-            <UserPlus className="h-4 w-4 mr-2 stroke-[2.5]" />
+            <UserPlus className="h-5 w-5 mr-3 stroke-[2.5] text-primary" />
             Provision Admin
           </Button>
         </div>
       </div>
 
       <Card className="border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden rounded-[2.5rem]">
-        <CardHeader className="pt-10 pb-6 px-10">
-          <div className="space-y-1.5 text-center sm:text-left">
-            <CardTitle className="flex items-center gap-3 text-2xl font-black tracking-tight uppercase italic justify-center sm:justify-start">
-              <SlidersHorizontal className="h-7 w-7 text-primary" />
-              Operational DNA
-            </CardTitle>
-            <CardDescription className="text-sm font-medium leading-relaxed max-w-2xl">
-              Configure lifecycle parameters, resource boundaries, and regional localization for this tenant index.
-            </CardDescription>
+        <div className="h-2 w-full bg-gradient-to-r from-blue-500 via-primary to-emerald-500" />
+        <CardHeader className="pt-12 pb-8 px-12">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-2">
+              <CardTitle className="flex items-center gap-4 text-3xl font-black tracking-tight uppercase italic">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
+                  <SlidersHorizontal className="h-6 w-6" />
+                </div>
+                Operational DNA
+              </CardTitle>
+              <CardDescription className="text-xs font-bold uppercase tracking-widest opacity-60 ml-16">
+                Lifecycle parameters, resource boundaries, and regional localization.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-3 bg-emerald-500/10 px-5 py-2.5 rounded-2xl border border-emerald-500/20 shadow-sm">
+              <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Integrity Verified</span>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-12 px-10 pb-12">
+        <CardContent className="space-y-16 px-12 pb-16">
           {/* Status & Lifecycle */}
-          <section className="space-y-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border/40 to-transparent" />
-              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 whitespace-nowrap">Status & Lifecycle</h3>
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+          <section className="space-y-10">
+            <div className="flex items-center gap-4">
+              <div className="h-px w-12 bg-primary/30" />
+              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 whitespace-nowrap italic">Status & Lifecycle</h3>
+              <div className="h-px flex-1 bg-gradient-to-r from-primary/30 to-transparent" />
             </div>
 
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between bg-secondary/20 p-6 rounded-3xl border border-border/10">
-              <div className="space-y-4 flex-1">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <Label className="w-40 shrink-0 text-[11px] uppercase tracking-[0.2em] font-black text-muted-foreground/80">Current State</Label>
+            <div className="flex flex-col gap-10 lg:flex-row lg:items-stretch bg-secondary/20 p-10 rounded-[2.5rem] border border-border/10 shadow-inner">
+              <div className="space-y-8 flex-1">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <Label className="w-48 shrink-0 text-[11px] uppercase tracking-[0.3em] font-black text-muted-foreground/60 ml-1 italic">Current Lifecycle State</Label>
                   <Select
                     value={t.status}
                     onValueChange={(status) => {
@@ -404,12 +424,12 @@ export default function PlatformTenantDetail() {
                     }}
                     disabled={statusMut.isPending}
                   >
-                    <SelectTrigger className="max-w-[240px] h-11 rounded-xl bg-background border-none shadow-sm font-bold uppercase tracking-wider text-xs">
+                    <SelectTrigger className="max-w-[280px] h-14 rounded-2xl bg-background border-none shadow-xl font-black uppercase tracking-[0.2em] text-[10px] px-6">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-border/40">
+                    <SelectContent className="rounded-2xl border-border/10">
                       {STATUS_OPTIONS.map((s) => (
-                        <SelectItem key={s} value={s} className="font-bold uppercase text-[10px] tracking-widest">
+                        <SelectItem key={s} value={s} className="font-black uppercase text-[10px] tracking-widest py-3">
                           {s}
                         </SelectItem>
                       ))}
@@ -417,80 +437,93 @@ export default function PlatformTenantDetail() {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                  <div className="p-4 bg-background/40 rounded-2xl border border-border/10 space-y-1">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Heartbeat Status</p>
-                    <p className="text-xs font-bold text-foreground/80">
-                      Last active {t.lastApiActivityAt ? formatDistanceToNow(new Date(t.lastApiActivityAt), { addSuffix: true }) : "never"}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="p-6 bg-background/50 backdrop-blur-md rounded-2xl border border-border/10 space-y-2 shadow-sm group hover:bg-background transition-all">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Activity className="h-3 w-3 text-emerald-500" />
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Heartbeat Metrics</p>
+                    </div>
+                    <p className="text-sm font-bold text-foreground/80 lowercase italic font-mono tracking-tight">
+                      last activity: {t.lastApiActivityAt ? formatDistanceToNow(new Date(t.lastApiActivityAt), { addSuffix: true }) : "never"}
                     </p>
                   </div>
-                  <div className="p-4 bg-background/40 rounded-2xl border border-border/10 space-y-1">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Governance Notes</p>
-                    <p className="text-xs font-bold text-foreground/80 truncate">
-                      {t.statusReason?.trim() ? t.statusReason : "Stable infrastructure"}
+                  <div className="p-6 bg-background/50 backdrop-blur-md rounded-2xl border border-border/10 space-y-2 shadow-sm group hover:bg-background transition-all">
+                    <div className="flex items-center gap-2 mb-1">
+                      <ShieldCheck className="h-3 w-3 text-blue-500" />
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Governance Narrative</p>
+                    </div>
+                    <p className="text-sm font-bold text-foreground/80 lowercase italic line-clamp-1">
+                      {t.statusReason?.trim() ? t.statusReason : "Stable infrastructure node"}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="shrink-0 bg-background/60 p-6 rounded-3xl border border-border/20 shadow-xl shadow-black/5 min-w-[280px]">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Trial Window</p>
-                  <CalendarClock className="h-4 w-4 text-primary opacity-40" />
+              <div className="shrink-0 bg-background shadow-2xl shadow-black/5 p-10 rounded-[2.5rem] border border-border/20 min-w-[320px] flex flex-col justify-between relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-1000">
+                  <CalendarClock className="h-24 w-24 text-primary" />
                 </div>
-                <div className="space-y-1 mb-6">
-                  <p className="text-2xl font-black tracking-tight">
-                    {t.trialEndDate ? format(new Date(t.trialEndDate), "MMM dd, yyyy") : "Unlimited"}
-                  </p>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Termination Deadline</p>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-8">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary italic">Trial Boundary</p>
+                    <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                      <CalendarClock className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <div className="space-y-2 mb-10">
+                    <p className="text-4xl font-black tracking-tighter text-foreground">
+                      {t.trialEndDate ? format(new Date(t.trialEndDate), "MMM dd, yyyy") : "UNLIMITED"}
+                    </p>
+                    <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-[0.2em] leading-none">Termination Deadline Vector</p>
+                  </div>
                 </div>
                 <Button
                   type="button"
-                  size="sm"
-                  className="w-full h-10 rounded-xl bg-primary shadow-lg shadow-primary/20 font-bold text-[10px] uppercase tracking-widest"
+                  size="lg"
+                  className="w-full h-14 rounded-2xl bg-primary shadow-2xl shadow-primary/20 font-black text-[10px] uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-[0.98] transition-all relative z-10"
                   disabled={trialMut.isPending}
                   onClick={() => {
                     setTrialDaysInput("7");
                     setTrialDialogOpen(true);
                   }}
                 >
-                  Shift Timeline
+                  Shift Timeline Window
                 </Button>
               </div>
             </div>
           </section>
 
           {/* Core Configuration */}
-          <section className="space-y-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border/40 to-transparent" />
-              <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 whitespace-nowrap">Core Configuration</h3>
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+          <section className="space-y-10">
+            <div className="flex items-center gap-4">
+              <div className="h-px w-12 bg-blue-500/30" />
+              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 whitespace-nowrap italic">Core Infrastructure Node</h3>
+              <div className="h-px flex-1 bg-gradient-to-r from-blue-500/30 to-transparent" />
             </div>
 
-            <div className="grid gap-8 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="disp" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 ml-1">Identity Display</Label>
+            <div className="grid gap-x-12 gap-y-10 sm:grid-cols-2 bg-background/30 p-10 rounded-[2.5rem] border border-border/10 shadow-inner">
+              <div className="space-y-3">
+                <Label htmlFor="disp" className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/50 ml-1">Entity Alias</Label>
                 <Input
                   id="disp"
                   value={editDisplayName}
                   onChange={(e) => setEditDisplayName(e.target.value)}
                   disabled={patchMut.isPending}
-                  className="h-12 rounded-xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-4"
+                  className="h-14 rounded-2xl bg-secondary/30 border-border/10 focus:bg-background transition-all font-black text-sm px-6 shadow-sm uppercase tracking-tight"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="legal" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 ml-1">Statutory Title</Label>
+              <div className="space-y-3">
+                <Label htmlFor="legal" className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/50 ml-1">Statutory Title</Label>
                 <Input
                   id="legal"
                   value={editLegalName}
                   onChange={(e) => setEditLegalName(e.target.value)}
                   disabled={patchMut.isPending}
-                  className="h-12 rounded-xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-4"
+                  className="h-14 rounded-2xl bg-secondary/30 border-border/10 focus:bg-background transition-all font-bold text-sm px-6 shadow-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="plan" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 ml-1">Subscription Tier</Label>
+              <div className="space-y-3">
+                <Label htmlFor="plan" className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/50 ml-1">Provisioned Tier</Label>
                 <div className="relative">
                   <Input
                     id="plan"
@@ -498,39 +531,42 @@ export default function PlatformTenantDetail() {
                     value={editPlan}
                     onChange={(e) => setEditPlan(e.target.value)}
                     disabled={patchMut.isPending}
-                    className="h-12 rounded-xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-black text-xs uppercase tracking-widest pl-4 pr-10"
+                    className="h-14 rounded-2xl bg-secondary/30 border-border/10 focus:bg-background transition-all font-black text-xs uppercase tracking-[0.2em] pl-6 pr-12 shadow-sm"
                   />
-                  <FileText className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-20" />
+                  <Layers className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 opacity-20 text-primary" />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 ml-1">Industry Vertical</Label>
+              <div className="space-y-3">
+                <Label className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/50 ml-1">Industry Vertical</Label>
                 <Select value={editIndustry} onValueChange={setEditIndustry} disabled={patchMut.isPending}>
-                  <SelectTrigger className="h-12 rounded-xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-4 shadow-none">
+                  <SelectTrigger className="h-14 rounded-2xl bg-secondary/30 border-border/10 focus:bg-background transition-all font-black text-[10px] uppercase tracking-widest px-6 shadow-none">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-border/40">
+                  <SelectContent className="rounded-2xl border-border/10">
                     {INDUSTRY_OPTIONS.map((ind) => (
-                      <SelectItem key={ind} value={ind} className="capitalize font-medium text-sm">
+                      <SelectItem key={ind} value={ind} className="font-black uppercase text-[10px] tracking-widest py-3">
                         {ind}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="tz" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 ml-1">Chronological Zone</Label>
-                <Input
-                  id="tz"
-                  placeholder="Africa/Addis_Ababa"
-                  value={editTimezone}
-                  onChange={(e) => setEditTimezone(e.target.value)}
-                  disabled={patchMut.isPending}
-                  className="h-12 rounded-xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-medium text-sm px-4"
-                />
+              <div className="space-y-3">
+                <Label htmlFor="tz" className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/50 ml-1">Chronological Zone</Label>
+                <div className="relative">
+                  <Input
+                    id="tz"
+                    placeholder="Africa/Addis_Ababa"
+                    value={editTimezone}
+                    onChange={(e) => setEditTimezone(e.target.value)}
+                    disabled={patchMut.isPending}
+                    className="h-14 rounded-2xl bg-secondary/30 border-border/10 focus:bg-background transition-all font-bold text-sm px-6 shadow-sm"
+                  />
+                  <Globe className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 opacity-20 text-primary" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="ccy" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 ml-1">Monetary Token</Label>
+              <div className="space-y-3">
+                <Label htmlFor="ccy" className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/50 ml-1">Monetary Token</Label>
                 <Input
                   id="ccy"
                   placeholder="ETB"
@@ -538,135 +574,153 @@ export default function PlatformTenantDetail() {
                   value={editCurrency}
                   onChange={(e) => setEditCurrency(e.target.value)}
                   disabled={patchMut.isPending}
-                  className="h-12 rounded-xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-black text-sm px-4 uppercase tracking-widest"
+                  className="h-14 rounded-2xl bg-secondary/30 border-border/10 focus:bg-background transition-all font-black text-sm px-6 uppercase tracking-widest shadow-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 ml-1">Billing Protocol</Label>
+              <div className="space-y-3">
+                <Label className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/50 ml-1">Billing Protocol</Label>
                 <Select
                   value={editBillingProvider}
                   onValueChange={setEditBillingProvider}
                   disabled={patchMut.isPending}
                 >
-                  <SelectTrigger className="h-12 rounded-xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-4 shadow-none">
+                  <SelectTrigger className="h-14 rounded-2xl bg-secondary/30 border-border/10 focus:bg-background transition-all font-black text-[10px] uppercase tracking-widest px-6 shadow-none">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl border-border/40">
+                  <SelectContent className="rounded-2xl border-border/10">
                     {BILLING_PROVIDER_OPTIONS.map((provider) => (
-                      <SelectItem key={provider} value={provider} className="capitalize font-medium text-sm">
+                      <SelectItem key={provider} value={provider} className="font-black uppercase text-[10px] tracking-widest py-3">
                         {provider}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="billing-customer-id" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 ml-1">Ledger Identifier</Label>
-                <Input
-                  id="billing-customer-id"
-                  placeholder="cus_... or external customer id"
-                  value={editBillingCustomerId}
-                  onChange={(e) => setEditBillingCustomerId(e.target.value)}
-                  disabled={patchMut.isPending}
-                  className="h-12 rounded-xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-mono text-xs px-4"
-                />
+              <div className="space-y-3">
+                <Label htmlFor="billing-customer-id" className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/50 ml-1">Ledger Identifier</Label>
+                <div className="relative">
+                  <Input
+                    id="billing-customer-id"
+                    placeholder="cus_... or external customer id"
+                    value={editBillingCustomerId}
+                    onChange={(e) => setEditBillingCustomerId(e.target.value)}
+                    disabled={patchMut.isPending}
+                    className="h-14 rounded-2xl bg-secondary/30 border-border/10 focus:bg-background transition-all font-mono text-xs px-6 shadow-sm"
+                  />
+                  <Database className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 opacity-20 text-primary" />
+                </div>
               </div>
             </div>
           </section>
 
-          {/* Communication & Toggles */}
-          <section className="grid gap-12 lg:grid-cols-2">
-            <div className="space-y-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="h-px w-8 bg-border/40" />
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 whitespace-nowrap">Broadcast Node</h3>
-                <div className="h-px flex-1 bg-gradient-to-r from-border/40 to-transparent" />
+          {/* Communication & Modules */}
+          <div className="grid gap-12 lg:grid-cols-2">
+            <section className="space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="h-px w-10 bg-indigo-500/30" />
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 whitespace-nowrap italic">Broadcast Node</h3>
+                <div className="h-px flex-1 bg-gradient-to-r from-indigo-500/30 to-transparent" />
               </div>
 
-              <div className="space-y-6 rounded-[2rem] bg-indigo-500/5 p-8 border border-indigo-500/10">
+              <div className="space-y-10 rounded-[2.5rem] bg-indigo-500/5 p-10 border border-indigo-500/10 shadow-inner">
                 <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label className="text-sm font-black tracking-tight uppercase italic italic">Local Banner</Label>
-                    <p className="text-[10px] font-medium text-muted-foreground opacity-70">Dedicated announcement stream</p>
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 shadow-sm border border-indigo-500/20">
+                      <Radio className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-sm font-black tracking-tight uppercase italic">Local Banner</Label>
+                      <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest leading-none">Dedicated announcement stream</p>
+                    </div>
                   </div>
                   <Switch
                     checked={tenantAnnouncementEnabled}
                     onCheckedChange={setTenantAnnouncementEnabled}
                     disabled={patchMut.isPending}
-                    className="data-[state=checked]:bg-indigo-500"
+                    className="data-[state=checked]:bg-indigo-500 scale-110"
                   />
                 </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-1">Urgency Vector</Label>
-                    <Select
-                      value={tenantAnnouncementLevel}
-                      onValueChange={(v) =>
-                        setTenantAnnouncementLevel(v as "info" | "warning" | "maintenance")
-                      }
-                      disabled={patchMut.isPending}
-                    >
-                      <SelectTrigger className="h-11 rounded-xl bg-background border-none shadow-sm font-bold text-xs px-4">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl border-border/40">
-                        <SelectItem value="info" className="font-bold uppercase text-[9px] tracking-widest">Information</SelectItem>
-                        <SelectItem value="warning" className="font-bold uppercase text-[9px] tracking-widest text-amber-600">Warning</SelectItem>
-                        <SelectItem value="maintenance" className="font-bold uppercase text-[9px] tracking-widest text-indigo-600">Critical</SelectItem>
-                      </SelectContent>
-                    </Select>
+                {tenantAnnouncementEnabled && (
+                  <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="space-y-3">
+                      <Label className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/50 ml-1 italic">Priority Level</Label>
+                      <Select
+                        value={tenantAnnouncementLevel}
+                        onValueChange={(val: any) => setTenantAnnouncementLevel(val)}
+                        disabled={patchMut.isPending}
+                      >
+                        <SelectTrigger className="h-14 rounded-2xl bg-background border-border/10 font-black text-[10px] uppercase tracking-widest px-6 shadow-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl border-border/10">
+                          <SelectItem value="info" className="font-black uppercase text-[10px] tracking-widest py-3">Low / Information</SelectItem>
+                          <SelectItem value="warning" className="font-black uppercase text-[10px] tracking-widest py-3 text-orange-500">Elevated / Warning</SelectItem>
+                          <SelectItem value="maintenance" className="font-black uppercase text-[10px] tracking-widest py-3 text-red-500">Critical / Maintenance</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/50 ml-1 italic">Payload Content</Label>
+                      <Input
+                        value={tenantAnnouncementMessage}
+                        onChange={(e) => setTenantAnnouncementMessage(e.target.value)}
+                        placeholder="Broadcast message for this entity..."
+                        disabled={patchMut.isPending}
+                        className="h-14 rounded-2xl bg-background border-border/10 font-bold text-sm px-6 shadow-sm italic"
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tenant-announcement-message" className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 ml-1">Stream Content</Label>
-                    <Input
-                      id="tenant-announcement-message"
-                      value={tenantAnnouncementMessage}
-                      onChange={(e) => setTenantAnnouncementMessage(e.target.value)}
-                      placeholder="e.g. Regional maintenance cycle scheduled."
-                      disabled={patchMut.isPending}
-                      className="h-11 rounded-xl bg-background border-none shadow-sm font-medium text-sm px-4"
-                    />
+                )}
+              </div>
+            </section>
+
+            <section className="space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="h-px w-10 bg-amber-500/30" />
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40 whitespace-nowrap italic">Module Architecture</h3>
+                <div className="h-px flex-1 bg-gradient-to-r from-amber-500/30 to-transparent" />
+              </div>
+
+              <div className="rounded-[2.5rem] bg-amber-500/5 p-10 border border-amber-500/10 shadow-inner">
+                <CardDescription className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mb-10 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/20">
+                    <Cpu className="h-5 w-5" />
                   </div>
+                  Provision functional modules for this instance
+                </CardDescription>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {TENANT_MODULE_KEYS.map((k) => (
+                    <div key={k} className="flex items-center justify-between p-5 bg-background/50 backdrop-blur-md rounded-2xl border border-border/10 hover:bg-background transition-all group shadow-sm">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-black uppercase tracking-tight italic text-foreground/80">{MODULE_LABELS[k]}</Label>
+                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/30">{k} system node</p>
+                      </div>
+                      <Switch
+                        checked={editModules[k]}
+                        onCheckedChange={(checked) =>
+                          setEditModules((prev) => ({ ...prev, [k]: checked }))
+                        }
+                        disabled={patchMut.isPending}
+                        className="data-[state=checked]:bg-amber-500 scale-90"
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            </section>
+          </div>
 
-            <div className="space-y-6">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="h-px w-8 bg-border/40" />
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 whitespace-nowrap">Neural Modules</h3>
-                <div className="h-px flex-1 bg-gradient-to-r from-border/40 to-transparent" />
-              </div>
-
-              <div className="grid gap-3">
-                {TENANT_MODULE_KEYS.map((key) => (
-                  <div
-                    key={key}
-                    className="flex items-center justify-between gap-4 rounded-2xl bg-secondary/10 px-5 py-3 border border-border/5 group hover:bg-secondary/20 transition-all"
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-xs font-black tracking-tight uppercase text-foreground/80">{MODULE_LABELS[key]}</span>
-                      <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest">{key} module gateway</span>
-                    </div>
-                    <Switch
-                      checked={editModules[key]}
-                      onCheckedChange={(checked) =>
-                        setEditModules((prev) => ({ ...prev, [key]: checked }))
-                      }
-                      disabled={patchMut.isPending}
-                      className="data-[state=checked]:bg-emerald-500 scale-90"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <div className="flex justify-end pt-8">
+          <div className="pt-12 border-t border-border/10">
             <Button
-              size="lg"
-              className="px-12 h-14 rounded-2xl shadow-2xl shadow-primary/20 bg-primary text-primary-foreground font-black tracking-tight text-base hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="w-full h-20 rounded-[2.5rem] bg-primary text-primary-foreground shadow-2xl shadow-primary/30 font-black text-sm uppercase tracking-[0.3em] hover:scale-[1.01] active:scale-[0.99] transition-all group overflow-hidden relative"
+              disabled={
+                patchMut.isPending ||
+                !editDisplayName.trim() ||
+                !editLegalName.trim() ||
+                !editTimezone.trim() ||
+                !editCurrency.trim()
+              }
               onClick={() =>
                 requestStepUp(
                   async () => {
@@ -678,129 +732,56 @@ export default function PlatformTenantDetail() {
                   }
                 )
               }
-              disabled={
-                patchMut.isPending ||
-                !editDisplayName.trim() ||
-                !editLegalName.trim() ||
-                !editTimezone.trim() ||
-                !editCurrency.trim()
-              }
             >
               {patchMut.isPending ? (
                 <Loader2 className="h-6 w-6 animate-spin mr-3" />
               ) : (
-                <Save className="h-6 w-6 mr-3 stroke-[3]" />
+                <Save className="h-6 w-6 mr-4 group-hover:scale-110 transition-transform stroke-[2.5]" />
               )}
-              Commit Changes
+              <span className="relative z-10">Commit Configuration Mutations</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
             </Button>
           </div>
         </CardContent>
       </Card>
 
       {(created || updated) && (
-        <p className="text-xs text-muted-foreground">
-          {created && <>Created {format(created, "PPp")}</>}
-          {created && updated && " · "}
-          {updated && <>Updated {format(updated, "PPp")}</>}
-        </p>
+        <div className="flex items-center justify-center gap-6 px-10">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-border/20" />
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 italic">
+            {created && <span className="mr-4">Origin Date: {format(created, "PPp")}</span>}
+            {updated && <span>Latest Sync: {format(updated, "PPp")}</span>}
+          </p>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-border/20" />
+        </div>
       )}
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="relative overflow-hidden border-none bg-gradient-to-br from-blue-500/10 via-background to-background shadow-xl shadow-blue-500/5 group hover:shadow-blue-500/10 transition-all duration-300">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-            <Users className="h-24 w-24 text-blue-500" />
-          </div>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-bold tracking-[0.2em] text-blue-500/70 uppercase">Employees</CardTitle>
-            <div className="p-2.5 bg-blue-500/10 rounded-xl border border-blue-500/20">
-              <Users className="h-4 w-4 text-blue-500" />
+      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        {[
+          { label: "Employees", count: counts.employees, icon: Users, color: "blue", sub: "Biological Units" },
+          { label: "Catalog", count: counts.products, icon: Package, color: "orange", sub: "Stock Ledgers" },
+          { label: "Flow Rate", count: counts.orders, icon: ShoppingCart, color: "emerald", sub: "Successive Cycles" },
+          { label: "Stakeholders", count: counts.clients, icon: UserCircle, color: "pink", sub: "Network Density" },
+          { label: "Settlements", count: counts.invoices, icon: FileText, color: "indigo", sub: "Financial Packets" },
+          { label: "Supply Chain", count: counts.purchaseOrders, icon: Truck, color: "teal", sub: "Procurement Volume" },
+        ].map((stat, i) => (
+          <Card key={i} className="group relative overflow-hidden border-none bg-card/40 backdrop-blur-xl rounded-[2.5rem] shadow-2xl shadow-black/5 hover:scale-[1.02] transition-all duration-500">
+            <div className={`absolute top-0 left-0 w-2 h-full bg-${stat.color}-500 opacity-20`} />
+            <CardHeader className="flex flex-row items-center justify-between pb-2 px-10 pt-10">
+              <CardTitle className={`text-[10px] font-black tracking-[0.3em] text-${stat.color}-500 uppercase italic`}>{stat.label}</CardTitle>
+              <div className={`p-4 bg-${stat.color}-500/10 rounded-2xl border border-${stat.color}-500/20 text-${stat.color}-500 shadow-inner group-hover:scale-110 transition-transform duration-500`}>
+                <stat.icon className="h-5 w-5 stroke-[2.5]" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-10 pb-10 pt-4">
+              <div className="text-5xl font-black tracking-tighter text-foreground font-mono">{stat.count}</div>
+              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 mt-6 italic">{stat.sub}</p>
+            </CardContent>
+            <div className={`absolute -right-8 -bottom-8 opacity-[0.03] group-hover:scale-110 group-hover:-rotate-12 transition-all duration-1000`}>
+              <stat.icon className="h-48 w-48 text-foreground" />
             </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="text-4xl font-black tracking-tight text-foreground/90">{counts.employees}</div>
-            <p className="text-[11px] text-muted-foreground mt-4 font-semibold italic opacity-60">Active biological units</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-none bg-gradient-to-br from-orange-500/10 via-background to-background shadow-xl shadow-orange-500/5 group hover:shadow-orange-500/10 transition-all duration-300">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-            <Package className="h-24 w-24 text-orange-500" />
-          </div>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-bold tracking-[0.2em] text-orange-500/70 uppercase">Catalog</CardTitle>
-            <div className="p-2.5 bg-orange-500/10 rounded-xl border border-orange-500/20">
-              <Package className="h-4 w-4 text-orange-500" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="text-4xl font-black tracking-tight text-foreground/90">{counts.products}</div>
-            <p className="text-[11px] text-muted-foreground mt-4 font-semibold italic opacity-60">Inventory ledger entries</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-none bg-gradient-to-br from-green-500/10 via-background to-background shadow-xl shadow-green-500/5 group hover:shadow-green-500/10 transition-all duration-300">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-            <ShoppingCart className="h-24 w-24 text-green-500" />
-          </div>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-bold tracking-[0.2em] text-green-500/70 uppercase">Flow Rate</CardTitle>
-            <div className="p-2.5 bg-green-500/10 rounded-xl border border-green-500/20">
-              <ShoppingCart className="h-4 w-4 text-green-500" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="text-4xl font-black tracking-tight text-foreground/90">{counts.orders}</div>
-            <p className="text-[11px] text-muted-foreground mt-4 font-semibold italic opacity-60">Successive order cycle</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-none bg-gradient-to-br from-pink-500/10 via-background to-background shadow-xl shadow-pink-500/5 group hover:shadow-pink-500/10 transition-all duration-300">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-            <UserCircle className="h-24 w-24 text-pink-500" />
-          </div>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-bold tracking-[0.2em] text-pink-500/70 uppercase">Stakeholders</CardTitle>
-            <div className="p-2.5 bg-pink-500/10 rounded-xl border border-pink-500/20">
-              <UserCircle className="h-4 w-4 text-pink-500" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="text-4xl font-black tracking-tight text-foreground/90">{counts.clients}</div>
-            <p className="text-[11px] text-muted-foreground mt-4 font-semibold italic opacity-60">Customer network density</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-none bg-gradient-to-br from-indigo-500/10 via-background to-background shadow-xl shadow-indigo-500/5 group hover:shadow-indigo-500/10 transition-all duration-300">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-            <FileText className="h-24 w-24 text-indigo-500" />
-          </div>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-bold tracking-[0.2em] text-indigo-500/70 uppercase">Settlements</CardTitle>
-            <div className="p-2.5 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
-              <FileText className="h-4 w-4 text-indigo-500" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="text-4xl font-black tracking-tight text-foreground/90">{counts.invoices}</div>
-            <p className="text-[11px] text-muted-foreground mt-4 font-semibold italic opacity-60">Financial document generation</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden border-none bg-gradient-to-br from-teal-500/10 via-background to-background shadow-xl shadow-teal-500/5 group hover:shadow-teal-500/10 transition-all duration-300">
-          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
-            <Truck className="h-24 w-24 text-teal-500" />
-          </div>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-bold tracking-[0.2em] text-teal-500/70 uppercase">Supply Chain</CardTitle>
-            <div className="p-2.5 bg-teal-500/10 rounded-xl border border-teal-500/20">
-              <Truck className="h-4 w-4 text-teal-500" />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="text-4xl font-black tracking-tight text-foreground/90">{counts.purchaseOrders}</div>
-            <p className="text-[11px] text-muted-foreground mt-4 font-semibold italic opacity-60">Procurement cycle volume</p>
-          </CardContent>
-        </Card>
+          </Card>
+        ))}
       </div>
 
       <Card className="border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden rounded-[2.5rem]">
@@ -897,27 +878,35 @@ export default function PlatformTenantDetail() {
       />
 
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Update status reason</DialogTitle>
-            <DialogDescription>
-              Provide a reason for marking <strong>{t.displayName || t.key}</strong> as <strong>{statusTargetValue}</strong>.
+        <DialogContent className="max-w-md rounded-[2.5rem] border-none bg-background/80 backdrop-blur-2xl shadow-2xl p-0 overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500/50 via-primary/50 to-indigo-500/50" />
+          <DialogHeader className="pt-10 px-10">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight italic flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                <Activity className="h-5 w-5" />
+              </div>
+              Status Vector Shift
+            </DialogTitle>
+            <DialogDescription className="text-sm font-medium pt-2">
+              Provide a rationale for marking <span className="font-black text-foreground italic">{t.displayName || t.key}</span> as <Badge variant="secondary" className="px-2 py-0.5 rounded-md font-black uppercase text-[9px] tracking-widest bg-primary/10 text-primary border-none inline-flex align-middle ml-1">{statusTargetValue}</Badge>.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="status-reason-input">Reason / Note</Label>
+          <div className="px-10 py-8 space-y-6">
+            <div className="space-y-3">
+              <Label htmlFor="status-reason-input" className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-1">Rationale Narrative</Label>
               <Input
                 id="status-reason-input"
                 placeholder="e.g. Non-payment, user requested archiving..."
                 value={statusReasonInput}
                 onChange={(e) => setStatusReasonInput(e.target.value)}
+                className="h-14 rounded-2xl bg-secondary/30 border-border/10 focus:bg-background transition-all font-bold text-sm px-6 italic shadow-inner"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>Cancel</Button>
+          <DialogFooter className="bg-secondary/20 p-8 flex gap-3 sm:justify-center">
+            <Button variant="ghost" onClick={() => setStatusDialogOpen(false)} className="rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-background h-12 px-8">Abort</Button>
             <Button
+              className="rounded-xl font-black text-[10px] uppercase tracking-widest bg-primary text-primary-foreground shadow-xl shadow-primary/20 h-12 px-8 hover:scale-[1.05] transition-all"
               onClick={() => {
                 setStatusDialogOpen(false);
                 requestStepUp(
@@ -935,36 +924,47 @@ export default function PlatformTenantDetail() {
                 );
               }}
             >
-              Update Status
+              Update Protocol
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={trialDialogOpen} onOpenChange={setTrialDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Extend trial window</DialogTitle>
-            <DialogDescription>
-              How many days would you like to extend the trial for <strong>{t.displayName || t.key}</strong>?
+        <DialogContent className="max-w-md rounded-[2.5rem] border-none bg-background/80 backdrop-blur-2xl shadow-2xl p-0 overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-orange-500/50 via-amber-500/50 to-yellow-500/50" />
+          <DialogHeader className="pt-10 px-10">
+            <DialogTitle className="text-xl font-black uppercase tracking-tight italic flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500">
+                <CalendarClock className="h-5 w-5" />
+              </div>
+              Timeline Expansion
+            </DialogTitle>
+            <DialogDescription className="text-sm font-medium pt-2">
+              Extend the trial window for <span className="font-black text-foreground italic">{t.displayName || t.key}</span>.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="trial-days-input">Days to extend</Label>
-              <Input
-                id="trial-days-input"
-                type="number"
-                min="1"
-                max="3650"
-                value={trialDaysInput}
-                onChange={(e) => setTrialDaysInput(e.target.value)}
-              />
+          <div className="px-10 py-8 space-y-6">
+            <div className="space-y-3">
+              <Label htmlFor="trial-days-input" className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 ml-1">Days to Append</Label>
+              <div className="relative">
+                <Input
+                  id="trial-days-input"
+                  type="number"
+                  min="1"
+                  max="3650"
+                  value={trialDaysInput}
+                  onChange={(e) => setTrialDaysInput(e.target.value)}
+                  className="h-14 rounded-2xl bg-secondary/30 border-border/10 focus:bg-background transition-all font-black text-xl px-12 shadow-inner text-center"
+                />
+                <Zap className="absolute right-6 top-1/2 -translate-y-1/2 h-5 w-5 opacity-20 text-orange-500" />
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTrialDialogOpen(false)}>Cancel</Button>
+          <DialogFooter className="bg-secondary/20 p-8 flex gap-3 sm:justify-center">
+            <Button variant="ghost" onClick={() => setTrialDialogOpen(false)} className="rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-background h-12 px-8">Abort</Button>
             <Button
+              className="rounded-xl font-black text-[10px] uppercase tracking-widest bg-orange-500 text-white shadow-xl shadow-orange-500/20 h-12 px-8 hover:scale-[1.05] transition-all border-none"
               onClick={() => {
                 const days = Math.min(Math.max(parseInt(trialDaysInput, 10) || 0, 1), 3650);
                 setTrialDialogOpen(false);

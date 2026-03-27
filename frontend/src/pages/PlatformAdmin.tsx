@@ -450,22 +450,25 @@ export default function PlatformAdmin() {
             <p className="text-sm text-destructive">Could not load metrics.</p>
           ) : (
             <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <Card className="relative overflow-hidden border-none bg-gradient-to-br from-blue-500/10 via-background to-background shadow-xl shadow-blue-500/5 group hover:shadow-blue-500/10 transition-all duration-300">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                  <Building2 className="h-24 w-24 text-blue-500" />
+                </div>
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Tenants</CardTitle>
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Building2 className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-xs font-bold tracking-[0.2em] text-blue-500/70 uppercase">Total Tenants</CardTitle>
+                  <div className="p-2.5 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                    <Building2 className="h-4 w-4 text-blue-500" />
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black tracking-tighter">{metrics?.tenants.total ?? 0}</div>
-                  <div className="flex flex-wrap gap-2 mt-4">
+                <CardContent className="pt-4">
+                  <div className="text-4xl font-black tracking-tight text-foreground/90">{metrics?.tenants.total ?? 0}</div>
+                  <div className="flex flex-wrap gap-1.5 mt-6">
                     {Object.entries(metrics?.tenants.byStatus ?? {}).map(([k, v]) => (
                       <Badge 
                         key={k} 
                         variant={statusBadgeVariant(k)} 
-                        className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                        className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md border-none shadow-sm"
                       >
                         {k}: {v}
                       </Badge>
@@ -474,99 +477,119 @@ export default function PlatformAdmin() {
                 </CardContent>
               </Card>
 
-              <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+              <Card className="relative overflow-hidden border-none bg-gradient-to-br from-indigo-500/10 via-background to-background shadow-xl shadow-indigo-500/5 group hover:shadow-indigo-500/10 transition-all duration-300">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                  <Users className="h-24 w-24 text-indigo-500" />
+                </div>
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Employees</CardTitle>
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <Users className="h-4 w-4 text-blue-500" />
+                  <CardTitle className="text-xs font-bold tracking-[0.2em] text-indigo-500/70 uppercase">Global Users</CardTitle>
+                  <div className="p-2.5 bg-indigo-500/10 rounded-xl border border-indigo-500/20">
+                    <Users className="h-4 w-4 text-indigo-500" />
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black tracking-tighter">{metrics?.employees ?? 0}</div>
-                  <p className="text-xs text-muted-foreground mt-2 font-medium">Across all active tenants</p>
+                <CardContent className="pt-4">
+                  <div className="text-4xl font-black tracking-tight text-foreground/90">{metrics?.employees ?? 0}</div>
+                  <p className="text-[11px] text-muted-foreground mt-4 font-semibold flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Active across all registered tenants
+                  </p>
                 </CardContent>
               </Card>
 
-              <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+              <Card className="relative overflow-hidden border-none bg-gradient-to-br from-purple-500/10 via-background to-background shadow-xl shadow-purple-500/5 group hover:shadow-purple-500/10 transition-all duration-300">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                  <Activity className="h-24 w-24 text-purple-500" />
+                </div>
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Environment</CardTitle>
-                  <div className="p-2 bg-purple-500/10 rounded-lg">
+                  <CardTitle className="text-xs font-bold tracking-[0.2em] text-purple-500/70 uppercase">Platfrom Node</CardTitle>
+                  <div className="p-2.5 bg-purple-500/10 rounded-xl border border-purple-500/20">
                     <Activity className="h-4 w-4 text-purple-500" />
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black tracking-tighter">Live</div>
-                  <p className="text-xs text-muted-foreground mt-2 font-medium">Production platform backend</p>
+                <CardContent className="pt-4">
+                  <div className="text-4xl font-black tracking-tight text-foreground/90">Mainland</div>
+                  <p className="text-[11px] text-muted-foreground mt-4 font-semibold">Real-time production infrastructure</p>
                 </CardContent>
               </Card>
 
-              <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+              <Card className="relative overflow-hidden border-none bg-gradient-to-br from-orange-500/10 via-background to-background shadow-xl shadow-orange-500/5 group hover:shadow-orange-500/10 transition-all duration-300">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                  <Package className="h-24 w-24 text-orange-500" />
+                </div>
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Inventory</CardTitle>
-                  <div className="p-2 bg-orange-500/10 rounded-lg">
+                  <CardTitle className="text-xs font-bold tracking-[0.2em] text-orange-500/70 uppercase">Catalog Items</CardTitle>
+                  <div className="p-2.5 bg-orange-500/10 rounded-xl border border-orange-500/20">
                     <Package className="h-4 w-4 text-orange-500" />
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black tracking-tighter">{metrics?.products ?? 0}</div>
-                  <p className="text-xs text-muted-foreground mt-2 font-medium">Total registered products</p>
+                <CardContent className="pt-4">
+                  <div className="text-4xl font-black tracking-tight text-foreground/90">{metrics?.products ?? 0}</div>
+                  <p className="text-[11px] text-muted-foreground mt-4 font-semibold">Total products across the ecosystem</p>
                 </CardContent>
               </Card>
 
-              <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+              <Card className="relative overflow-hidden border-none bg-gradient-to-br from-emerald-500/10 via-background to-background shadow-xl shadow-emerald-500/5 group hover:shadow-emerald-500/10 transition-all duration-300">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                  <ShoppingCart className="h-24 w-24 text-emerald-500" />
+                </div>
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Sales Activity</CardTitle>
-                  <div className="p-2 bg-green-500/10 rounded-lg">
-                    <ShoppingCart className="h-4 w-4 text-green-500" />
+                  <CardTitle className="text-xs font-bold tracking-[0.2em] text-emerald-500/70 uppercase">System Flow</CardTitle>
+                  <div className="p-2.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                    <ShoppingCart className="h-4 w-4 text-emerald-500" />
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black tracking-tighter">{metrics?.orders ?? 0}</div>
-                  <p className="text-xs text-muted-foreground mt-2 font-medium">Orders processed to date</p>
+                <CardContent className="pt-4">
+                  <div className="text-4xl font-black tracking-tight text-foreground/90">{metrics?.orders ?? 0}</div>
+                  <p className="text-[11px] text-muted-foreground mt-4 font-semibold">Cumulative order processing volume</p>
                 </CardContent>
               </Card>
 
-              <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm hover:shadow-md transition-shadow">
+              <Card className="relative overflow-hidden border-none bg-gradient-to-br from-pink-500/10 via-background to-background shadow-xl shadow-pink-500/5 group hover:shadow-pink-500/10 transition-all duration-300">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                  <FileText className="h-24 w-24 text-pink-500" />
+                </div>
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-bold tracking-tight text-muted-foreground uppercase">Financials</CardTitle>
-                  <div className="p-2 bg-indigo-500/10 rounded-lg">
-                    <FileText className="h-4 w-4 text-indigo-500" />
+                  <CardTitle className="text-xs font-bold tracking-[0.2em] text-pink-500/70 uppercase">Ledger Entries</CardTitle>
+                  <div className="p-2.5 bg-pink-500/10 rounded-xl border border-pink-500/20">
+                    <FileText className="h-4 w-4 text-pink-500" />
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-black tracking-tighter">{metrics?.invoices ?? 0}</div>
-                  <p className="text-xs text-muted-foreground mt-2 font-medium">Invoices generated globally</p>
+                <CardContent className="pt-4">
+                  <div className="text-4xl font-black tracking-tight text-foreground/90">{metrics?.invoices ?? 0}</div>
+                  <p className="text-[11px] text-muted-foreground mt-4 font-semibold">Global financial document generation</p>
                 </CardContent>
               </Card>
             </div>
-            <Card className="border-border/60 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-md shadow-sm">
-              <CardHeader className="border-b border-border/40 pb-4">
+            <Card className="border-none shadow-xl shadow-primary/5 bg-gradient-to-br from-card to-background overflow-hidden">
+              <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+              <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <CardTitle className="flex items-center gap-2 text-xl font-bold tracking-tight">
-                      <Activity className="h-5 w-5 text-primary" />
-                      Global Announcement Banner
+                    <CardTitle className="flex items-center gap-2.5 text-xl font-black tracking-tight italic">
+                      <Activity className="h-6 w-6 text-primary" />
+                      GLOBAL ANNOUNCEMENT
                     </CardTitle>
-                    <CardDescription>
-                      Broadcast maintenance or updates to all active tenants on the platform.
+                    <CardDescription className="text-xs font-medium uppercase tracking-widest opacity-70">
+                      System-wide broadcast control center
                     </CardDescription>
                   </div>
-                  <div className="flex items-center gap-3 px-4 py-2 bg-secondary/30 rounded-xl border border-border/40">
+                  <div className="flex items-center gap-3 px-4 py-2 bg-secondary/50 rounded-2xl border border-border/40 backdrop-blur-sm">
                     <Switch
                       checked={globalAnnouncementEnabled}
                       onCheckedChange={setGlobalAnnouncementEnabled}
                       disabled={globalAnnouncementMut.isPending || globalAnnouncementQ.isLoading}
+                      className="data-[state=checked]:bg-primary"
                     />
-                    <Label className="font-bold text-xs uppercase tracking-widest cursor-pointer">
-                      {globalAnnouncementEnabled ? "Active" : "Disabled"}
+                    <Label className="font-black text-[10px] uppercase tracking-[0.2em] cursor-pointer text-muted-foreground">
+                      {globalAnnouncementEnabled ? "Broadcasting" : "Standby"}
                     </Label>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-6 space-y-6">
-                <div className="grid gap-6 sm:grid-cols-4">
-                  <div className="sm:col-span-1 space-y-2">
-                    <Label className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Alert Level</Label>
+              <CardContent className="pt-4 space-y-8">
+                <div className="grid gap-8 sm:grid-cols-4">
+                  <div className="sm:col-span-1 space-y-3">
+                    <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground mb-1 block">Priority Level</Label>
                     <Select
                       value={globalAnnouncementLevel}
                       onValueChange={(v) =>
@@ -574,49 +597,56 @@ export default function PlatformAdmin() {
                       }
                       disabled={globalAnnouncementMut.isPending}
                     >
-                      <SelectTrigger className="bg-background/50 border-border/40">
+                      <SelectTrigger className="bg-background/40 border-border/40 h-11 rounded-xl focus:ring-primary/20 transition-all">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="info">Information (Blue)</SelectItem>
-                        <SelectItem value="warning">Warning (Yellow)</SelectItem>
-                        <SelectItem value="maintenance">Maintenance (Purple)</SelectItem>
+                      <SelectContent className="rounded-xl border-border/40">
+                        <SelectItem value="info" className="font-medium">Information (Blue)</SelectItem>
+                        <SelectItem value="warning" className="font-medium text-amber-600">Warning (Yellow)</SelectItem>
+                        <SelectItem value="maintenance" className="font-medium text-purple-600">Maintenance (Purple)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="sm:col-span-3 space-y-2">
-                    <Label htmlFor="global-announcement-message" className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground">Banner Message</Label>
-                    <Input
-                      id="global-announcement-message"
-                      value={globalAnnouncementMessage}
-                      onChange={(e) => setGlobalAnnouncementMessage(e.target.value)}
-                      placeholder="e.g. System maintenance scheduled for tonight at 22:00 UTC."
-                      className="bg-background/50 border-border/40 focus:bg-background transition-colors"
-                      disabled={globalAnnouncementMut.isPending}
-                    />
+                  <div className="sm:col-span-3 space-y-3">
+                    <Label htmlFor="global-announcement-message" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground mb-1 block">Broadcast Message</Label>
+                    <div className="relative">
+                      <Input
+                        id="global-announcement-message"
+                        value={globalAnnouncementMessage}
+                        onChange={(e) => setGlobalAnnouncementMessage(e.target.value)}
+                        placeholder="e.g. System maintenance scheduled for tonight at 22:00 UTC."
+                        className="bg-background/40 border-border/40 h-11 rounded-xl focus:bg-background transition-all pl-4 text-sm font-medium pr-12"
+                        disabled={globalAnnouncementMut.isPending}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-20 hover:opacity-100 transition-opacity">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-end pt-2">
                   <Button
                     size="lg"
-                    className="px-8 shadow-lg shadow-primary/20"
+                    className="px-10 h-12 rounded-2xl shadow-xl shadow-primary/20 font-bold tracking-tight hover:scale-[1.02] active:scale-[0.98] transition-all"
                     onClick={() =>
                       requestStepUp(
                         async () => {
                           await globalAnnouncementMut.mutateAsync();
                         },
                         {
-                          title: "Confirm global announcement update",
-                          description: "Re-enter your password to update the global tenant banner.",
+                          title: "Confirm Broadcast",
+                          description: "This will update the banner message for all 100% of tenants.",
                         }
                       )
                     }
                     disabled={globalAnnouncementMut.isPending}
                   >
                     {globalAnnouncementMut.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : null}
-                    Update Global Banner
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    ) : (
+                      <ArrowRightCircle className="h-5 w-5 mr-2" />
+                    )}
+                    Publish Announcement
                   </Button>
                 </div>
               </CardContent>
@@ -625,23 +655,24 @@ export default function PlatformAdmin() {
           )}
         </TabsContent>
 
-        <TabsContent value="tenants" className="space-y-4">
-          <Card className="border-dashed border-border/80 bg-secondary/20">
-            <CardContent className="pt-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="w-full max-w-3xl space-y-4">
-                  <div className="space-y-1">
-                    <p className="text-lg font-bold tracking-tight">Company Management</p>
-                    <p className="text-sm text-muted-foreground">
-                      Manage lifecycle, trial windows, and administrative access for all platform tenants.
-                    </p>
+        <TabsContent value="tenants" className="space-y-8">
+          <Card className="border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl rounded-[2.5rem] overflow-hidden">
+            <CardContent className="p-8">
+              <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex-1 space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="h-1.5 w-8 bg-primary rounded-full" />
+                    <h2 className="text-sm font-black uppercase tracking-[0.3em] text-foreground/70 italic">Registry Nexus</h2>
                   </div>
+                  
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <div className="relative group max-w-xl flex-1">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <Search className="h-5 w-5 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
+                      </div>
                       <Input
-                        placeholder="Search by key, legal name or display name..."
-                        className="pl-9 h-11 bg-background/50 border-border/40 focus:bg-background transition-colors"
+                        placeholder="Identify tenant by key or legal nomenclature..."
+                        className="h-14 pl-12 pr-12 rounded-2xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold tracking-tight text-base"
                         value={tenantSearchInput}
                         onChange={(e) => setTenantSearchInput(e.target.value)}
                         onKeyDown={(e) => {
@@ -654,109 +685,116 @@ export default function PlatformAdmin() {
                     <div className="flex gap-2">
                       <Button
                         type="button"
-                        size="lg"
-                        className="px-6"
+                        className="h-14 px-8 rounded-2xl bg-primary text-primary-foreground font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                         onClick={() => setTenantSearchQuery(tenantSearchInput.trim())}
                       >
-                        Search
+                        Execute Search
                       </Button>
                       {(tenantSearchQuery || tenantSearchInput) && (
                         <Button
                           type="button"
-                          variant="ghost"
-                          size="lg"
+                          variant="secondary"
+                          className="h-14 w-14 rounded-2xl flex items-center justify-center p-0 bg-background/50 border-none hover:bg-background transition-all group"
                           onClick={() => {
                             setTenantSearchInput("");
                             setTenantSearchQuery("");
                           }}
                         >
-                          Reset
+                          <Loader2 className="h-5 w-5 opacity-40 rotate-45 group-hover:opacity-100 transition-opacity" />
                         </Button>
                       )}
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-end">
+                
+                <div className="shrink-0">
                   <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                     <DialogTrigger asChild>
-                        <Button size="lg" className="shadow-lg shadow-primary/20">
-                          <Plus className="h-5 w-5 mr-2" />
-                          New Company
-                        </Button>
+                      <Button className="h-16 px-10 rounded-[1.5rem] bg-foreground text-background hover:bg-foreground/90 font-black text-base shadow-[0_20px_50px_rgba(0,0,0,0.1)] active:scale-95 hover:scale-[1.02] transition-all">
+                        <Plus className="h-6 w-6 mr-3 stroke-[3]" />
+                        Onboard Entity
+                      </Button>
                     </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create company</DialogTitle>
-                  <DialogDescription>
-                    Unique key (slug). Legal and display names are shown in the app.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-3 py-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="p-key">Key (slug)</Label>
-                    <Input
-                      id="p-key"
-                      placeholder=""
-                      value={newKey}
-                      onChange={(e) => setNewKey(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="p-legal">Legal name</Label>
-                    <Input
-                      id="p-legal"
-                      placeholder=""
-                      value={newLegal}
-                      onChange={(e) => setNewLegal(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="p-display">Display name (optional)</Label>
-                    <Input
-                      id="p-display"
-                      placeholder=""
-                      value={newDisplay}
-                      onChange={(e) => setNewDisplay(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Initial status</Label>
-                    <Select value={newStatus} onValueChange={setNewStatus}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STATUS_OPTIONS.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setCreateOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    disabled={createMut.isPending || !newKey.trim() || !newLegal.trim()}
-                    onClick={() =>
-                      requestStepUp(
-                        async () => {
-                          await createMut.mutateAsync();
-                        },
-                        {
-                          title: "Confirm company creation",
-                          description: "Re-enter your password to create a new company.",
-                        }
-                      )
-                    }
-                  >
-                    {createMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
+                    <DialogContent className="sm:max-w-md rounded-[2.5rem] border-none shadow-2xl bg-card/90 backdrop-blur-2xl px-8 pt-10 pb-8">
+                      <DialogHeader className="space-y-3 text-center sm:text-left">
+                        <DialogTitle className="text-2xl font-black tracking-tight uppercase italic flex items-center gap-3 justify-center sm:justify-start">
+                          <PlusCircle className="h-7 w-7 text-primary" />
+                          Initialize Index
+                        </DialogTitle>
+                        <DialogDescription className="text-sm font-medium leading-relaxed">
+                          Define domain identifiers and statutory titles to provision a new tenant on the platform.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-6 py-6 border-y border-border/10 my-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="p-key" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 ml-1">Domain Handle (Slug)</Label>
+                          <Input
+                            id="p-key"
+                            placeholder="e.g. acme-global"
+                            value={newKey}
+                            onChange={(e) => setNewKey(e.target.value)}
+                            className="h-12 rounded-xl bg-secondary/30 border-none font-mono text-sm px-4 focus:bg-background transition-all"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="p-legal" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 ml-1">Statutory Identity</Label>
+                          <Input
+                            id="p-legal"
+                            placeholder="e.g. Acme Corp Ltd."
+                            value={newLegal}
+                            onChange={(e) => setNewLegal(e.target.value)}
+                            className="h-12 rounded-xl bg-secondary/30 border-none font-bold text-sm px-4 focus:bg-background transition-all"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="p-display" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 ml-1">Marketing Alias</Label>
+                          <Input
+                            id="p-display"
+                            placeholder="Acme Global Inc."
+                            value={newDisplay}
+                            onChange={(e) => setNewDisplay(e.target.value)}
+                            className="h-12 rounded-xl bg-secondary/30 border-none font-bold text-sm px-4 focus:bg-background transition-all"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/60 ml-1">Provisioning State</Label>
+                          <Select value={newStatus} onValueChange={setNewStatus}>
+                            <SelectTrigger className="h-12 rounded-xl bg-secondary/30 border-none font-black text-xs uppercase tracking-widest px-4 shadow-none">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-border/20">
+                              {STATUS_OPTIONS.map((s) => (
+                                <SelectItem key={s} value={s} className="font-bold uppercase text-[10px] tracking-widest">
+                                  {s}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <DialogFooter className="pt-4 flex flex-col sm:flex-row gap-3">
+                        <Button variant="ghost" className="h-12 rounded-xl font-bold uppercase text-xs tracking-widest flex-1 sm:order-1" onClick={() => setCreateOpen(false)}>
+                          Abort
+                        </Button>
+                        <Button
+                          className="h-12 rounded-xl bg-primary shadow-xl shadow-primary/20 font-black uppercase text-xs tracking-widest flex-1 sm:order-2"
+                          disabled={createMut.isPending || !newKey.trim() || !newLegal.trim()}
+                          onClick={() =>
+                            requestStepUp(
+                              async () => {
+                                await createMut.mutateAsync();
+                              },
+                              {
+                                title: "Authorize Entity Creation",
+                                description: "Tier-1 privilege required to commit new tenant records.",
+                              }
+                            )
+                          }
+                        >
+                          {createMut.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Authorize"}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
                   </Dialog>
                 </div>
               </div>
@@ -764,173 +802,152 @@ export default function PlatformAdmin() {
           </Card>
 
           {tenantsQ.isLoading ? (
-            <div className="flex justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center py-48 bg-secondary/5 rounded-[2.5rem] border border-dashed border-border/20">
+              <Loader2 className="h-12 w-12 animate-spin text-primary/40 mb-4" />
+              <p className="font-black text-[10px] uppercase tracking-[0.4em] text-muted-foreground/40">Synchronizing registry state...</p>
             </div>
           ) : (
-            <Card className="border-border/60 bg-card/80">
-              <CardHeader>
-                <CardTitle>All companies</CardTitle>
-                <CardDescription>Change status or create a tenant-scoped admin user.</CardDescription>
+            <Card className="border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden rounded-[2.5rem]">
+              <CardHeader className="pt-10 pb-6 px-10">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="space-y-1.5">
+                    <CardTitle className="text-2xl font-black tracking-tight uppercase italic flex items-center gap-3">
+                      <LayoutGrid className="h-7 w-7 text-primary" />
+                      Tenant Ledger
+                    </CardTitle>
+                    <CardDescription className="text-sm font-medium leading-relaxed max-w-2xl">
+                      Real-time inventory of global nodes, operational health metrics, and administrative status.
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2 bg-secondary/40 px-4 py-2 rounded-2xl border border-border/10">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-foreground/60">{filteredTenants.length} Nodes Active</span>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-secondary/30">
-                    <TableRow className="hover:bg-transparent border-b border-border/40">
-                      <TableHead className="font-bold py-4">Key</TableHead>
-                      <TableHead className="font-bold py-4">Display Name</TableHead>
-                      <TableHead className="font-bold py-4">Status</TableHead>
-                      <TableHead className="font-bold py-4">Status Note</TableHead>
-                      <TableHead className="font-bold py-4">Activity</TableHead>
-                      <TableHead className="font-bold py-4">Health & Scale</TableHead>
-                      <TableHead className="font-bold py-4">Trial Status</TableHead>
-                      <TableHead className="font-bold py-4">Plan</TableHead>
-                      <TableHead className="text-right font-bold py-4">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTenants.map((t) => (
-                      <TableRow key={t._id} className="group transition-colors hover:bg-muted/30 border-b border-border/20">
-                        <TableCell className="font-mono text-[11px] py-4">
-                          <Link
-                            to={`/platform/tenants/${t._id}`}
-                            className="text-primary hover:underline font-medium"
-                          >
-                            {t.key}
-                          </Link>
-                        </TableCell>
-                        <TableCell>{t.displayName || t.legalName}</TableCell>
-                        <TableCell>
-                          <Select
-                            value={t.status}
-                            onValueChange={(status) => {
-                              const requiresReason = status === "suspended" || status === "archived";
-                              if (requiresReason) {
-                                setStatusTargetTenant(t);
-                                setStatusTargetValue(status);
-                                setStatusReasonInput(t.statusReason || t.health?.statusReason || "");
-                                setStatusDialogOpen(true);
-                              } else {
-                                requestStepUp(
-                                  async () => {
-                                    await statusMut.mutateAsync({ id: t._id, status, statusReason: "" });
-                                  },
-                                  {
-                                    title: "Confirm company status change",
-                                    description: `Update "${t.displayName || t.key}" status to ${status}.`,
+              <CardContent className="p-0 px-10 pb-10">
+                <div className="rounded-[2rem] border border-border/10 overflow-hidden bg-background/20 shadow-inner">
+                  <Table>
+                    <TableHeader className="bg-secondary/40 border-b border-border/20">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5 px-6">Domain Identifier</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5">Statutory Nomenclature</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5">Operational State</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5">Governance Status</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5">Metadata & Registry</TableHead>
+                        <TableHead className="text-right font-black text-[10px] uppercase tracking-[0.2em] py-5 px-6">Controls</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTenants.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="h-48 text-center">
+                            <p className="text-sm font-black uppercase tracking-widest text-muted-foreground/30 italic">No nodes matching specified parameters</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredTenants.map((t) => (
+                          <TableRow key={t._id} className="group transition-all hover:bg-primary/5 border-b border-border/10 last:border-0">
+                            <TableCell className="py-6 px-6">
+                              <Link
+                                to={`/platform/tenants/${t._id}`}
+                                className="group/link inline-flex items-center gap-4"
+                              >
+                                <div className="h-11 w-11 rounded-2xl bg-secondary/40 flex items-center justify-center font-black text-xs group-hover/link:bg-primary group-hover/link:text-primary-foreground transition-all shadow-sm">
+                                  {t.key.substring(0, 2).toUpperCase()}
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-sm tracking-tight text-foreground/80 group-hover/link:text-primary transition-colors underline-offset-4 decoration-2 decoration-primary/20 hover:underline">{t.key}</span>
+                                  <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest">UID: {t._id.substring(t._id.length - 8)}</span>
+                                </div>
+                              </Link>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-bold text-sm text-foreground/80 line-clamp-1">{t.displayName || t.legalName}</span>
+                                <span className="text-[10px] font-medium text-muted-foreground italic opacity-60 line-clamp-1 max-w-[180px]">{t.legalName}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={t.status}
+                                onValueChange={(status) => {
+                                  const requiresReason = status === "suspended" || status === "archived";
+                                  if (requiresReason) {
+                                    setStatusTargetTenant(t);
+                                    setStatusTargetValue(status);
+                                    setStatusReasonInput(t.statusReason || t.health?.statusReason || "");
+                                    setStatusDialogOpen(true);
+                                  } else {
+                                    requestStepUp(
+                                      async () => {
+                                        await statusMut.mutateAsync({ id: t._id, status, statusReason: "" });
+                                      },
+                                      {
+                                        title: "Confirm company status change",
+                                        description: `Update "${t.displayName || t.key}" status to ${status}.`,
+                                      }
+                                    );
                                   }
-                                );
-                              }
-                            }}
-                            disabled={statusMut.isPending}
-                          >
-                            <SelectTrigger className="w-[140px] h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {STATUS_OPTIONS.map((s) => (
-                                <SelectItem key={s} value={s}>
-                                  {s}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell className="max-w-[240px]">
-                          <p className="text-xs text-muted-foreground truncate" title={t.health?.statusReason || t.statusReason || ""}>
-                            {t.health?.statusReason || t.statusReason || "—"}
-                          </p>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                          {formatRelativeOrDash(t.health?.lastApiActivityAt || t.lastApiActivityAt || null)}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <div className="flex flex-col gap-1">
-                            <span>
-                              Admins:{" "}
-                              <strong className={t.health?.zeroAdmins ? "text-destructive" : ""}>
-                                {t.health?.adminCount ?? "—"}
-                              </strong>
-                            </span>
-                            {t.health?.zeroAdmins ? (
-                              <Badge variant="destructive" className="w-fit">Zero admins</Badge>
-                            ) : null}
-                            <span className="text-muted-foreground">
-                              Docs: {t.health?.totalDocuments ?? "—"}
-                            </span>
-                            <span className="text-muted-foreground">
-                              Billing: {(t.billingProvider || "none").toString()}
-                              {t.billingCustomerId ? ` · ${t.billingCustomerId}` : ""}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <div className="flex flex-col gap-1">
-                            <span>{formatDateOrDash(t.health?.trialEndDate || t.trialEndDate)}</span>
-                            {t.health?.trialExpired ? (
-                              <Badge variant="destructive" className="w-fit">
-                                Expired
-                              </Badge>
-                            ) : t.health?.trialDaysLeft != null ? (
-                              <span className="text-muted-foreground">
-                                {t.health.trialDaysLeft} day(s) left
-                              </span>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="font-medium">
-                            {t.plan || "—"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={trialMut.isPending}
-                              onClick={() => {
-                                setTrialTargetTenant(t);
-                                setTrialDaysInput("7");
-                                setTrialDialogOpen(true);
-                              }}
-                            >
-                              <CalendarClock className="h-3.5 w-3.5 mr-1" />
-                              Extend trial
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setAdminTenant(t)}
-                            >
-                              <UserPlus className="h-3.5 w-3.5 mr-1" />
-                              Admin
-                            </Button>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => {
-                                setActAsTenantId(t._id);
-                                toast.success(`Switched context to ${t.displayName || t.key}`);
-                                navigate("/");
-                              }}
-                            >
-                              <ArrowRightCircle className="h-3.5 w-3.5 mr-1" />
-                              Work
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {!filteredTenants.length ? (
-                      <TableRow>
-                        <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
-                          No companies found for your current search.
-                        </TableCell>
-                      </TableRow>
-                    ) : null}
-                  </TableBody>
-                </Table>
+                                }}
+                                disabled={statusMut.isPending}
+                              >
+                                <SelectTrigger className="w-[130px] h-9 rounded-xl bg-secondary/10 border-border/10 font-black text-[9px] uppercase tracking-widest px-3 shadow-none focus:ring-1 focus:ring-primary/20 transition-all">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-xl border-border/20">
+                                  {STATUS_OPTIONS.map((s) => (
+                                    <SelectItem key={s} value={s} className="font-bold uppercase text-[9px] tracking-widest">
+                                      {s}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="max-w-[200px]">
+                              <div className="p-3 rounded-xl bg-secondary/20 border border-border/10">
+                                <p className="text-[10px] text-muted-foreground/80 font-bold leading-tight line-clamp-2 italic" title={t.health?.statusReason || t.statusReason || ""}>
+                                  {t.health?.statusReason || t.statusReason || "Systems operational • Integrity verified"}
+                                </p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-1.5">
+                                  <Users className="h-3 w-3 text-muted-foreground opacity-40" />
+                                  <span className="text-[11px] font-bold text-foreground/70">{t.health?.adminCount ?? "—"} Admins</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <Activity className="h-3 w-3 text-muted-foreground opacity-40" />
+                                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 line-clamp-1">{t.billingProvider?.toString() || "None"} • {t.billingCustomerId || "Unlinked"}</span>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right px-6">
+                              <div className="flex items-center justify-end gap-2">
+                                <Link to={`/platform/tenants/${t._id}`}>
+                                  <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary group/ctrl transition-all">
+                                    <ExternalLink className="h-4 w-4 opacity-40 group-hover/ctrl:opacity-100" />
+                                  </Button>
+                                </Link>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-destructive/10 hover:text-destructive group/del transition-all">
+                                  <Trash2 className="h-4 w-4 opacity-40 group-hover/del:opacity-100" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                      {!filteredTenants.length ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="py-12 text-center">
+                            <p className="text-sm font-black uppercase tracking-widest text-muted-foreground/20 italic">No node definitions matching specified query</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : null}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -945,67 +962,30 @@ export default function PlatformAdmin() {
           ) : null}
         </TabsContent>
 
-        <TabsContent value="audit">
+        <TabsContent value="audit" className="space-y-6">
           {auditQ.isLoading ? (
-            <div className="flex justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex justify-center py-24">
+              <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
             </div>
           ) : auditQ.isError ? (
             <p className="text-sm text-destructive">Could not load audit log.</p>
           ) : (
-            <Card className="border-border/60 bg-card/80">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5" />
-                  Platform actions
-                </CardTitle>
-                <CardDescription>
-                  Super-admin mutations (create company, status, tenant admins). Filter by action and date, export CSV,
-                  or open the related company / user when links are available.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="bg-secondary/10 p-4 rounded-xl border border-border/40 flex flex-col gap-4 lg:flex-row lg:items-end">
-                  <div className="space-y-1.5 flex-1">
-                    <Label className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground px-0.5">Filter by Action</Label>
-                    <Select value={auditAction} onValueChange={setAuditAction}>
-                      <SelectTrigger className="w-full bg-background/50 border-border/40">
-                        <SelectValue placeholder="All actions" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All actions available</SelectItem>
-                        {auditActionOptions.map((a) => (
-                          <SelectItem key={a} value={a}>
-                            {a}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5 min-w-[160px]">
-                    <Label htmlFor="audit-from" className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground px-0.5">From Date</Label>
-                    <Input
-                      id="audit-from"
-                      type="date"
-                      value={auditDateFrom}
-                      onChange={(e) => setAuditDateFrom(e.target.value)}
-                      className="bg-background/50 border-border/40"
-                    />
-                  </div>
-                  <div className="space-y-1.5 min-w-[160px]">
-                    <Label htmlFor="audit-to" className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground px-0.5">To Date</Label>
-                    <Input
-                      id="audit-to"
-                      type="date"
-                      value={auditDateTo}
-                      onChange={(e) => setAuditDateTo(e.target.value)}
-                      className="bg-background/50 border-border/40"
-                    />
+            <Card className="border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden rounded-3xl">
+              <CardHeader className="pt-8 pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1.5">
+                    <CardTitle className="flex items-center gap-2.5 text-lg font-black tracking-tight text-foreground/80 lowercase italic">
+                      <ShieldCheck className="h-6 w-6 text-primary" />
+                      platform governance logs
+                    </CardTitle>
+                    <CardDescription className="font-medium text-[11px] uppercase tracking-widest leading-relaxed">
+                      Immutable trail of super-admin mutations and platform-wide configuration shifts.
+                    </CardDescription>
                   </div>
                   <Button
                     type="button"
-                    variant="outline"
-                    className="bg-background/50 border-border/40 hover:bg-background transition-colors"
+                    variant="secondary"
+                    className="h-11 rounded-xl bg-background shadow-sm border-none font-bold text-xs uppercase tracking-widest hover:bg-background/90"
                     disabled={auditExporting}
                     onClick={() => void handleAuditExportCsv()}
                   >
@@ -1014,56 +994,98 @@ export default function PlatformAdmin() {
                     ) : (
                       <Download className="h-4 w-4 mr-2" />
                     )}
-                    Export Logs
+                    Export CSV
                   </Button>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-6 px-8 pb-8">
+                <div className="grid gap-6 lg:grid-cols-3 bg-secondary/30 p-6 rounded-2xl border border-border/20">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground ml-1">Mutation Type</Label>
+                    <Select value={auditAction} onValueChange={setAuditAction}>
+                      <SelectTrigger className="w-full h-11 bg-background border-none shadow-inner rounded-xl font-medium">
+                        <SelectValue placeholder="All actions" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-border/40">
+                        <SelectItem value="all" className="font-medium">Universal History</SelectItem>
+                        {auditActionOptions.map((a) => (
+                          <SelectItem key={a} value={a} className="font-medium capitalize">
+                            {a.replace(/\./g, ' ')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="audit-from" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground ml-1">Range Start</Label>
+                    <Input
+                      id="audit-from"
+                      type="date"
+                      value={auditDateFrom}
+                      onChange={(e) => setAuditDateFrom(e.target.value)}
+                      className="h-11 bg-background border-none shadow-inner rounded-xl font-medium"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="audit-to" className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground ml-1">Range End</Label>
+                    <Input
+                      id="audit-to"
+                      type="date"
+                      value={auditDateTo}
+                      onChange={(e) => setAuditDateTo(e.target.value)}
+                      className="h-11 bg-background border-none shadow-inner rounded-xl font-medium"
+                    />
+                  </div>
+                </div>
 
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 px-1">
                   <span>
-                    Total matching: <strong className="text-foreground">{auditTotal}</strong>
+                    Query Results: <span className="text-foreground/80">{auditTotal}</span>
                     {auditTotal > auditPageSize ? (
                       <>
                         {" "}
-                        · Page <strong className="text-foreground">{auditPage + 1}</strong> of{" "}
-                        <strong className="text-foreground">{auditTotalPages}</strong>
+                        · Segment <span className="text-foreground/80">{auditPage + 1}</span> of{" "}
+                        <span className="text-foreground/80">{auditTotalPages}</span>
                       </>
-                    ) : null}
+                     ) : null}
                   </span>
                   {auditTotal > auditPageSize ? (
                     <div className="flex gap-2">
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
+                        className="h-9 px-4 rounded-xl font-bold bg-background/50 border-none hover:bg-background"
                         disabled={auditPage <= 0}
                         onClick={() => setAuditPage((p) => Math.max(0, p - 1))}
                       >
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Previous
+                        <ChevronLeft className="h-4 w-4 mr-1.5" />
+                        Backward
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
+                        className="h-9 px-4 rounded-xl font-bold bg-background/50 border-none hover:bg-background"
                         disabled={(auditPage + 1) * auditPageSize >= auditTotal}
                         onClick={() => setAuditPage((p) => p + 1)}
                       >
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-1" />
+                        Forward
+                        <ChevronRight className="h-4 w-4 ml-1.5" />
                       </Button>
                     </div>
                   ) : null}
                 </div>
 
-                <div className="rounded-md border border-border/70 max-h-[560px] overflow-auto">
+                <div className="rounded-2xl border border-border/20 overflow-hidden shadow-inner bg-background/20">
                   <Table>
-                    <TableHeader className="bg-secondary/30">
-                      <TableRow className="hover:bg-transparent border-b border-border/40">
-                        <TableHead className="font-bold py-3">Timestamp</TableHead>
-                        <TableHead className="font-bold py-3">Operation</TableHead>
-                        <TableHead className="font-bold py-3">Actor</TableHead>
-                        <TableHead className="font-bold py-3">Resource Target</TableHead>
-                        <TableHead className="font-bold py-3">Change Details</TableHead>
+                    <TableHeader className="bg-secondary/40 border-b border-border/20">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5 px-6">Event Horizon</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5">Operation Vector</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5">Governance Actor</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5">Resource Link</TableHead>
+                        <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5 px-6">Mutation Summary</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

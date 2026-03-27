@@ -31,9 +31,27 @@ const employeeSchema = mongoose.Schema({
     type: String,
     default: '',
   },
+  /** Structured org position (optional; keeps legacy jobTitle string for compatibility). */
+  positionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Position',
+    default: null,
+  },
   department: {
     type: String,
     required: true
+  },
+  /** Structured org department (optional; keeps legacy department string for compatibility). */
+  departmentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Department',
+    default: null,
+  },
+  /** Direct reporting manager (employee hierarchy). */
+  manager: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Employee',
+    default: null,
   },
   status: {
     type: String,

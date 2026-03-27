@@ -1,8 +1,119 @@
+const mongoose = require('mongoose');
 const asyncHandler = require('../middleware/asyncHandler');
 const Shipment = require('../models/Shipment');
 const Order = require('../models/Order');
 const { formatEthiopianLong, formatEthiopianNumeric } = require('../utils/ethiopianDate');
 const { byTenant } = require('../utils/tenantQuery');
+const { applyMovement } = require('../services/stockService');
+const { consumeOrderLineReservationQuantity } = require('../services/reservationService');
+
+function isReplicaSetError(err) {
+  const msg = err && err.message ? String(err.message) : '';
+  return (
+    msg.includes('replica set') ||
+    msg.includes('mongos') ||
+    msg.includes('Transaction numbers are only allowed')
+  );
+}
+
+async function applyShipmentInventoryWithSession(tenantId, shipmentDoc, orderDoc, session) {
+  const num = shipmentDoc.shipmentNumber || '';
+  for (const ln of shipmentDoc.lines) {
+    const idx = ln.lineIndex;
+    const q = ln.quantity;
+    const item = orderDoc.items[idx];
+    const productId = item.product._id || item.product;
+    await consumeOrderLineReservationQuantity(
+      orderDoc._id,
+      idx,
+      productId,
+      tenantId,
+      q,
+      session
+    );
+    await applyMovement(session, {
+      tenantId,
+      productId,
+      delta: -q,
+      movementType: 'issue',
+      referenceType: 'Shipment',
+      referenceId: shipmentDoc._id,
+      note: `Shipment ${num} line ${idx}`,
+    });
+  }
+}
+
+async function applyShipmentInventoryWithoutTxn(tenantId, shipmentDoc, orderDoc) {
+  const num = shipmentDoc.shipmentNumber || '';
+  const done = [];
+  try {
+    for (const ln of shipmentDoc.lines) {
+      const idx = ln.lineIndex;
+      const q = ln.quantity;
+      const item = orderDoc.items[idx];
+      const productId = item.product._id || item.product;
+      await applyMovement(null, {
+        tenantId,
+        productId,
+        delta: -q,
+        movementType: 'issue',
+        referenceType: 'Shipment',
+        referenceId: shipmentDoc._id,
+        note: `Shipment ${num} line ${idx}`,
+      });
+      done.push({ productId, q });
+    }
+    for (const ln of shipmentDoc.lines) {
+      const idx = ln.lineIndex;
+      const q = ln.quantity;
+      const item = orderDoc.items[idx];
+      const productId = item.product._id || item.product;
+      await consumeOrderLineReservationQuantity(
+        orderDoc._id,
+        idx,
+        productId,
+        tenantId,
+        q,
+        null
+      );
+    }
+  } catch (e) {
+    for (const d of done.reverse()) {
+      try {
+        await applyMovement(null, {
+          tenantId,
+          productId: d.productId,
+          delta: d.q,
+          movementType: 'adjustment',
+          referenceType: 'Shipment',
+          referenceId: shipmentDoc._id,
+          note: `Rollback shipment ${num}`,
+        });
+      } catch (_) {
+        /* best-effort */
+      }
+    }
+    throw e;
+  }
+}
+
+function bumpShippedQuantities(orderDoc, shipmentDoc) {
+  for (const ln of shipmentDoc.lines) {
+    const idx = ln.lineIndex;
+    const q = ln.quantity;
+    const item = orderDoc.items[idx];
+    const already = Number(item.shippedQty) || 0;
+    orderDoc.items[idx].shippedQty = already + q;
+  }
+}
+
+function refreshOrderShipmentStatus(orderDoc) {
+  const allShipped = orderDoc.items.every(
+    (it) => (Number(it.shippedQty) || 0) >= it.quantity - 0.0001
+  );
+  if (allShipped) orderDoc.status = 'shipped';
+  else if (orderDoc.status === 'pending') orderDoc.status = 'processing';
+}
 
 function nextShipmentNumber() {
   return `SH-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -135,22 +246,54 @@ exports.shipShipment = asyncHandler(async (req, res) => {
         message: `Line ${idx}: over-ship blocked`,
       });
     }
-    order.items[idx].shippedQty = already + q;
   }
 
-  const allShipped = order.items.every(
-    (it) => (Number(it.shippedQty) || 0) >= it.quantity - 0.0001
-  );
-  if (allShipped) order.status = 'shipped';
-  else if (order.status === 'pending') order.status = 'processing';
+  let fallbackNoTxn = false;
+  const session = await mongoose.startSession();
 
-  await order.save();
+  try {
+    session.startTransaction();
+    await applyShipmentInventoryWithSession(req.tenantId, s, order, session);
+    bumpShippedQuantities(order, s);
+    refreshOrderShipmentStatus(order);
+    await order.save({ session });
+    s.status = 'shipped';
+    s.carrier = carrier != null ? carrier : s.carrier;
+    s.trackingNumber = trackingNumber != null ? trackingNumber : s.trackingNumber;
+    s.shippedAt = shippedAt ? new Date(shippedAt) : new Date();
+    await s.save({ session });
+    await session.commitTransaction();
+  } catch (e) {
+    await session.abortTransaction();
+    if (isReplicaSetError(e)) {
+      fallbackNoTxn = true;
+    } else if (String(e.message || '').includes('Insufficient stock')) {
+      return res.status(400).json({ success: false, message: e.message });
+    } else {
+      throw e;
+    }
+  } finally {
+    session.endSession();
+  }
 
-  s.status = 'shipped';
-  s.carrier = carrier != null ? carrier : s.carrier;
-  s.trackingNumber = trackingNumber != null ? trackingNumber : s.trackingNumber;
-  s.shippedAt = shippedAt ? new Date(shippedAt) : new Date();
-  await s.save();
+  if (fallbackNoTxn) {
+    const orderFb = await Order.findOne(byTenant(req, { _id: s.order }));
+    const shipFb = await Shipment.findOne(byTenant(req, { _id: s._id }));
+    if (!orderFb || !shipFb) {
+      return res.status(500).json({ success: false, message: 'Could not reload order/shipment for ship' });
+    }
+    await applyShipmentInventoryWithoutTxn(req.tenantId, shipFb, orderFb);
+    bumpShippedQuantities(orderFb, shipFb);
+    refreshOrderShipmentStatus(orderFb);
+    await orderFb.save();
+    shipFb.status = 'shipped';
+    shipFb.carrier = carrier != null ? carrier : shipFb.carrier;
+    shipFb.trackingNumber = trackingNumber != null ? trackingNumber : shipFb.trackingNumber;
+    shipFb.shippedAt = shippedAt ? new Date(shippedAt) : new Date();
+    await shipFb.save();
+    const populatedFb = await Shipment.findOne(byTenant(req, { _id: shipFb._id })).populate('order');
+    return res.json({ success: true, data: populatedFb });
+  }
 
   const populated = await Shipment.findOne(byTenant(req, { _id: s._id })).populate('order');
   res.json({ success: true, data: populated });

@@ -50,6 +50,7 @@ const allNavItems = [
     roles: ["Admin", "warehouse_head", "finance_head", "finance_viewer", "purchasing_head"],
   },
   { titleKey: "nav.hr", url: "/hr", icon: UserCog, roles: ["Admin", "hr_head", "finance_head"] },
+  { titleKey: "nav.hr", url: "/my-hr", icon: UserCog, roles: ["employee"] },
   {
     titleKey: "nav.finance",
     url: "/finance",
@@ -77,6 +78,7 @@ const routeModuleMap: Partial<Record<(typeof allNavItems)[number]["url"], Tenant
   "/purchase-orders": "procurement",
   "/finance": "finance",
   "/hr": "hr",
+  "/my-hr": "hr",
 };
 
 export function AppSidebar() {

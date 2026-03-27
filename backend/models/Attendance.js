@@ -28,12 +28,43 @@ const attendanceSchema = mongoose.Schema({
   checkOut: {
     type: String
   },
+  workMinutes: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  lateMinutes: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  overtimeMinutes: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  overtimeApprovalStatus: {
+    type: String,
+    enum: ['none', 'pending', 'approved', 'rejected'],
+    default: 'none',
+  },
+  overtimeApprovedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Employee',
+    default: null,
+  },
+  overtimeApprovedAt: {
+    type: Date,
+    default: null,
+  },
   notes: {
     type: String
   }
 }, {
   timestamps: true
 });
+
+attendanceSchema.index({ tenantId: 1, employee: 1, date: 1 }, { unique: true });
 
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 

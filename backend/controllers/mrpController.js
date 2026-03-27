@@ -12,9 +12,11 @@ const { byTenant } = require('../utils/tenantQuery');
  * Demand → supply: open order lines with BOMs, coverage from reservations + linked jobs.
  */
 exports.getMrpSuggestions = asyncHandler(async (req, res) => {
-  const orders = await Order.find({
-    status: { $in: ['pending', 'processing'] },
-  })
+  const orders = await Order.find(
+    byTenant(req, {
+      status: { $in: ['pending', 'processing'] },
+    })
+  )
     .populate('client', 'name')
     .populate('items.product', 'name sku')
     .lean();

@@ -1,12 +1,22 @@
 const Notification = require('../models/Notification');
 const { byTenant } = require('../utils/tenantQuery');
 
+function scopedRecipientQuery(req) {
+  return {
+    $or: [
+      { userId: req.user?._id || null },
+      { userId: null },
+      { userId: { $exists: false } },
+    ],
+  };
+}
+
 // @desc    Get all notifications
 // @route   GET /api/notifications
 // @access  Private
 const getNotifications = async (req, res) => {
   try {
-    const match = byTenant(req);
+    const match = byTenant(req, scopedRecipientQuery(req));
     if (req.query.isRead !== undefined) {
       match.isRead = req.query.isRead === 'true';
     }
@@ -24,7 +34,9 @@ const getNotifications = async (req, res) => {
 // @access  Private
 const markAsRead = async (req, res) => {
   try {
-    const notification = await Notification.findOne(byTenant(req, { _id: req.params.id }));
+    const notification = await Notification.findOne(
+      byTenant(req, { _id: req.params.id, ...scopedRecipientQuery(req) })
+    );
 
     if (!notification) {
       return res.status(404).json({ success: false, message: 'Notification not found' });
@@ -44,7 +56,10 @@ const markAsRead = async (req, res) => {
 // @access  Private
 const markAllAsRead = async (req, res) => {
   try {
-    await Notification.updateMany(byTenant(req, { isRead: false }), { isRead: true });
+    await Notification.updateMany(
+      byTenant(req, { isRead: false, ...scopedRecipientQuery(req) }),
+      { isRead: true }
+    );
 
     res.json({ success: true, message: 'All notifications marked as read' });
   } catch (error) {

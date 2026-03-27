@@ -278,6 +278,74 @@ export const productionApi = {
     const response = await api.post(`/production/${jobId}/operations/${opIndex}/scrap-rework`, body);
     return response.data.data;
   },
+  logOperationWip: async (
+    jobId: string,
+    opIndex: number,
+    body: { wipInQty?: number; wipOutQty?: number }
+  ) => {
+    const response = await api.post(`/production/${jobId}/operations/${opIndex}/wip`, body);
+    return response.data.data;
+  },
+  recordOperationQuality: async (
+    jobId: string,
+    opIndex: number,
+    body: { status: 'pass' | 'fail' | 'waive' }
+  ) => {
+    const response = await api.post(`/production/${jobId}/operations/${opIndex}/quality`, body);
+    return response.data.data;
+  },
+  issueMaterial: async (
+    jobId: string,
+    body: { productId: string; quantity: number; operationIndex?: number; note?: string }
+  ) => {
+    const response = await api.post(`/production/${jobId}/materials/issue`, body);
+    return response.data.data;
+  },
+  returnMaterial: async (
+    jobId: string,
+    body: { productId: string; quantity: number; operationIndex?: number; note?: string }
+  ) => {
+    const response = await api.post(`/production/${jobId}/materials/return`, body);
+    return response.data.data;
+  },
+  updateCosting: async (
+    jobId: string,
+    body: {
+      plannedLaborCost?: number;
+      plannedMachineCost?: number;
+      plannedOverheadCost?: number;
+      actualLaborCost?: number;
+      actualMachineCost?: number;
+      actualOverheadCost?: number;
+    }
+  ) => {
+    const response = await api.patch(`/production/${jobId}/costing`, body);
+    return response.data.data;
+  },
+  getCapacityPlan: async (params?: { from?: string; to?: string; capacityPerDayMinutes?: number }) => {
+    const response = await api.get('/production/capacity/plan', { params });
+    return response.data.data as Array<{
+      day: string;
+      workCenterCode: string;
+      loadMinutes: number;
+      jobs: number;
+      capacityMinutes: number;
+      utilizationPct: number;
+      overloaded: boolean;
+    }>;
+  },
+  getKpis: async (params?: { from?: string; to?: string }) => {
+    const response = await api.get('/production/kpis', { params });
+    return response.data.data as {
+      window: { from: string; to: string };
+      jobsCreated: number;
+      jobsCompleted: number;
+      throughputQty: number;
+      scheduleAdherencePct: number;
+      scrapRatePct: number;
+      oeeProxyPct: number;
+    };
+  },
 };
 
 export const ordersApi = {
@@ -857,6 +925,250 @@ export type PayrollMonthStatus = {
   } | null;
   closed: boolean;
   closedAt: string | null;
+};
+
+export type HrLeaveRow = {
+  _id: string;
+  employee?: { _id: string; name: string; employeeId: string; department?: string; status?: string };
+  leaveType: 'annual' | 'sick' | 'unpaid' | 'maternity' | 'paternity' | 'other';
+  startDate: string;
+  endDate: string;
+  days: number;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  reason?: string;
+  reviewNote?: string;
+  reviewedBy?: { _id: string; name: string; employeeId: string; role?: string } | null;
+  reviewedAt?: string | null;
+};
+
+export const hrLeaveApi = {
+  list: async (params?: {
+    employeeId?: string;
+    status?: 'pending' | 'approved' | 'rejected' | 'cancelled';
+    from?: string;
+    to?: string;
+  }) => {
+    const r = await api.get('/hr/leaves', { params });
+    return r.data as HrLeaveRow[];
+  },
+  create: async (body: {
+    employee: string;
+    leaveType: HrLeaveRow['leaveType'];
+    startDate: string;
+    endDate: string;
+    reason?: string;
+  }) => {
+    const r = await api.post('/hr/leaves', body);
+    return r.data as HrLeaveRow;
+  },
+  review: async (
+    leaveId: string,
+    body: { status: 'approved' | 'rejected' | 'cancelled'; reviewNote?: string }
+  ) => {
+    const r = await api.patch(`/hr/leaves/${leaveId}/review`, body);
+    return r.data as HrLeaveRow;
+  },
+  balance: async (employeeId: string, year?: number) => {
+    const r = await api.get(`/hr/leaves/balance/${employeeId}`, {
+      params: year ? { year } : {},
+    });
+    return r.data as {
+      employee: {
+        _id: string;
+        employeeId: string;
+        name: string;
+        department?: string;
+        status?: string;
+      };
+      year: number;
+      balances: Record<
+        'annual' | 'sick' | 'maternity' | 'paternity' | 'other' | 'unpaid',
+        { entitlement: number | null; used: number; remaining: number | null }
+      >;
+    };
+  },
+};
+
+export const hrAttendanceApi = {
+  reviewOvertime: async (
+    attendanceId: string,
+    body: { status: 'approved' | 'rejected'; note?: string }
+  ) => {
+    const r = await api.patch(`/hr/attendance/${attendanceId}/overtime`, body);
+    return r.data;
+  },
+};
+
+export type HrDepartmentRow = {
+  _id: string;
+  code: string;
+  name: string;
+  description?: string;
+  active: boolean;
+};
+
+export type HrPositionRow = {
+  _id: string;
+  code: string;
+  title: string;
+  department?: { _id: string; code: string; name: string } | string | null;
+  reportsToPosition?: { _id: string; code: string; title: string } | string | null;
+  active: boolean;
+};
+
+export const hrOrgApi = {
+  listDepartments: async () => {
+    const r = await api.get('/hr/departments');
+    return r.data as HrDepartmentRow[];
+  },
+  createDepartment: async (body: {
+    code: string;
+    name: string;
+    description?: string;
+    active?: boolean;
+  }) => {
+    const r = await api.post('/hr/departments', body);
+    return r.data as HrDepartmentRow;
+  },
+  updateDepartment: async (id: string, body: Partial<HrDepartmentRow>) => {
+    const r = await api.put(`/hr/departments/${id}`, body);
+    return r.data as HrDepartmentRow;
+  },
+  listPositions: async (departmentId?: string) => {
+    const r = await api.get('/hr/positions', {
+      params: departmentId ? { departmentId } : {},
+    });
+    return r.data as HrPositionRow[];
+  },
+  createPosition: async (body: {
+    code: string;
+    title: string;
+    department?: string | null;
+    reportsToPosition?: string | null;
+    active?: boolean;
+  }) => {
+    const r = await api.post('/hr/positions', body);
+    return r.data as HrPositionRow;
+  },
+  updatePosition: async (id: string, body: Record<string, unknown>) => {
+    const r = await api.put(`/hr/positions/${id}`, body);
+    return r.data as HrPositionRow;
+  },
+};
+
+export type EmployeeAttendanceRow = {
+  _id: string;
+  date: string;
+  status: string;
+  checkIn?: string;
+  checkOut?: string;
+  workMinutes?: number;
+  lateMinutes?: number;
+  overtimeMinutes?: number;
+  overtimeApprovalStatus?: string;
+  notes?: string;
+};
+
+export type AttendanceCorrectionRow = {
+  _id: string;
+  attendanceDate: string;
+  requestedStatus: 'Present' | 'Absent' | 'Late' | 'On Leave';
+  requestedCheckIn?: string;
+  requestedCheckOut?: string;
+  reason?: string;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  reviewNote?: string;
+  reviewedAt?: string | null;
+};
+
+export const employeeSelfServiceApi = {
+  getTodayAttendance: async () => {
+    const r = await api.get('/employee/attendance/today');
+    return r.data?.data as EmployeeAttendanceRow | null;
+  },
+  listAttendance: async () => {
+    const r = await api.get('/employee/attendance');
+    return r.data as EmployeeAttendanceRow[];
+  },
+  submitAttendance: async (body: {
+    date: string;
+    status: 'Present' | 'Absent' | 'Late' | 'On Leave';
+    checkIn?: string;
+    checkOut?: string;
+    notes?: string;
+  }) => {
+    const r = await api.post('/employee/attendance', body);
+    return r.data?.data as EmployeeAttendanceRow;
+  },
+  checkIn: async (notes?: string) => {
+    const r = await api.post('/employee/attendance/check-in', { notes: notes || '' });
+    return r.data?.data as EmployeeAttendanceRow;
+  },
+  checkOut: async (notes?: string) => {
+    const r = await api.post('/employee/attendance/check-out', { notes: notes || '' });
+    return r.data?.data as EmployeeAttendanceRow;
+  },
+  listLeaves: async () => {
+    const r = await api.get('/employee/leaves');
+    return (r.data?.data || []) as HrLeaveRow[];
+  },
+  requestLeave: async (body: {
+    leaveType: HrLeaveRow['leaveType'];
+    startDate: string;
+    endDate: string;
+    reason?: string;
+  }) => {
+    const r = await api.post('/employee/leaves', body);
+    return r.data?.data as HrLeaveRow;
+  },
+  updateLeave: async (
+    leaveId: string,
+    body: {
+      leaveType?: HrLeaveRow['leaveType'];
+      startDate?: string;
+      endDate?: string;
+      reason?: string;
+    }
+  ) => {
+    const r = await api.put(`/employee/leaves/${leaveId}`, body);
+    return r.data?.data as HrLeaveRow;
+  },
+  cancelLeave: async (leaveId: string) => {
+    const r = await api.delete(`/employee/leaves/${leaveId}`);
+    return r.data?.data as HrLeaveRow;
+  },
+  listAttendanceCorrections: async () => {
+    const r = await api.get('/employee/attendance-corrections');
+    return (r.data?.data || []) as AttendanceCorrectionRow[];
+  },
+  requestAttendanceCorrection: async (body: {
+    attendanceDate: string;
+    requestedStatus: 'Present' | 'Absent' | 'Late' | 'On Leave';
+    requestedCheckIn?: string;
+    requestedCheckOut?: string;
+    reason?: string;
+  }) => {
+    const r = await api.post('/employee/attendance-corrections', body);
+    return r.data?.data as AttendanceCorrectionRow;
+  },
+};
+
+export const hrAttendanceCorrectionApi = {
+  list: async (params?: { status?: 'pending' | 'approved' | 'rejected' | 'cancelled'; employeeId?: string }) => {
+    const r = await api.get('/hr/attendance-corrections', { params });
+    return r.data as Array<
+      AttendanceCorrectionRow & {
+        employee?: { _id: string; name: string; employeeId: string; department?: string };
+      }
+    >;
+  },
+  review: async (
+    id: string,
+    body: { status: 'approved' | 'rejected' | 'cancelled'; reviewNote?: string }
+  ) => {
+    const r = await api.patch(`/hr/attendance-corrections/${id}/review`, body);
+    return r.data as AttendanceCorrectionRow;
+  },
 };
 
 export const hrPayrollApi = {

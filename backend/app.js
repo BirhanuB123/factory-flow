@@ -28,6 +28,13 @@ const {
   completeOperation,
   logOperationTime,
   scrapReworkOperation,
+  logOperationWip,
+  recordOperationQuality,
+  issueJobMaterial,
+  returnJobMaterial,
+  updateJobCosting,
+  getCapacityPlan,
+  getProductionKpis,
 } = require('./controllers/productionController');
 const { getClients, getClient, createClient, updateClient, deleteClient } = require('./controllers/clientController');
 const {
@@ -51,9 +58,35 @@ const {
   updateEmployee,
   getAttendance,
   logAttendance,
+  reviewAttendanceOvertime,
+  getLeaves,
+  createLeave,
+  reviewLeave,
+  getLeaveBalance,
+  getAttendanceCorrections,
+  reviewAttendanceCorrection,
+  getDepartments,
+  createDepartment,
+  updateDepartment,
+  getPositions,
+  createPosition,
+  updatePosition,
   getPayroll,
   createPayroll,
 } = require('./controllers/hrController');
+const {
+  getMyAttendance,
+  getMyAttendanceToday,
+  submitAttendance,
+  checkIn,
+  checkOut,
+  getMyLeaves,
+  requestMyLeave,
+  updateMyPendingLeave,
+  cancelMyPendingLeave,
+  getMyAttendanceCorrections,
+  createMyAttendanceCorrection,
+} = require('./controllers/employeeSelfServiceController');
 const {
   previewPayroll,
   preparePayroll,
@@ -239,6 +272,7 @@ app.use('/api/shipments', requireTenantModule('sales'));
 app.use('/api/purchase-orders', requireTenantModule('procurement'));
 app.use('/api/finance', requireTenantModule('finance'));
 app.use('/api/hr', requireTenantModule('hr'));
+app.use('/api/employee', requireTenantModule('hr'));
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/billing', billingRoutes);
 
@@ -294,6 +328,8 @@ app.delete('/api/boms/:id', deleteBom);
 app.get('/api/production', getJobs);
 app.post('/api/production', createJob);
 app.post('/api/production/from-order', createJobFromOrder);
+app.get('/api/production/capacity/plan', getCapacityPlan);
+app.get('/api/production/kpis', getProductionKpis);
 app.post('/api/production/:id/reserve-materials', reserveJobMaterials);
 app.get('/api/production/:id', getJob);
 app.put('/api/production/:id', updateJob);
@@ -303,6 +339,11 @@ app.post('/api/production/:id/operations/:opIndex/start', startOperation);
 app.post('/api/production/:id/operations/:opIndex/complete', completeOperation);
 app.post('/api/production/:id/operations/:opIndex/time', logOperationTime);
 app.post('/api/production/:id/operations/:opIndex/scrap-rework', scrapReworkOperation);
+app.post('/api/production/:id/operations/:opIndex/wip', logOperationWip);
+app.post('/api/production/:id/operations/:opIndex/quality', recordOperationQuality);
+app.post('/api/production/:id/materials/issue', issueJobMaterial);
+app.post('/api/production/:id/materials/return', returnJobMaterial);
+app.patch('/api/production/:id/costing', updateJobCosting);
 
 const mc = manufacturingController;
 app.get('/api/manufacturing/work-centers', mc.listWorkCenters);
@@ -449,6 +490,19 @@ app.post('/api/hr/employees', createEmployee);
 app.put('/api/hr/employees/:id', updateEmployee);
 app.get('/api/hr/attendance', getAttendance);
 app.post('/api/hr/attendance', logAttendance);
+app.patch('/api/hr/attendance/:id/overtime', reviewAttendanceOvertime);
+app.get('/api/hr/leaves', getLeaves);
+app.post('/api/hr/leaves', createLeave);
+app.patch('/api/hr/leaves/:id/review', reviewLeave);
+app.get('/api/hr/leaves/balance/:employeeId', getLeaveBalance);
+app.get('/api/hr/attendance-corrections', getAttendanceCorrections);
+app.patch('/api/hr/attendance-corrections/:id/review', reviewAttendanceCorrection);
+app.get('/api/hr/departments', getDepartments);
+app.post('/api/hr/departments', createDepartment);
+app.put('/api/hr/departments/:id', updateDepartment);
+app.get('/api/hr/positions', getPositions);
+app.post('/api/hr/positions', createPosition);
+app.put('/api/hr/positions/:id', updatePosition);
 app.get('/api/hr/payroll/export/pension', exportPensionCsv);
 app.get('/api/hr/payroll/export/income-tax', exportIncomeTaxCsv);
 app.get('/api/hr/payroll/payslip/:id/html', getPayslipHtml);
@@ -469,6 +523,18 @@ app.post(
 );
 app.get('/api/hr/payroll', getPayroll);
 app.post('/api/hr/payroll', createPayroll);
+
+app.get('/api/employee/attendance', getMyAttendance);
+app.get('/api/employee/attendance/today', getMyAttendanceToday);
+app.post('/api/employee/attendance', submitAttendance);
+app.post('/api/employee/attendance/check-in', checkIn);
+app.post('/api/employee/attendance/check-out', checkOut);
+app.get('/api/employee/leaves', getMyLeaves);
+app.post('/api/employee/leaves', requestMyLeave);
+app.put('/api/employee/leaves/:id', updateMyPendingLeave);
+app.delete('/api/employee/leaves/:id', cancelMyPendingLeave);
+app.get('/api/employee/attendance-corrections', getMyAttendanceCorrections);
+app.post('/api/employee/attendance-corrections', createMyAttendanceCorrection);
 
 app.get('/api/finance/transactions', getTransactions);
 app.post('/api/finance/invoices', createInvoice);

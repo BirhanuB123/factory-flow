@@ -7,6 +7,8 @@ const MOVEMENT_TYPES = [
   'adjustment',
   'production_consume',
   'production_output',
+  'production_issue',
+  'production_return',
 ];
 
 const StockMovementSchema = new mongoose.Schema({
@@ -34,7 +36,7 @@ const StockMovementSchema = new mongoose.Schema({
   },
   referenceType: {
     type: String,
-    enum: ['ProductionJob', 'Product', 'Manual', 'PurchaseOrder', null],
+    enum: ['ProductionJob', 'Product', 'Manual', 'PurchaseOrder', 'Shipment', null],
     default: null,
   },
   referenceId: {

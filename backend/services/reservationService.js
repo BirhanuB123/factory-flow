@@ -90,6 +90,55 @@ async function releaseOrderReservations(orderId, tenantId) {
   );
 }
 
+/**
+ * Reduce or remove active order-line reservations by shipped quantity (FIFO by createdAt).
+ * @param {import('mongoose').ClientSession|null} session
+ */
+async function consumeOrderLineReservationQuantity(
+  orderId,
+  lineIndex,
+  productId,
+  tenantId,
+  quantity,
+  session
+) {
+  if (!tenantId) {
+    throw new Error('consumeOrderLineReservationQuantity: tenantId required');
+  }
+  let remaining = Number(quantity);
+  if (!Number.isFinite(remaining) || remaining <= 0) return;
+
+  const match = {
+    tenantId: tid(tenantId),
+    refType: 'Order',
+    refId: new mongoose.Types.ObjectId(orderId),
+    lineIndex: Number(lineIndex),
+    product: new mongoose.Types.ObjectId(productId),
+    status: 'active',
+  };
+
+  let q = StockReservation.find(match).sort({ createdAt: 1 });
+  if (session) q = q.session(session);
+  const reservations = await q;
+
+  for (const r of reservations) {
+    if (remaining <= 0) break;
+    const take = Math.min(r.quantity, remaining);
+    remaining -= take;
+    const newQty = r.quantity - take;
+    if (newQty <= 0.0001) {
+      if (session) {
+        await r.deleteOne({ session });
+      } else {
+        await r.deleteOne();
+      }
+    } else {
+      r.quantity = newQty;
+      await r.save(session ? { session } : {});
+    }
+  }
+}
+
 async function releaseJobReservations(jobId, tenantId) {
   if (!tenantId) throw new Error('releaseJobReservations: tenantId required');
   await StockReservation.updateMany(
@@ -140,6 +189,7 @@ module.exports = {
   createReservation,
   sumReservedForOrderLine,
   releaseOrderReservations,
+  consumeOrderLineReservationQuantity,
   releaseJobReservations,
   consumeJobMaterialReservations,
   listActiveForOrder,

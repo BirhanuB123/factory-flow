@@ -19,14 +19,24 @@ import {
   Play,
   BookOpen,
   Lock,
+  Check,
+  X,
 } from "lucide-react";
 import {
   hrPayrollApi,
+  hrLeaveApi,
+  hrAttendanceApi,
+  hrAttendanceCorrectionApi,
+  hrOrgApi,
   downloadPayrollPensionCsv,
   downloadPayrollIncomeTaxCsv,
   openPayrollPayslipHtml,
   type PayrollPrepareRow,
   type PayrollMonthStatus,
+  type HrLeaveRow,
+  type AttendanceCorrectionRow,
+  type HrDepartmentRow,
+  type HrPositionRow,
 } from "@/lib/api";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -87,6 +97,10 @@ type Employee = {
   salary?: number;
   tinNumber?: string;
   pensionMemberId?: string;
+  managerId?: string | null;
+  managerName?: string;
+  departmentId?: string | null;
+  positionId?: string | null;
 };
 
 const statusVariant: Record<EmploymentStatus, "success" | "warning" | "secondary"> = {
@@ -120,14 +134,48 @@ export default function Hr() {
     status: "Active" as EmploymentStatus,
     email: "",
     password: "",
+    departmentId: "",
+    positionId: "",
+    managerId: "",
+  });
+  const [departments, setDepartments] = useState<HrDepartmentRow[]>([]);
+  const [positions, setPositions] = useState<HrPositionRow[]>([]);
+  const [orgLoading, setOrgLoading] = useState(false);
+  const [newDepartment, setNewDepartment] = useState({ code: "", name: "", description: "" });
+  const [newPosition, setNewPosition] = useState({
+    code: "",
+    title: "",
+    department: "",
+    reportsToPosition: "",
   });
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   const [attendance, setAttendance] = useState<any[]>([]);
+  const [attendanceCorrections, setAttendanceCorrections] = useState<
+    Array<AttendanceCorrectionRow & { employee?: { _id: string; name: string; employeeId: string; department?: string } }>
+  >([]);
+  const [leaves, setLeaves] = useState<HrLeaveRow[]>([]);
   const [payroll, setPayroll] = useState<any[]>([]);
   const [attLoading, setAttLoading] = useState(false);
+  const [attCorrectionLoading, setAttCorrectionLoading] = useState(false);
+  const [leaveLoading, setLeaveLoading] = useState(false);
+  const [leaveActionLoading, setLeaveActionLoading] = useState(false);
+  const [selectedLeaveEmployeeId, setSelectedLeaveEmployeeId] = useState<string>("");
+  const [selectedLeaveYear, setSelectedLeaveYear] = useState<number>(new Date().getFullYear());
+  const [leaveBalance, setLeaveBalance] = useState<null | {
+    employee: { _id: string; employeeId: string; name: string };
+    year: number;
+    balances: Record<string, { entitlement: number | null; used: number; remaining: number | null }>;
+  }>(null);
+  const [newLeave, setNewLeave] = useState({
+    employee: "",
+    leaveType: "annual" as HrLeaveRow["leaveType"],
+    startDate: "",
+    endDate: "",
+    reason: "",
+  });
   const [payLoading, setPayLoading] = useState(false);
   const [payrollMonth, setPayrollMonth] = useState(() => {
     const d = new Date();
@@ -149,6 +197,9 @@ export default function Hr() {
     if (authLoading || !token) return;
     fetchEmployees();
     fetchAttendance();
+    fetchLeaves();
+    fetchOrg();
+    fetchAttendanceCorrections();
   }, [authLoading, token]);
 
   useEffect(() => {
@@ -172,6 +223,196 @@ export default function Hr() {
       console.error("Failed to fetch attendance:", error);
     } finally {
       setAttLoading(false);
+    }
+  };
+
+  const fetchAttendanceCorrections = async () => {
+    setAttCorrectionLoading(true);
+    try {
+      const rows = await hrAttendanceCorrectionApi.list();
+      setAttendanceCorrections(Array.isArray(rows) ? rows : []);
+    } catch (error) {
+      console.error("Failed to fetch attendance corrections:", error);
+      setAttendanceCorrections([]);
+    } finally {
+      setAttCorrectionLoading(false);
+    }
+  };
+
+  const fetchLeaves = async () => {
+    setLeaveLoading(true);
+    try {
+      const data = await hrLeaveApi.list();
+      setLeaves(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Failed to fetch leaves:", error);
+      toast({
+        title: "Leave load failed",
+        description: "Could not load leave requests.",
+        variant: "destructive",
+      });
+      setLeaves([]);
+    } finally {
+      setLeaveLoading(false);
+    }
+  };
+
+  const fetchOrg = async () => {
+    setOrgLoading(true);
+    try {
+      const [deps, pos] = await Promise.all([
+        hrOrgApi.listDepartments(),
+        hrOrgApi.listPositions(),
+      ]);
+      setDepartments(Array.isArray(deps) ? deps : []);
+      setPositions(Array.isArray(pos) ? pos : []);
+    } catch (error) {
+      console.error("Failed to fetch org data:", error);
+      setDepartments([]);
+      setPositions([]);
+    } finally {
+      setOrgLoading(false);
+    }
+  };
+
+  const handleCreateDepartment = async () => {
+    if (!newDepartment.code.trim() || !newDepartment.name.trim()) {
+      toast({ title: "Department code and name required", variant: "destructive" });
+      return;
+    }
+    try {
+      await hrOrgApi.createDepartment({
+        code: newDepartment.code.trim(),
+        name: newDepartment.name.trim(),
+        description: newDepartment.description.trim(),
+      });
+      toast({ title: "Department created" });
+      setNewDepartment({ code: "", name: "", description: "" });
+      await fetchOrg();
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Create department failed";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    }
+  };
+
+  const handleCreatePosition = async () => {
+    if (!newPosition.code.trim() || !newPosition.title.trim()) {
+      toast({ title: "Position code and title required", variant: "destructive" });
+      return;
+    }
+    try {
+      await hrOrgApi.createPosition({
+        code: newPosition.code.trim(),
+        title: newPosition.title.trim(),
+        department: newPosition.department || null,
+        reportsToPosition: newPosition.reportsToPosition || null,
+      });
+      toast({ title: "Position created" });
+      setNewPosition({ code: "", title: "", department: "", reportsToPosition: "" });
+      await fetchOrg();
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Create position failed";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    }
+  };
+
+  const loadLeaveBalance = async (employeeId: string, year = selectedLeaveYear) => {
+    if (!employeeId) return;
+    try {
+      const data = await hrLeaveApi.balance(employeeId, year);
+      setLeaveBalance(data);
+    } catch {
+      setLeaveBalance(null);
+      toast({
+        title: "Balance load failed",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateLeave = async () => {
+    if (!newLeave.employee || !newLeave.startDate || !newLeave.endDate) {
+      toast({
+        title: "Missing fields",
+        description: "Select employee and leave dates.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setLeaveActionLoading(true);
+    try {
+      await hrLeaveApi.create(newLeave);
+      toast({ title: "Leave request created" });
+      setNewLeave((s) => ({ ...s, startDate: "", endDate: "", reason: "" }));
+      await fetchLeaves();
+      if (selectedLeaveEmployeeId) {
+        await loadLeaveBalance(selectedLeaveEmployeeId);
+      }
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Create leave failed";
+      toast({ title: "Create failed", description: msg, variant: "destructive" });
+    } finally {
+      setLeaveActionLoading(false);
+    }
+  };
+
+  const handleReviewLeave = async (
+    leaveId: string,
+    status: "approved" | "rejected" | "cancelled"
+  ) => {
+    setLeaveActionLoading(true);
+    try {
+      await hrLeaveApi.review(leaveId, { status });
+      toast({ title: `Leave ${status}` });
+      await fetchLeaves();
+      if (selectedLeaveEmployeeId) {
+        await loadLeaveBalance(selectedLeaveEmployeeId);
+      }
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Leave review failed";
+      toast({ title: "Review failed", description: msg, variant: "destructive" });
+    } finally {
+      setLeaveActionLoading(false);
+    }
+  };
+
+  const handleAttendanceOvertimeReview = async (
+    attendanceId: string,
+    status: "approved" | "rejected"
+  ) => {
+    try {
+      await hrAttendanceApi.reviewOvertime(attendanceId, { status });
+      toast({ title: `Overtime ${status}` });
+      await fetchAttendance();
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Overtime review failed";
+      toast({ title: "Overtime review failed", description: msg, variant: "destructive" });
+    }
+  };
+
+  const handleReviewAttendanceCorrection = async (
+    id: string,
+    status: "approved" | "rejected" | "cancelled"
+  ) => {
+    try {
+      await hrAttendanceCorrectionApi.review(id, { status });
+      toast({ title: `Correction ${status}` });
+      await Promise.all([fetchAttendanceCorrections(), fetchAttendance()]);
+    } catch (e: unknown) {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Correction review failed";
+      toast({ title: "Review failed", description: msg, variant: "destructive" });
     }
   };
 
@@ -248,6 +489,10 @@ export default function Hr() {
                 salary: e.salary,
                 tinNumber: e.tinNumber,
                 pensionMemberId: e.pensionMemberId,
+                managerId: e.manager?._id || e.manager || null,
+                managerName: e.manager?.name || "",
+                departmentId: e.departmentId?._id || e.departmentId || null,
+                positionId: e.positionId?._id || e.positionId || null,
               };
             })
           );
@@ -287,6 +532,9 @@ export default function Hr() {
         email: newEmployee.email || undefined,
         password: newEmployee.password,
         role: newEmployee.position,
+        departmentId: newEmployee.departmentId || undefined,
+        positionId: newEmployee.positionId || undefined,
+        manager: newEmployee.managerId || undefined,
       };
       if (user?.role === "Admin") {
         payload.accessRole = newEmployee.accessRole;
@@ -317,6 +565,9 @@ export default function Hr() {
           status: "Active",
           email: "",
           password: "",
+          departmentId: "",
+          positionId: "",
+          managerId: "",
         });
       } else {
         const data = await response.json().catch(() => ({}));
@@ -349,6 +600,9 @@ export default function Hr() {
         jobTitle: editingEmployee.position,
         tinNumber: editingEmployee.tinNumber,
         pensionMemberId: editingEmployee.pensionMemberId,
+        departmentId: editingEmployee.departmentId || null,
+        positionId: editingEmployee.positionId || null,
+        manager: editingEmployee.managerId || null,
       };
       if (user?.role === "Admin") {
         body.accessRole = editingEmployee.appRole;
@@ -406,6 +660,10 @@ export default function Hr() {
   const totalPayroll = useMemo(() => {
     return employees.reduce((acc, e) => acc + (e.salary || 0), 0);
   }, [employees]);
+  const pendingLeaveCount = useMemo(
+    () => leaves.filter((l) => l.status === "pending").length,
+    [leaves]
+  );
 
   const activeCount = employees.filter(e => e.status === "Active").length;
   const leaveCount = employees.filter(e => e.status === "On Leave").length;
@@ -489,13 +747,71 @@ export default function Hr() {
                       placeholder="e.g. CNC Operator"
                     />
                   </div>
-                    <div className="space-y-2">
+                  <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Department Partition</Label>
                     <Input
                       value={newEmployee.department}
                       onChange={(e) => setNewEmployee({ ...newEmployee, department: e.target.value })}
                       className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
                     />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Department (org)</Label>
+                    <Select
+                      value={newEmployee.departmentId}
+                      onValueChange={(v) => setNewEmployee({ ...newEmployee, departmentId: v })}
+                    >
+                      <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold">
+                        <SelectValue placeholder="Optional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map((d) => (
+                          <SelectItem key={d._id} value={d._id}>
+                            {d.code} - {d.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Position (org)</Label>
+                    <Select
+                      value={newEmployee.positionId}
+                      onValueChange={(v) => setNewEmployee({ ...newEmployee, positionId: v })}
+                    >
+                      <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold">
+                        <SelectValue placeholder="Optional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {positions.map((p) => (
+                          <SelectItem key={p._id} value={p._id}>
+                            {p.code} - {p.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Manager</Label>
+                    <Select
+                      value={newEmployee.managerId}
+                      onValueChange={(v) => setNewEmployee({ ...newEmployee, managerId: v })}
+                    >
+                      <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold">
+                        <SelectValue placeholder="Optional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees
+                          .filter((e) => !!e._id)
+                          .map((e) => (
+                            <SelectItem key={e._id} value={String(e._id)}>
+                              {e.name} ({e.id})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 {user?.role === "Admin" && (
@@ -547,6 +863,79 @@ export default function Hr() {
                         className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
                         placeholder="••••••••"
                       />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Department (org)</Label>
+                      <Select
+                        value={newEmployee.departmentId || ""}
+                        onValueChange={(v) =>
+                          setNewEmployee({
+                            ...newEmployee,
+                            departmentId: v || "",
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold">
+                          <SelectValue placeholder="Optional" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {departments.map((d) => (
+                            <SelectItem key={d._id} value={d._id}>
+                              {d.code} - {d.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Position (org)</Label>
+                      <Select
+                        value={newEmployee.positionId || ""}
+                        onValueChange={(v) =>
+                          setNewEmployee({
+                            ...newEmployee,
+                            positionId: v || "",
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold">
+                          <SelectValue placeholder="Optional" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {positions.map((p) => (
+                            <SelectItem key={p._id} value={p._id}>
+                              {p.code} - {p.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Manager</Label>
+                      <Select
+                        value={newEmployee.managerId || ""}
+                        onValueChange={(v) =>
+                          setNewEmployee({
+                            ...newEmployee,
+                            managerId: v || "",
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold">
+                          <SelectValue placeholder="Optional" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {employees
+                            .filter((e) => !!e._id)
+                            .map((e) => (
+                              <SelectItem key={e._id} value={String(e._id)}>
+                                {e.name} ({e.id})
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </div>
@@ -725,6 +1114,19 @@ export default function Hr() {
               <Calendar className="h-4 w-4 shrink-0" />
               Attendance
             </TabsTrigger>
+            <TabsTrigger value="leaves" className={moduleTabsTriggerClassName()}>
+              <Calendar className="h-4 w-4 shrink-0" />
+              Leaves
+              {pendingLeaveCount > 0 ? (
+                <Badge variant="warning" className="ml-1 h-5 px-1.5 text-[9px] leading-none">
+                  {pendingLeaveCount}
+                </Badge>
+              ) : null}
+            </TabsTrigger>
+            <TabsTrigger value="org" className={moduleTabsTriggerClassName()}>
+              <Users className="h-4 w-4 shrink-0" />
+              Org
+            </TabsTrigger>
             <TabsTrigger value="payroll" className={moduleTabsTriggerClassName()}>
               <DollarSign className="h-4 w-4 shrink-0" />
               Payroll
@@ -795,6 +1197,9 @@ export default function Hr() {
                           {e.appRole !== "employee" && (
                             <span className="block text-[9px] opacity-50 mt-0.5">({e.appRole})</span>
                           )}
+                          {e.managerName ? (
+                            <span className="block text-[9px] opacity-50 mt-0.5">Mgr: {e.managerName}</span>
+                          ) : null}
                         </TableCell>
                         <TableCell className="py-4">
                           <Badge variant={statusVariant[e.status]} className="text-[9px] font-black uppercase italic tracking-widest px-2.5 py-0.5 rounded-lg">
@@ -826,6 +1231,101 @@ export default function Hr() {
               </Table>
             </CardContent>
           </Card>
+          <Card className="bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl shadow-2xl mt-4">
+            <CardHeader className="pb-4 border-b border-white/5">
+              <div className="space-y-1">
+                <h3 className="text-lg font-black tracking-tight uppercase text-sky-500">
+                  Attendance Correction Requests
+                </h3>
+                <p className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest">
+                  Employee submitted changes for HR review
+                </p>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-white/5">
+                    <TableHead className="pl-6">Employee</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Requested</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="pr-6 text-right">Review</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {attCorrectionLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-sky-500/50" />
+                      </TableCell>
+                    </TableRow>
+                  ) : attendanceCorrections.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center text-xs text-muted-foreground">
+                        No correction requests found.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    attendanceCorrections.map((c) => (
+                      <TableRow key={c._id}>
+                        <TableCell className="pl-6 text-xs">
+                          <div className="font-semibold">{c.employee?.name || "Unknown"}</div>
+                          <div className="text-[10px] text-muted-foreground">{c.employee?.employeeId || "-"}</div>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {new Date(c.attendanceDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {c.requestedStatus} ({c.requestedCheckIn || "--:--"} -{" "}
+                          {c.requestedCheckOut || "--:--"})
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              c.status === "approved"
+                                ? "success"
+                                : c.status === "rejected"
+                                  ? "secondary"
+                                  : c.status === "cancelled"
+                                    ? "secondary"
+                                    : "warning"
+                            }
+                          >
+                            {c.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="pr-6 text-right">
+                          {c.status === "pending" ? (
+                            <div className="inline-flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-[10px]"
+                                onClick={() => handleReviewAttendanceCorrection(c._id, "approved")}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-[10px]"
+                                onClick={() => handleReviewAttendanceCorrection(c._id, "rejected")}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="attendance">
@@ -844,20 +1344,22 @@ export default function Hr() {
                     <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Date</TableHead>
                     <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Status</TableHead>
                     <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Interval</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">OT</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">OT Review</TableHead>
                     <TableHead className="pr-6 h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {attLoading ? (
                     <TableRow className="hover:bg-transparent border-white/5">
-                      <TableCell colSpan={5} className="h-32 text-center">
+                      <TableCell colSpan={7} className="h-32 text-center">
                         <Loader2 className="h-8 w-8 animate-spin mx-auto text-amber-500/40" />
                         <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Scanning Biometrics...</p>
                       </TableCell>
                     </TableRow>
                   ) : attendance.length === 0 ? (
                     <TableRow className="hover:bg-transparent border-white/5">
-                      <TableCell colSpan={5} className="h-32 text-center text-[10px] font-black uppercase tracking-widest opacity-40 italic">
+                      <TableCell colSpan={7} className="h-32 text-center text-[10px] font-black uppercase tracking-widest opacity-40 italic">
                         No presence records detected for current period.
                       </TableCell>
                     </TableRow>
@@ -880,6 +1382,50 @@ export default function Hr() {
                             {a.checkIn || "--:--"} <span className="opacity-20">-</span> {a.checkOut || "--:--"}
                           </div>
                         </TableCell>
+                        <TableCell className="py-4 text-xs font-mono">
+                          {(a.overtimeMinutes || 0) > 0 ? `${a.overtimeMinutes} min` : "—"}
+                        </TableCell>
+                        <TableCell className="py-4">
+                          {(a.overtimeMinutes || 0) > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant={
+                                  a.overtimeApprovalStatus === "approved"
+                                    ? "success"
+                                    : a.overtimeApprovalStatus === "rejected"
+                                      ? "secondary"
+                                      : "warning"
+                                }
+                                className="text-[9px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-lg"
+                              >
+                                {a.overtimeApprovalStatus || "pending"}
+                              </Badge>
+                              {(a.overtimeApprovalStatus === "pending" || !a.overtimeApprovalStatus) &&
+                                (user?.role === "Admin" || user?.role === "hr_head") && (
+                                  <>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-7 gap-1 text-[10px]"
+                                      onClick={() => handleAttendanceOvertimeReview(a._id, "approved")}
+                                    >
+                                      <Check className="h-3 w-3" /> Approve
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 gap-1 text-[10px]"
+                                      onClick={() => handleAttendanceOvertimeReview(a._id, "rejected")}
+                                    >
+                                      <X className="h-3 w-3" /> Reject
+                                    </Button>
+                                  </>
+                                )}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
                         <TableCell className="pr-6 py-4 text-[10px] italic font-medium text-muted-foreground/60">{a.notes || "-"}</TableCell>
                       </TableRow>
                     ))
@@ -888,6 +1434,359 @@ export default function Hr() {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="leaves">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="md:col-span-2 bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl shadow-2xl">
+              <CardHeader className="pb-4 border-b border-white/5">
+                <div className="space-y-1">
+                  <h3 className="text-xl font-black tracking-tighter italic uppercase text-sky-500">Leave Requests</h3>
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest">
+                    Request, approve, and monitor leave
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 p-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                  <div className="md:col-span-2 space-y-1">
+                    <Label className="text-[10px] font-black uppercase">Employee</Label>
+                    <Select
+                      value={newLeave.employee}
+                      onValueChange={(v) => setNewLeave((s) => ({ ...s, employee: v }))}
+                    >
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Select employee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.filter((e) => !!e._id).map((e) => (
+                          <SelectItem key={e._id || e.id} value={String(e._id)}>
+                            {e.name} ({e.id})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-black uppercase">Type</Label>
+                    <Select
+                      value={newLeave.leaveType}
+                      onValueChange={(v: HrLeaveRow["leaveType"]) =>
+                        setNewLeave((s) => ({ ...s, leaveType: v }))
+                      }
+                    >
+                      <SelectTrigger className="h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="annual">Annual</SelectItem>
+                        <SelectItem value="sick">Sick</SelectItem>
+                        <SelectItem value="unpaid">Unpaid</SelectItem>
+                        <SelectItem value="maternity">Maternity</SelectItem>
+                        <SelectItem value="paternity">Paternity</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-black uppercase">From</Label>
+                    <Input
+                      type="date"
+                      value={newLeave.startDate}
+                      onChange={(e) => setNewLeave((s) => ({ ...s, startDate: e.target.value }))}
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-black uppercase">To</Label>
+                    <Input
+                      type="date"
+                      value={newLeave.endDate}
+                      onChange={(e) => setNewLeave((s) => ({ ...s, endDate: e.target.value }))}
+                      className="h-10"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                  <div className="md:col-span-4 space-y-1">
+                    <Label className="text-[10px] font-black uppercase">Reason</Label>
+                    <Input
+                      value={newLeave.reason}
+                      onChange={(e) => setNewLeave((s) => ({ ...s, reason: e.target.value }))}
+                      placeholder="Optional reason"
+                      className="h-10"
+                    />
+                  </div>
+                  <Button
+                    className="h-10 font-black uppercase text-xs"
+                    disabled={leaveActionLoading}
+                    onClick={handleCreateLeave}
+                  >
+                    {leaveActionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Request leave
+                  </Button>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-white/5">
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead>Days</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leaveLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto text-sky-500/60" />
+                        </TableCell>
+                      </TableRow>
+                    ) : leaves.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center text-xs text-muted-foreground">
+                          No leave requests yet.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      leaves.map((l) => (
+                        <TableRow key={l._id}>
+                          <TableCell className="text-xs font-semibold">
+                            {l.employee?.name || "Unknown"}
+                          </TableCell>
+                          <TableCell className="text-xs uppercase">{l.leaveType}</TableCell>
+                          <TableCell className="text-xs">
+                            {new Date(l.startDate).toLocaleDateString()} -{" "}
+                            {new Date(l.endDate).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-xs font-mono">{l.days}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                l.status === "approved"
+                                  ? "success"
+                                  : l.status === "rejected"
+                                    ? "secondary"
+                                    : "warning"
+                              }
+                            >
+                              {l.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {l.status === "pending" &&
+                            (user?.role === "Admin" || user?.role === "hr_head") ? (
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-[10px]"
+                                  onClick={() => handleReviewLeave(l._id, "approved")}
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 text-[10px]"
+                                  onClick={() => handleReviewLeave(l._id, "rejected")}
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl shadow-2xl">
+              <CardHeader className="pb-3 border-b border-white/5">
+                <CardTitle className="text-base font-black uppercase tracking-wide">Leave Balance</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 p-4">
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-black uppercase">Employee</Label>
+                  <Select
+                    value={selectedLeaveEmployeeId}
+                    onValueChange={(v) => setSelectedLeaveEmployeeId(v)}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Select employee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.filter((e) => !!e._id).map((e) => (
+                        <SelectItem key={e._id || e.id} value={String(e._id)}>
+                          {e.name} ({e.id})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-black uppercase">Year</Label>
+                  <Input
+                    type="number"
+                    min={2020}
+                    max={2100}
+                    value={selectedLeaveYear}
+                    onChange={(e) => setSelectedLeaveYear(parseInt(e.target.value || "0", 10) || new Date().getFullYear())}
+                    className="h-10"
+                  />
+                </div>
+                <Button
+                  className="h-10 w-full font-black uppercase text-xs"
+                  onClick={() => selectedLeaveEmployeeId && loadLeaveBalance(selectedLeaveEmployeeId)}
+                >
+                  Load balance
+                </Button>
+                {leaveBalance ? (
+                  <div className="space-y-2 text-xs">
+                    <div className="font-semibold">
+                      {leaveBalance.employee.name} ({leaveBalance.year})
+                    </div>
+                    {Object.entries(leaveBalance.balances).map(([k, v]) => (
+                      <div key={k} className="rounded-md border p-2">
+                        <div className="font-semibold uppercase">{k}</div>
+                        <div>Used: {v.used}</div>
+                        <div>Entitlement: {v.entitlement == null ? "N/A" : v.entitlement}</div>
+                        <div>Remaining: {v.remaining == null ? "N/A" : v.remaining}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Select employee and load balance.</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="org">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card className="bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl shadow-2xl">
+              <CardHeader className="pb-3 border-b border-white/5">
+                <CardTitle className="text-base font-black uppercase tracking-wide">Departments</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 p-4">
+                <div className="grid grid-cols-3 gap-2">
+                  <Input
+                    placeholder="Code"
+                    value={newDepartment.code}
+                    onChange={(e) => setNewDepartment((s) => ({ ...s, code: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="Name"
+                    value={newDepartment.name}
+                    onChange={(e) => setNewDepartment((s) => ({ ...s, name: e.target.value }))}
+                  />
+                  <Button className="font-black uppercase text-xs" onClick={handleCreateDepartment}>
+                    Add dept
+                  </Button>
+                </div>
+                <Input
+                  placeholder="Description (optional)"
+                  value={newDepartment.description}
+                  onChange={(e) => setNewDepartment((s) => ({ ...s, description: e.target.value }))}
+                />
+                <div className="space-y-2 max-h-72 overflow-auto">
+                  {orgLoading ? (
+                    <div className="text-xs text-muted-foreground">Loading...</div>
+                  ) : departments.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">No departments yet.</div>
+                  ) : (
+                    departments.map((d) => (
+                      <div key={d._id} className="rounded-md border p-2 text-xs">
+                        <div className="font-semibold">{d.code} - {d.name}</div>
+                        {d.description ? <div className="text-muted-foreground">{d.description}</div> : null}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl shadow-2xl">
+              <CardHeader className="pb-3 border-b border-white/5">
+                <CardTitle className="text-base font-black uppercase tracking-wide">Positions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 p-4">
+                <div className="grid grid-cols-3 gap-2">
+                  <Input
+                    placeholder="Code"
+                    value={newPosition.code}
+                    onChange={(e) => setNewPosition((s) => ({ ...s, code: e.target.value }))}
+                  />
+                  <Input
+                    placeholder="Title"
+                    value={newPosition.title}
+                    onChange={(e) => setNewPosition((s) => ({ ...s, title: e.target.value }))}
+                  />
+                  <Button className="font-black uppercase text-xs" onClick={handleCreatePosition}>
+                    Add pos
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Select
+                    value={newPosition.department}
+                    onValueChange={(v) => setNewPosition((s) => ({ ...s, department: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Department (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((d) => (
+                        <SelectItem key={d._id} value={d._id}>
+                          {d.code} - {d.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={newPosition.reportsToPosition}
+                    onValueChange={(v) => setNewPosition((s) => ({ ...s, reportsToPosition: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Reports to (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {positions.map((p) => (
+                        <SelectItem key={p._id} value={p._id}>
+                          {p.code} - {p.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 max-h-72 overflow-auto">
+                  {orgLoading ? (
+                    <div className="text-xs text-muted-foreground">Loading...</div>
+                  ) : positions.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">No positions yet.</div>
+                  ) : (
+                    positions.map((p) => (
+                      <div key={p._id} className="rounded-md border p-2 text-xs">
+                        <div className="font-semibold">{p.code} - {p.title}</div>
+                        <div className="text-muted-foreground">
+                          Dept: {typeof p.department === "object" ? p.department?.name : "-"} | Reports to:{" "}
+                          {typeof p.reportsToPosition === "object" ? p.reportsToPosition?.title : "-"}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="payroll">

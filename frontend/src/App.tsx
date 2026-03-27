@@ -24,6 +24,7 @@ import Boms from "./pages/Boms.tsx";
 import Orders from "./pages/Orders.tsx";
 import Clients from "./pages/Clients.tsx";
 import Hr from "./pages/Hr.tsx";
+import EmployeeHr from "./pages/EmployeeHr.tsx";
 import Finance from "./pages/Finance.tsx";
 import Production from "./pages/Production.tsx";
 import PurchaseOrders from "./pages/PurchaseOrders.tsx";
@@ -214,6 +215,9 @@ const App = () => {
                   <Route element={<TenantModuleRoute moduleKey="hr" moduleLabel="HR & payroll" />}>
                     <Route element={<ProtectedRoute allowedRoles={['Admin', 'hr_head', 'finance_head']} />}>
                       <Route path="/hr" element={<Hr />} />
+                    </Route>
+                    <Route element={<ProtectedRoute allowedRoles={['employee']} />}>
+                      <Route path="/my-hr" element={<EmployeeHr />} />
                     </Route>
                   </Route>
                   <Route element={<TenantModuleRoute moduleKey="finance" moduleLabel="Finance & AP/AR" />}>

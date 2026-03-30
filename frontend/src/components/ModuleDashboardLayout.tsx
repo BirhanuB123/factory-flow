@@ -28,33 +28,35 @@ export function ModuleDashboardLayout({
   className = "",
 }: ModuleDashboardLayoutProps) {
   return (
-    <div className={`space-y-8 pb-8 animate-in fade-in duration-700 ${className}`}>
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-        <div className="space-y-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="h-8 w-1 shrink-0 bg-primary rounded-full" />
-            <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">
+    <div className={`space-y-10 pb-10 animate-in fade-in slide-in-from-top-4 duration-700 ${className}`}>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+        <div className="space-y-3 min-w-0">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="h-10 w-1.5 shrink-0 bg-primary rounded-full shadow-[0_0_15px_rgba(var(--primary),0.5)]" />
+            <h1 className="text-4xl font-black tracking-tighter text-foreground uppercase italic leading-none">
               {title}
             </h1>
-            <Icon className="h-6 w-6 shrink-0 text-primary" aria-hidden />
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+              <Icon className="h-6 w-6 stroke-[2.5]" aria-hidden />
+            </div>
           </div>
-          <p className="text-sm font-medium text-muted-foreground max-w-2xl">
+          <p className="text-sm font-medium text-muted-foreground/80 max-w-2xl leading-relaxed ml-5">
             {description}
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-6 shrink-0">
           {healthStats && healthStats.length > 0 && (
-            <div className="hidden lg:flex items-center gap-6 px-6 py-3 bg-secondary/50 rounded-2xl backdrop-blur-sm border border-border/50">
+            <div className="hidden lg:flex items-center gap-8 px-8 py-4 bg-card/40 backdrop-blur-xl rounded-[2rem] border border-border/10 shadow-2xl shadow-black/5">
               {healthStats.map((s, i) => (
                 <React.Fragment key={s.label}>
-                  {i > 0 && <div className="h-8 w-px bg-border" />}
-                  <div className="text-right">
-                    <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
+                  {i > 0 && <div className="h-10 w-px bg-border/20" />}
+                  <div className="text-right space-y-0.5">
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/50">
                       {s.label}
                     </p>
                     <p
-                      className={`text-sm font-mono font-bold ${s.accent ?? "text-foreground"}`}
+                      className={`text-base font-mono font-black tracking-tight ${s.accent ?? "text-foreground/90"}`}
                     >
                       {s.value}
                     </p>
@@ -63,19 +65,24 @@ export function ModuleDashboardLayout({
               ))}
             </div>
           )}
-          {actions}
+          <div className="flex items-center gap-3">
+            {actions}
+          </div>
         </div>
       </div>
-      {children}
+      <div className="relative">
+        <div className="absolute -top-6 left-0 w-full h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+        {children}
+      </div>
     </div>
   );
 }
 
 const tabsListClass =
-  "bg-secondary/50 border p-1 h-auto flex-wrap gap-1 rounded-xl w-full justify-start md:w-auto";
+  "bg-secondary/20 backdrop-blur-md border border-border/10 p-1.5 h-auto flex-wrap gap-2 rounded-[1.5rem] w-full justify-start md:w-auto shadow-inner";
 
 const tabsTriggerClass =
-  "gap-2 px-5 py-2.5 rounded-lg transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg shadow-primary/20 font-bold tracking-tight text-xs sm:text-sm";
+  "gap-3 px-8 py-3.5 rounded-[1.2rem] transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xl shadow-black/10 font-black uppercase tracking-[0.2em] text-[10px]";
 
 type StickyModuleTabsProps = {
   children: React.ReactNode;

@@ -57,6 +57,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Link } from "react-router-dom";
 type FinanceStatus = "Paid" | "Pending" | "Overdue" | "Posted";
 type TransactionType = "Income" | "Expense" | "Journal";
 
@@ -148,8 +149,26 @@ function FinanceLedgerTable({
               </TableRow>
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={onOpenTaxInvoice ? 8 : 7} className="h-48 text-center text-sm text-muted-foreground">
-                  No entries in this view.
+                <TableCell colSpan={onOpenTaxInvoice ? 8 : 7} className="h-52 text-center align-middle">
+                  <div className="max-w-lg mx-auto space-y-3 text-muted-foreground px-4">
+                    <p className="text-sm font-medium">No ledger rows in this tab yet.</p>
+                    <p className="text-xs">
+                      Invoices often start from sales: ship an order (if your role allows), then use{" "}
+                      <strong>Invoice from order</strong> above. Expenses and manual entries use{" "}
+                      <strong>New entry</strong>.
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                      <Button asChild variant="outline" size="sm" className="h-8">
+                        <Link to="/orders">Orders</Link>
+                      </Button>
+                      <Button asChild variant="outline" size="sm" className="h-8">
+                        <Link to="/shipments">Shipments</Link>
+                      </Button>
+                      <Button asChild variant="secondary" size="sm" className="h-8">
+                        <Link to="/sme-bundle">SME workflow</Link>
+                      </Button>
+                    </div>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (

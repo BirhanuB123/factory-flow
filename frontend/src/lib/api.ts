@@ -348,6 +348,17 @@ export const productionApi = {
   },
 };
 
+export const manufacturingApi = {
+  listAssets: async () => {
+    const response = await api.get('/manufacturing/assets');
+    return response.data.data;
+  },
+  listDowntime: async (params?: { assetId?: string; limit?: number }) => {
+    const response = await api.get('/manufacturing/downtime', { params });
+    return response.data.data;
+  },
+};
+
 export const ordersApi = {
   getAll: async () => {
     const response = await api.get('/orders');

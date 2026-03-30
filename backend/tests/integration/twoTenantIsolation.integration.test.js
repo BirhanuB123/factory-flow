@@ -184,6 +184,16 @@ describe('Two-tenant integration (MongoMemoryServer)', () => {
     expect(res.body.data.sku).toBe('SKU-B-INT');
   });
 
+  test('normal tenant user with mismatched x-tenant-id is rejected (403)', async () => {
+    const res = await request(app)
+      .get(`/api/products/${productAId}`)
+      .set('Authorization', authA())
+      .set('x-tenant-id', String(tenantBId));
+
+    expect(res.status).toBe(403);
+    expect(String(res.body.message || '')).toMatch(/tenant mismatch/i);
+  });
+
   test('super admin can use tenant API when home tenant is suspended', async () => {
     await Tenant.updateOne({ _id: tenantAId }, { $set: { status: 'suspended', statusReason: 'Test' } });
 

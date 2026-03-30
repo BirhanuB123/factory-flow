@@ -91,7 +91,7 @@ export function OfflineQueueBanner() {
             <WifiOff className="h-4 w-4 shrink-0" />
             <span className="font-semibold">Offline</span>
             <span className="text-amber-900/80 dark:text-amber-200/90">
-              Goods receipt &amp; stock issue/receipt can be queued and will post when you reconnect.
+              PO receive and stock receipt/issue/adjustment can be queued and will post when you reconnect.
             </span>
           </>
         ) : (

@@ -137,7 +137,7 @@ const ProductionJobs = () => {
   });
 
   const { data: allJobs = [], isLoading } = useQuery({
-    queryKey: ['production-jobs'],
+    queryKey: ["productions"],
     queryFn: productionApi.getAll,
   });
 
@@ -211,7 +211,7 @@ const ProductionJobs = () => {
   const createJobMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => productionApi.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['production-jobs'] });
+      queryClient.invalidateQueries({ queryKey: ["productions"] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-movements'] });
       toast.success("Job created");
@@ -238,7 +238,7 @@ const ProductionJobs = () => {
     mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
       productionApi.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['production-jobs'] });
+      queryClient.invalidateQueries({ queryKey: ["productions"] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-movements'] });
       toast.success("Status updated");
@@ -255,7 +255,7 @@ const ProductionJobs = () => {
   const reserveMaterialsMutation = useMutation({
     mutationFn: (jobId: string) => productionApi.reserveMaterials(jobId),
     onSuccess: async (_, jobId) => {
-      queryClient.invalidateQueries({ queryKey: ["production-jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["productions"] });
       queryClient.invalidateQueries({ queryKey: ["inventory-alerts"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["mrp"] });
@@ -280,7 +280,7 @@ const ProductionJobs = () => {
   const syncOpsMut = useMutation({
     mutationFn: (id: string) => productionApi.syncOperations(id),
     onSuccess: async (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ["production-jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["productions"] });
       toast.success("Operations synced from BOM routing");
       await refreshJob(id);
     },
@@ -311,7 +311,7 @@ const ProductionJobs = () => {
       });
     },
     onSuccess: async (_, v) => {
-      queryClient.invalidateQueries({ queryKey: ["production-jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["productions"] });
       toast.success("Updated");
       await refreshJob(v.jobId);
       setOpNote("");

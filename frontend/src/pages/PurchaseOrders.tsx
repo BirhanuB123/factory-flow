@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { purchaseOrdersApi, inventoryApi, apApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -357,8 +358,30 @@ export default function PurchaseOrders() {
                 </TableRow>
               ) : (pos as PO[]).length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                    No purchase orders. {can(PERM.create) ? "Create a draft PO." : ""}
+                  <TableCell colSpan={6} className="text-center py-14">
+                    <div className="max-w-md mx-auto space-y-3 text-muted-foreground">
+                      <p className="text-sm font-medium">
+                        No purchase orders yet.
+                        {can(PERM.create) ? " Create a draft, approve it, then receive into stock." : ""}
+                      </p>
+                      <p className="text-xs">
+                        PO lines need SKUs from inventory. Optional: maintain vendor master in Finance for
+                        bill-from-PO.
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                        <Button asChild variant="outline" size="sm" className="h-8">
+                          <Link to="/inventory">Inventory / SKUs</Link>
+                        </Button>
+                        {canPickVendor && (
+                          <Button asChild variant="outline" size="sm" className="h-8">
+                            <Link to="/finance">Finance & vendors</Link>
+                          </Button>
+                        )}
+                        <Button asChild variant="secondary" size="sm" className="h-8">
+                          <Link to="/sme-bundle">SME workflow</Link>
+                        </Button>
+                      </div>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (

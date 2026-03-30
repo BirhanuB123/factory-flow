@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ordersApi, clientsApi, inventoryApi, mrpApi, productionApi, downloadReportCsv } from "@/lib/api";
 import { SavedViewsBar } from "@/components/SavedViewsBar";
@@ -152,7 +153,7 @@ export default function Orders() {
     onSuccess: async (_, v) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["mrp"] });
-      queryClient.invalidateQueries({ queryKey: ["production-jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["productions"] });
       const fresh = await ordersApi.getOne(v.orderId);
       setSelectedOrder(fresh as Order);
       toast.success("Production job linked to order line");
@@ -252,9 +253,23 @@ export default function Orders() {
         </CardHeader>
         <CardContent className="p-0 max-h-[280px] overflow-y-auto">
           {mrpRows.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground text-center">
-              No open demand with BOM output match. Add orders for finished-good SKUs (e.g. HMB-4200-FG).
-            </p>
+            <div className="p-6 text-center space-y-3">
+              <p className="text-sm text-muted-foreground">
+                No open demand with a BOM match yet. Create SKUs with an active BOM, then add pending or
+                processing orders for those finished goods.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Button asChild variant="outline" size="sm" className="h-8">
+                  <Link to="/boms">BOMs</Link>
+                </Button>
+                <Button asChild variant="outline" size="sm" className="h-8">
+                  <Link to="/inventory">Inventory</Link>
+                </Button>
+                <Button asChild variant="secondary" size="sm" className="h-8">
+                  <Link to="/production-jobs">Production jobs</Link>
+                </Button>
+              </div>
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -396,8 +411,25 @@ export default function Orders() {
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-20 text-muted-foreground font-medium">
-                      No matching transactions in central log.
+                    <TableCell colSpan={6} className="text-center py-16">
+                      <div className="max-w-md mx-auto space-y-3 text-muted-foreground">
+                        <p className="text-sm font-medium">No orders match your search or status filter.</p>
+                        <p className="text-xs">
+                          New tenant? Set up clients and products first, then register an order. Use MRP above to
+                          reserve stock or create jobs.
+                        </p>
+                        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                          <Button asChild variant="outline" size="sm" className="h-8">
+                            <Link to="/clients">Clients</Link>
+                          </Button>
+                          <Button asChild variant="outline" size="sm" className="h-8">
+                            <Link to="/inventory">Products</Link>
+                          </Button>
+                          <Button asChild variant="secondary" size="sm" className="h-8">
+                            <Link to="/sme-bundle">SME workflow</Link>
+                          </Button>
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (

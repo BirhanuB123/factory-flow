@@ -17,11 +17,18 @@ import {
   Boxes,
 } from "lucide-react";
 import { ModuleDashboardLayout } from "@/components/ModuleDashboardLayout";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * In-app overview of the SME go-to-market package (inventory + PO + simple production + ETB finance).
  */
 export default function SmeBundle() {
+  const { user } = useAuth();
+  const role = user?.role ?? "employee";
+  const canOpenFinance = ["Admin", "finance_head", "finance_viewer"].includes(role);
+  const canOpenShipments = ["Admin", "warehouse_head", "finance_head", "finance_viewer", "purchasing_head"].includes(role);
+  const canOpenHr = ["Admin", "hr_head", "finance_head"].includes(role);
+
   return (
     <ModuleDashboardLayout
       title="SME package"
@@ -29,7 +36,7 @@ export default function SmeBundle() {
       icon={Package}
       healthStats={[
         { label: "Core modules", value: "4" },
-        { label: "Offline queue", value: "Receipt / issue" },
+        { label: "Offline queue", value: "PO receive + stock moves" },
         { label: "Currency", value: "ETB-first" },
       ]}
       actions={
@@ -153,7 +160,7 @@ export default function SmeBundle() {
           </CardHeader>
           <CardContent className="p-8 pt-2 space-y-4">
             {[
-              { icon: Package, title: "Inventory & movements", desc: "On-hand, adjustments, receipt/issue with offline queue." },
+              { icon: Package, title: "Inventory & movements", desc: "On-hand plus manual receipt/issue/adjustment with offline queue." },
               { icon: Truck, title: "Purchase orders", desc: "Draft → approve → receive; landed cost optional." },
               { icon: Factory, title: "Simple production", desc: "BOMs + jobs + operations (not full APS/MES)." },
               { icon: FileSpreadsheet, title: "Finance & Ethiopia tax", desc: "Invoices, VAT/WHT exports, tax invoice HTML." },
@@ -193,9 +200,52 @@ export default function SmeBundle() {
             <WifiOff className="h-5 w-5" /> Slow or intermittent connectivity
           </CardTitle>
           <CardDescription>
-            PO <strong>receive</strong> and inventory <strong>receipt/issue</strong> (manual movement) can be saved locally and synced when the connection returns. Use the amber bar at the top to <strong>Sync now</strong>.
+            PO <strong>receive</strong> and inventory manual movements (<strong>receipt/issue/adjustment</strong>) can be saved locally and synced when the connection returns. Use the amber bar at the top to <strong>Sync now</strong>.
           </CardDescription>
         </CardHeader>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CheckCircle2 className="h-5 w-5" /> End-to-end workflow handoff
+          </CardTitle>
+          <CardDescription>
+            Follow this sequence from order intake to finance close, with role-aware route gates.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {[
+            { step: "1", label: "Orders intake", to: "/orders", open: true },
+            { step: "2", label: "Production jobs", to: "/production-jobs", open: true },
+            { step: "3", label: "Purchase orders", to: "/purchase-orders", open: true },
+            { step: "4", label: "Inventory control", to: "/inventory", open: true },
+            { step: "5", label: "Shipments", to: "/shipments", open: canOpenShipments },
+            { step: "6", label: "Finance", to: "/finance", open: canOpenFinance },
+            { step: "7", label: "HR payroll", to: "/hr", open: canOpenHr },
+          ].map((row) => (
+            <div
+              key={row.step}
+              className="flex items-center justify-between rounded-lg border border-border/70 px-3 py-2"
+            >
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="font-mono text-[10px]">
+                  Step {row.step}
+                </Badge>
+                <span className="text-sm font-medium">{row.label}</span>
+              </div>
+              {row.open ? (
+                <Button asChild size="sm" variant="secondary" className="h-8">
+                  <Link to={row.to}>Open</Link>
+                </Button>
+              ) : (
+                <Badge variant="secondary" className="text-[10px] uppercase">
+                  Role restricted
+                </Badge>
+              )}
+            </div>
+          ))}
+        </CardContent>
       </Card>
 
       <Card className="mt-6">

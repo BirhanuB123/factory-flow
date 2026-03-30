@@ -26,7 +26,7 @@ const statusVariant: Record<JobStatus, "success" | "info" | "destructive" | "war
 export function ProductionJobsTable() {
   const navigate = useNavigate();
   const { data: jobs = [], isLoading } = useQuery({
-    queryKey: ["production-jobs"],
+    queryKey: ["productions"],
     queryFn: productionApi.getAll,
   });
 

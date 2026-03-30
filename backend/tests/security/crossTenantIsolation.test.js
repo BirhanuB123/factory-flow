@@ -141,6 +141,27 @@ describe('Cross-tenant hardening suite', () => {
     expect(res.status).toBe(403);
   });
 
+  test('normal tenant user cannot switch tenant via x-tenant-id (403)', async () => {
+    mockAuthUser({
+      _id: 'u1-switch',
+      tenantId: tenantA,
+      platformRole: 'none',
+      role: 'Admin',
+      department: 'Ops',
+      name: 'Tenant Admin',
+      email: 'admin@a.test',
+      employeeId: 'A-001-SW',
+    });
+
+    const res = await request(app)
+      .get('/api/products')
+      .set('Authorization', bearerFor({ id: 'u1-switch', tenantId: tenantA, platformRole: 'none' }))
+      .set('x-tenant-id', tenantB);
+
+    expect(res.status).toBe(403);
+    expect(String(res.body.message || '')).toMatch(/tenant mismatch/i);
+  });
+
   test('platform list works for super-admin', async () => {
     mockAuthUser({
       _id: 'sa1',

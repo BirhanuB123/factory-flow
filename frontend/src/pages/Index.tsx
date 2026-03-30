@@ -1,9 +1,13 @@
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { KpiCards } from "@/components/KpiCards";
 import { ProductionJobsTable } from "@/components/ProductionJobsTable";
 import { QuickActions } from "@/components/QuickActions";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { MachineStatus } from "@/components/MachineStatus";
 import { useAuth } from "@/contexts/AuthContext";
+import { productionApi, manufacturingApi } from "@/lib/api";
+import type { TenantModuleFlags } from "@/lib/api";
 import { useSettings } from "@/hooks/use-settings";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,9 +31,35 @@ function subscriptionStatusLabel(status?: string): string {
   return "Unknown";
 }
 
+function dashboardMfgEnabled(
+  user: { platformRole?: string; tenantModuleFlags?: Partial<TenantModuleFlags> } | null | undefined
+) {
+  if (!user) return false;
+  if (user.platformRole === "super_admin") return true;
+  return user.tenantModuleFlags?.manufacturing !== false;
+}
+
 const Index = () => {
   const { user } = useAuth();
   const { settings } = useSettings();
+  const mfgDash = dashboardMfgEnabled(user);
+
+  const { data: kpis } = useQuery({
+    queryKey: ["production-kpis", "30d"],
+    queryFn: () => productionApi.getKpis(),
+    enabled: mfgDash,
+  });
+
+  const { data: downtime = [] } = useQuery({
+    queryKey: ["manufacturing-downtime"],
+    queryFn: () => manufacturingApi.listDowntime({ limit: 200 }),
+    enabled: mfgDash,
+  });
+
+  const hasOpenDowntime = useMemo(
+    () => (downtime as { endedAt?: string | null }[]).some((d) => !d.endedAt),
+    [downtime]
+  );
   const tenantSubscription = user?.tenantSubscription;
   const userName = user?.name || settings.displayName || "Operator";
   const hours = new Date().getHours();
@@ -71,12 +101,20 @@ const Index = () => {
         <div className="hidden lg:flex items-center gap-6 px-6 py-3 bg-secondary/50 rounded-2xl backdrop-blur-sm border border-border/50">
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">System Health</p>
-            <p className="text-sm font-mono font-bold text-success">OPERATIONAL</p>
+            <p
+              className={`text-sm font-mono font-bold ${
+                !mfgDash ? "text-muted-foreground" : hasOpenDowntime ? "text-amber-500" : "text-success"
+              }`}
+            >
+              {!mfgDash ? "—" : hasOpenDowntime ? "CHECK ASSETS" : "OPERATIONAL"}
+            </p>
           </div>
           <div className="h-8 w-px bg-border" />
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Efficiency</p>
-            <p className="text-sm font-mono font-bold">94.8%</p>
+            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">OEE proxy (30d)</p>
+            <p className="text-sm font-mono font-bold">
+              {!mfgDash || kpis == null ? "—" : `${kpis.oeeProxyPct}%`}
+            </p>
           </div>
         </div>
       </div>

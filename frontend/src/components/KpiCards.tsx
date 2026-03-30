@@ -1,36 +1,88 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { productionApi, inventoryApi } from "@/lib/api";
+import { productionApi, inventoryApi, manufacturingApi, type TenantModuleFlags } from "@/lib/api";
 import { Wrench, Gauge, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+
+function moduleEnabled(
+  user: { platformRole?: string; tenantModuleFlags?: Partial<TenantModuleFlags> } | null | undefined,
+  key: keyof TenantModuleFlags
+): boolean {
+  if (!user) return false;
+  if (user.platformRole === "super_admin") return true;
+  return user.tenantModuleFlags?.[key] !== false;
+}
+
+function assetIdFromDowntime(d: { asset: string | { _id?: string }; endedAt?: string | null }): string | null {
+  const a = d.asset;
+  if (a && typeof a === "object" && "_id" in a && a._id) return String(a._id);
+  if (typeof a === "string") return a;
+  return null;
+}
 
 export function KpiCards() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const mfgEnabled = moduleEnabled(user, "manufacturing");
+  const invEnabled = moduleEnabled(user, "inventory");
+
   const { data: jobs = [] } = useQuery({
     queryKey: ["productions"],
     queryFn: productionApi.getAll,
+    enabled: mfgEnabled,
   });
   const { data: inventory = [] } = useQuery({
     queryKey: ["inventory"],
     queryFn: inventoryApi.getAll,
+    enabled: invEnabled,
+  });
+  const { data: assets = [] } = useQuery({
+    queryKey: ["manufacturing-assets"],
+    queryFn: manufacturingApi.listAssets,
+    enabled: mfgEnabled,
+  });
+  const { data: downtime = [] } = useQuery({
+    queryKey: ["manufacturing-downtime"],
+    queryFn: () => manufacturingApi.listDowntime({ limit: 200 }),
+    enabled: mfgEnabled,
   });
 
   const activeJobs = jobs.filter((j: { status: string }) => j.status === "In Progress" || j.status === "Scheduled").length;
-  const completedToday = jobs.filter((j: { status: string; dueDate?: string }) => {
+  const completedToday = jobs.filter((j: { status: string; dueDate?: string; updatedAt?: string }) => {
     if (j.status !== "Completed") return false;
-    const d = j.dueDate ? new Date(j.dueDate) : null;
-    return d && d.toDateString() === new Date().toDateString();
+    const t = new Date((j as { updatedAt?: string }).updatedAt || j.dueDate || 0).getTime();
+    return new Date(t).toDateString() === new Date().toDateString();
   }).length;
   const lowStockCount = inventory.filter((i: { stock: number; reorderPoint: number }) => i.stock <= i.reorderPoint && i.reorderPoint > 0).length;
   const outOfStockCount = inventory.filter((i: { stock: number }) => i.stock === 0).length;
-  const totalItems = inventory.length;
-  const utilization = totalItems > 0 ? Math.round((activeJobs / Math.max(totalItems, 1)) * 100) : 0;
-  const displayUtil = Math.min(99, utilization + 30);
+
+  const fleetAvailabilityPct = useMemo(() => {
+    const list = (assets as { _id: string; active?: boolean }[]).filter((a) => a.active !== false);
+    if (list.length === 0) return null;
+    const open = new Set<string>();
+    for (const d of downtime as { asset: string | { _id?: string }; endedAt?: string | null }[]) {
+      if (d.endedAt) continue;
+      const id = assetIdFromDowntime(d);
+      if (id) open.add(id);
+    }
+    const downCount = list.filter((a) => open.has(String(a._id))).length;
+    return Math.max(0, Math.min(100, Math.round(100 * (1 - downCount / list.length))));
+  }, [assets, downtime]);
+
+  const workloadPct = useMemo(() => {
+    const pool = jobs.filter((j: { status: string }) => j.status !== "Cancelled").length;
+    if (pool <= 0) return 0;
+    return Math.max(0, Math.min(100, Math.round((100 * activeJobs) / pool)));
+  }, [jobs, activeJobs]);
+
+  const displayUtil = fleetAvailabilityPct != null ? fleetAvailabilityPct : workloadPct;
 
   const kpis = [
     {
       label: "Active Jobs",
-      value: String(activeJobs),
+      value: mfgEnabled ? String(activeJobs) : "—",
       change: "Scheduled + In Progress",
       icon: Wrench,
       iconBg: "bg-primary/10",
@@ -39,9 +91,9 @@ export function KpiCards() {
       href: "/production-jobs",
     },
     {
-      label: "Machine Utilization",
-      value: `${displayUtil}%`,
-      change: "Based on active jobs",
+      label: "Floor availability",
+      value: mfgEnabled ? `${displayUtil}%` : "—",
+      change: fleetAvailabilityPct != null ? "Assets not in open downtime" : "Share of open jobs in progress",
       icon: Gauge,
       iconBg: "bg-success/10",
       iconColor: "text-success",
@@ -50,18 +102,22 @@ export function KpiCards() {
     },
     {
       label: "Low Stock Alerts",
-      value: String(lowStockCount + outOfStockCount),
-      change: lowStockCount + outOfStockCount > 0 ? "Requires attention" : "All good",
+      value: invEnabled ? String(lowStockCount + outOfStockCount) : "—",
+      change: invEnabled
+        ? lowStockCount + outOfStockCount > 0
+          ? "Requires attention"
+          : "All good"
+        : "Inventory module disabled",
       icon: AlertTriangle,
       iconBg: "bg-destructive/10",
       iconColor: "text-destructive",
-      alert: lowStockCount + outOfStockCount > 0,
+      alert: invEnabled && lowStockCount + outOfStockCount > 0,
       href: "/inventory",
     },
     {
       label: "Completed Today",
-      value: String(completedToday),
-      change: "Completed status",
+      value: mfgEnabled ? String(completedToday) : "—",
+      change: "Completed today (by last update)",
       icon: CheckCircle2,
       iconBg: "bg-info/10",
       iconColor: "text-info",

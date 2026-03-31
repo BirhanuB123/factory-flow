@@ -5,6 +5,7 @@ import { productionApi, inventoryApi, manufacturingApi, type TenantModuleFlags }
 import { Wrench, Gauge, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { PERMS } from "@/lib/permissions";
 
 function moduleEnabled(
   user: { platformRole?: string; tenantModuleFlags?: Partial<TenantModuleFlags> } | null | undefined,
@@ -24,9 +25,9 @@ function assetIdFromDowntime(d: { asset: string | { _id?: string }; endedAt?: st
 
 export function KpiCards() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const mfgEnabled = moduleEnabled(user, "manufacturing");
-  const invEnabled = moduleEnabled(user, "inventory");
+  const { user, can } = useAuth();
+  const mfgEnabled = moduleEnabled(user, "manufacturing") && can(PERMS.DASHBOARD_MFG);
+  const invEnabled = moduleEnabled(user, "inventory") && can(PERMS.DASHBOARD_INVENTORY);
 
   const { data: jobs = [] } = useQuery({
     queryKey: ["productions"],

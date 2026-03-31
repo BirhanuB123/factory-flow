@@ -211,7 +211,7 @@ export default function Shipments() {
             <div className="relative w-full sm:max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                className="pl-10 h-10 rounded-xl"
+                className="pl-10 h-10 rounded-xl bg-background/50 border-border/60 focus-visible:ring-primary/20"
                 placeholder="Search #, tracking, order…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
@@ -221,37 +221,40 @@ export default function Shipments() {
         </StickyModuleTabs>
 
         <TabsContent value="list" className="mt-0">
-          <div className="rounded-2xl border border-border/60 bg-card/40 overflow-hidden shadow-xl">
+          <div className="rounded-2xl border border-border/70 bg-background/70 overflow-hidden">
             {isLoading ? (
               <div className="flex justify-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
               <Table>
-                <TableHeader className="bg-secondary/30">
-                  <TableRow>
-                    <TableHead className="pl-6">Shipment</TableHead>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Lines</TableHead>
-                    <TableHead>Carrier / Tracking</TableHead>
-                    <TableHead>Shipped</TableHead>
-                    <TableHead className="w-[52px] text-center">Note</TableHead>
-                    {canShip && <TableHead className="pr-6 text-right">Actions</TableHead>}
+                <TableHeader className="bg-muted/10">
+                  <TableRow className="hover:bg-transparent border-border/50">
+                    <TableHead className="pl-6 h-12 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Shipment</TableHead>
+                    <TableHead className="h-12 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Order</TableHead>
+                    <TableHead className="h-12 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Status</TableHead>
+                    <TableHead className="h-12 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Lines</TableHead>
+                    <TableHead className="h-12 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Carrier / Tracking</TableHead>
+                    <TableHead className="h-12 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Shipped</TableHead>
+                    <TableHead className="w-[52px] h-12 text-center text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Note</TableHead>
+                    {canShip && <TableHead className="pr-6 h-12 text-right text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={canShip ? 8 : 7} className="text-center py-16 text-muted-foreground">
-                        No shipments
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">No shipments match your search.</p>
+                          <p className="text-xs">Create a draft shipment from an active order to begin pick-pack-ship flow.</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
                     filtered.map((s) => {
                       const oid = typeof s.order === "object" ? s.order._id : s.order;
                       return (
-                        <TableRow key={s._id}>
+                        <TableRow key={s._id} className="border-border/50 hover:bg-muted/30 transition-colors">
                           <TableCell className="pl-6 font-mono text-xs font-bold">{s.shipmentNumber}</TableCell>
                           <TableCell className="font-mono text-[10px] text-muted-foreground">
                             …{String(oid).slice(-8)}

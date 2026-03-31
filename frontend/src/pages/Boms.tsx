@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  Search, Plus, FileStack, Eye, Copy, Layers, DollarSign, Hash, Trash2,
+  Search, Plus, FileStack, Eye, Copy, Layers, DollarSign, Hash, Trash2, Sparkles,
 } from "lucide-react";
 
 type BomStatus = "Active" | "Draft" | "Archived";
@@ -248,9 +248,39 @@ export default function Boms() {
   const draftCount = bomsData.filter((b) => b.status === "Draft").length;
   const totalComponents = bomsData.reduce((sum, b) => sum + b.components.length, 0);
   const avgCost = bomsData.length > 0 ? bomsData.reduce((sum, b) => sum + calcBomCost(b.components), 0) / bomsData.length : 0;
+  const archivedCount = bomsData.filter((b) => b.status === "Archived").length;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-8 pb-8 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-1 bg-primary rounded-full" />
+            <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">
+              Bill of Materials
+            </h1>
+            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground max-w-xl">
+            Manage product structures, revisions, and routing definitions for repeatable production planning.
+          </p>
+        </div>
+
+        <div className="hidden lg:flex items-center gap-6 px-6 py-3 bg-secondary/50 rounded-2xl backdrop-blur-sm border border-border/50">
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Active BOMs</p>
+            <p className="text-sm font-mono font-bold text-success">{activeCount}</p>
+          </div>
+          <div className="h-8 w-px bg-border" />
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Draft + Archived</p>
+            <p className="text-sm font-mono font-bold">
+              {draftCount + archivedCount}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -259,8 +289,8 @@ export default function Boms() {
           { label: "Total Components", value: totalComponents, icon: Hash, color: "text-warning", bg: "bg-warning/10" },
           { label: "Avg BOM Cost", value: `${symbol}${avgCost.toFixed(2)}`, icon: DollarSign, color: "text-info", bg: "bg-info/10" }
         ].map((stat, idx) => (
-          <Card key={idx} className="border-none shadow-md bg-card/60 backdrop-blur-md overflow-hidden group">
-            <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full blur-3xl opacity-10 ${stat.bg}`} />
+          <Card key={idx} className="relative overflow-hidden group rounded-2xl border-border/70 bg-card/60 backdrop-blur-md shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
+            <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
             <CardContent className="p-5 flex items-center gap-4">
               <div className={`h-12 w-12 rounded-xl ${stat.bg} flex items-center justify-center transition-transform group-hover:scale-110 duration-300`}>
                 <stat.icon className={`h-6 w-6 ${stat.color}`} />
@@ -275,8 +305,8 @@ export default function Boms() {
       </div>
 
       {/* Main Container */}
-      <Card className="border-none shadow-xl bg-card/60 backdrop-blur-xl overflow-hidden">
-        <CardHeader className="pb-6 border-b border-white/5 bg-white/5">
+      <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
+        <CardHeader className="pb-6 border-b border-border/60 bg-muted/10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -287,8 +317,8 @@ export default function Boms() {
               </div>
               <p className="text-sm font-medium text-muted-foreground">Technical specifications and bill of materials ledger</p>
             </div>
-            <Button 
-              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5" 
+            <Button
+              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5"
               onClick={() => { resetForm(); setFormOpen(true); }}
             >
               <Plus className="h-4 w-4" /> 
@@ -306,7 +336,7 @@ export default function Boms() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="flex items-center p-1 bg-secondary/50 border border-border/50 rounded-xl gap-1">
+            <div className="flex items-center p-1 bg-secondary/40 border border-border/60 rounded-xl gap-1">
               {(["All", "Active", "Draft", "Archived"] as const).map((s) => (
                 <button
                   key={s}
@@ -327,7 +357,7 @@ export default function Boms() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/10">
-                <TableRow className="hover:bg-transparent border-white/5">
+                <TableRow className="hover:bg-transparent border-border/50">
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground pl-6 h-12">System ID</TableHead>
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12">Product Name</TableHead>
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden sm:table-cell">Output SKU</TableHead>
@@ -356,7 +386,7 @@ export default function Boms() {
                   filtered.map((bom) => (
                     <TableRow
                       key={bom._id}
-                      className="cursor-pointer transition-colors hover:bg-white/5 border-white/5 group/row"
+                      className="cursor-pointer transition-colors hover:bg-muted/30 border-border/50 group/row"
                       onClick={() => setSelectedBom(bom)}
                     >
                       <TableCell className="pl-6 font-mono text-[10px] font-bold text-muted-foreground opacity-50 group-hover/row:opacity-100 transition-opacity">

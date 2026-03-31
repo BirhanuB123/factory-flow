@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TenantModuleKey } from "@/lib/api";
 import { toast } from "sonner";
+import { PERMS } from "@/lib/permissions";
 
 const actions = [
   {
@@ -14,6 +15,7 @@ const actions = [
     variant: "default" as const,
     path: "/production-jobs?action=new",
     moduleKey: "manufacturing" as TenantModuleKey,
+    permission: PERMS.DASHBOARD_MFG,
   },
   {
     label: "Report Machine Down",
@@ -21,6 +23,7 @@ const actions = [
     variant: "destructive" as const,
     path: null as string | null,
     moduleKey: "manufacturing" as TenantModuleKey,
+    permission: PERMS.DASHBOARD_MFG,
   },
   {
     label: "Receive Inventory",
@@ -28,12 +31,15 @@ const actions = [
     variant: "outline" as const,
     path: "/inventory?action=receipt",
     moduleKey: "inventory" as TenantModuleKey,
+    permission: PERMS.DASHBOARD_INVENTORY,
   },
 ];
 
 export function QuickActions() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  const visible = actions.filter((action) => (action.permission ? can(action.permission) : true));
+  if (visible.length === 0) return null;
 
   return (
     <Card className="shadow-sm border-none bg-card/50 backdrop-blur-sm overflow-hidden">
@@ -43,7 +49,7 @@ export function QuickActions() {
         </CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-2.5">
-        {actions.map((action) => {
+        {visible.map((action) => {
           const isDisabledByPolicy =
             user?.platformRole !== "super_admin" && user?.tenantModuleFlags?.[action.moduleKey] === false;
           return (

@@ -1135,20 +1135,20 @@ export default function Hr() {
         </StickyModuleTabs>
 
         <TabsContent value="employees">
-          <Card className="bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl group shadow-2xl">
-            <CardHeader className="pb-4 border-b border-white/5 space-y-4">
+          <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden group">
+            <CardHeader className="pb-4 border-b border-border/60 bg-muted/10 space-y-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <h3 className="text-xl font-black tracking-tighter italic">ACTIVE DIRECTORY</h3>
                   <p className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest">Authorized personnel database</p>
                 </div>
                 <div className="relative w-full md:w-96 group/search">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 group-focus-within/search:text-primary transition-colors" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within/search:text-primary transition-colors" />
                   <Input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                     placeholder="SCAN LEDGER FOR NAME, ROLE, DEPT..."
-                    className="h-12 pl-11 rounded-2xl bg-white/5 border-white/10 focus-visible:ring-primary/20 font-bold italic text-xs tracking-wider placeholder:opacity-30"
+                    className="h-12 pl-11 rounded-2xl bg-background/50 border-border/60 focus-visible:ring-primary/20 font-bold italic text-xs tracking-wider placeholder:opacity-30"
                   />
                 </div>
               </div>
@@ -1156,34 +1156,34 @@ export default function Hr() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent border-white/5">
-                    <TableHead className="pl-6 h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Emp ID</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Full Name</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Dept</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Operational Role</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Status</TableHead>
-                    <TableHead className="pr-6 h-12 text-right text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Protocol</TableHead>
+                  <TableRow className="hover:bg-transparent border-border/50">
+                    <TableHead className="pl-6 h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Emp ID</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Full Name</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Dept</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Operational Role</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status</TableHead>
+                    <TableHead className="pr-6 h-12 text-right text-[10px] font-black uppercase text-muted-foreground tracking-widest">Protocol</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow className="hover:bg-transparent border-white/5">
+                    <TableRow className="hover:bg-transparent border-border/50">
                       <TableCell colSpan={6} className="h-32 text-center">
                         <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary/40" />
                         <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Syncing Ledger...</p>
                       </TableCell>
                     </TableRow>
                   ) : filteredEmployees.length === 0 ? (
-                    <TableRow className="hover:bg-transparent border-white/5">
+                    <TableRow className="hover:bg-transparent border-border/50">
                       <TableCell colSpan={6} className="h-32 text-center text-[10px] font-black uppercase tracking-widest opacity-40 italic">
                         No records match current query parameters.
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredEmployees.map((e) => (
-                      <TableRow key={e.id} className="group/row transition-all hover:bg-white/[0.02] border-white/5">
+                      <TableRow key={e.id} className="group/row transition-all hover:bg-muted/30 border-border/50">
                         <TableCell className="pl-6 py-4">
-                          <span className="font-mono text-[10px] font-black px-2 py-1 rounded bg-white/5 text-muted-foreground tracking-tighter uppercase group-hover/row:bg-primary group-hover/row:text-white transition-colors">
+                          <span className="font-mono text-[10px] font-black px-2 py-1 rounded bg-muted/30 text-muted-foreground tracking-tighter uppercase group-hover/row:bg-primary group-hover/row:text-white transition-colors">
                             {e.id}
                           </span>
                         </TableCell>
@@ -1790,8 +1790,8 @@ export default function Hr() {
         </TabsContent>
 
         <TabsContent value="payroll">
-          <Card className="bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl shadow-2xl">
-            <CardHeader className="pb-4 border-b border-white/5 space-y-4">
+          <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border/60 bg-muted/10 space-y-4">
               <div className="space-y-1">
                 <h3 className="text-xl font-black tracking-tighter italic uppercase text-purple-500">Ethiopia payroll</h3>
                 <p className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest">
@@ -1952,34 +1952,34 @@ export default function Hr() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent border-white/5">
-                    <TableHead className="pl-6 h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Personnel</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Gross</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Pension 7%</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">PAYE</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Net</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Status</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Paid</TableHead>
-                    <TableHead className="pr-6 h-12 text-right text-[10px] font-black uppercase text-muted-foreground/50 tracking-widest">Payslip</TableHead>
+                  <TableRow className="hover:bg-transparent border-border/50">
+                    <TableHead className="pl-6 h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Personnel</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Gross</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Pension 7%</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">PAYE</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Net</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status</TableHead>
+                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Paid</TableHead>
+                    <TableHead className="pr-6 h-12 text-right text-[10px] font-black uppercase text-muted-foreground tracking-widest">Payslip</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {payLoading ? (
-                    <TableRow className="hover:bg-transparent border-white/5">
+                    <TableRow className="hover:bg-transparent border-border/50">
                       <TableCell colSpan={8} className="h-32 text-center">
                         <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-500/40" />
                         <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Loading…</p>
                       </TableCell>
                     </TableRow>
                   ) : payroll.length === 0 ? (
-                    <TableRow className="hover:bg-transparent border-white/5">
+                    <TableRow className="hover:bg-transparent border-border/50">
                       <TableCell colSpan={8} className="h-32 text-center text-[10px] font-black uppercase tracking-widest opacity-40 italic">
                         No payroll for {payrollMonth}. Run month or pick another period.
                       </TableCell>
                     </TableRow>
                   ) : (
                     payroll.map((p) => (
-                      <TableRow key={p._id} className="transition-all hover:bg-white/[0.02] border-white/5">
+                      <TableRow key={p._id} className="transition-all hover:bg-muted/30 border-border/50">
                         <TableCell className="pl-6 py-4">
                           <div className="font-black italic text-sm">{p.employee?.name || "Unknown"}</div>
                           <div className="text-[10px] font-mono opacity-50">{p.employee?.employeeId}</div>

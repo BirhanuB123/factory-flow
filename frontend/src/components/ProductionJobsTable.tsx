@@ -1,6 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { productionApi } from "@/lib/api";
+import { productionApi, type TenantModuleFlags } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { PERMS } from "@/lib/permissions";
+
+function moduleEnabled(
+  user: { platformRole?: string; tenantModuleFlags?: Partial<TenantModuleFlags> } | null | undefined,
+  key: keyof TenantModuleFlags
+): boolean {
+  if (!user) return false;
+  if (user.platformRole === "super_admin") return true;
+  return user.tenantModuleFlags?.[key] !== false;
+}
 import {
   Table,
   TableBody,
@@ -25,9 +36,12 @@ const statusVariant: Record<JobStatus, "success" | "info" | "destructive" | "war
 
 export function ProductionJobsTable() {
   const navigate = useNavigate();
+  const { user, can } = useAuth();
+  const enabled = moduleEnabled(user, "manufacturing") && can(PERMS.DASHBOARD_MFG);
   const { data: jobs = [], isLoading } = useQuery({
     queryKey: ["productions"],
     queryFn: productionApi.getAll,
+    enabled,
   });
 
   const displayJobs = (jobs as { _id: string; jobId: string; bom?: { name: string }; status: JobStatus; progress?: number }[])

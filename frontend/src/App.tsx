@@ -37,6 +37,7 @@ import PlatformTenantDetail from "./pages/PlatformTenantDetail.tsx";
 import { SuperAdminRoute } from "./components/SuperAdminRoute";
 import { MustChangePasswordGate } from "./components/MustChangePasswordGate";
 import { TenantModuleRoute } from "./components/TenantModuleRoute";
+import { PERMS } from "./lib/permissions";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -196,24 +197,32 @@ const App = () => {
               <Route element={<ProtectedRoute />}>
                 <Route element={<MustChangePasswordGate />}>
                   <Route element={<Layout />}>
-                  <Route path="/" element={<Index />} />
+                  <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_VIEW]} />}>
+                    <Route path="/" element={<Index />} />
+                  </Route>
+                  <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_MFG]} />}>
                   <Route element={<TenantModuleRoute moduleKey="manufacturing" moduleLabel="Manufacturing & production" />}>
                     <Route path="/production" element={<Production />} />
                     <Route path="/production-jobs" element={<ProductionJobs />} />
                     <Route path="/boms" element={<Boms />} />
+                  </Route>
                   </Route>
                   <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
                     <Route path="/orders" element={<Orders />} />
                     <Route path="/clients" element={<Clients />} />
                   </Route>
                   <Route element={<TenantModuleRoute moduleKey="inventory" moduleLabel="Inventory & stock" />}>
-                    <Route path="/inventory" element={<Inventory />} />
+                    <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_INVENTORY]} />}>
+                      <Route path="/inventory" element={<Inventory />} />
+                    </Route>
                   </Route>
                   <Route element={<TenantModuleRoute moduleKey="procurement" moduleLabel="Procurement & POs" />}>
-                    <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                    <Route element={<ProtectedRoute requiredPermissions={[PERMS.PO_VIEW]} />}>
+                      <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                    </Route>
                   </Route>
                   <Route element={<TenantModuleRoute moduleKey="hr" moduleLabel="HR & payroll" />}>
-                    <Route element={<ProtectedRoute allowedRoles={['Admin', 'hr_head', 'finance_head']} />}>
+                    <Route element={<ProtectedRoute requiredPermissions={[PERMS.HR_FULL]} />}>
                       <Route path="/hr" element={<Hr />} />
                     </Route>
                     <Route element={<ProtectedRoute allowedRoles={['employee']} />}>
@@ -221,28 +230,12 @@ const App = () => {
                     </Route>
                   </Route>
                   <Route element={<TenantModuleRoute moduleKey="finance" moduleLabel="Finance & AP/AR" />}>
-                  <Route
-                    element={
-                      <ProtectedRoute allowedRoles={["Admin", "finance_head", "finance_viewer"]} />
-                    }
-                  >
+                  <Route element={<ProtectedRoute requiredPermissions={[PERMS.FINANCE_READ]} />}>
                     <Route path="/finance" element={<Finance />} />
                   </Route>
                   </Route>
                   <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
-                  <Route
-                    element={
-                      <ProtectedRoute
-                        allowedRoles={[
-                          "Admin",
-                          "warehouse_head",
-                          "finance_head",
-                          "finance_viewer",
-                          "purchasing_head",
-                        ]}
-                      />
-                    }
-                  >
+                  <Route element={<ProtectedRoute requiredPermissions={[PERMS.SHIPMENTS_VIEW]} />}>
                     <Route path="/shipments" element={<Shipments />} />
                   </Route>
                   </Route>

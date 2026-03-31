@@ -108,6 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     (permission: string) => {
       if (!user) return false;
       if (user.role === "Admin") return true;
+      if (user.platformRole === "super_admin") return true;
       const p = user.permissions || [];
       if (p.includes("*")) return true;
       return p.includes(permission);

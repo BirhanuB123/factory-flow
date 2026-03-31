@@ -16,7 +16,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Search, Plus, Users, Eye, Edit, Trash2, FileStack, Layers, Hash } from "lucide-react";
+import { Search, Plus, Users, Eye, Edit, Trash2, FileStack, Layers, Hash, Sparkles } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface Client {
@@ -131,27 +131,49 @@ export default function Clients() {
       c.email?.toLowerCase().includes(search.toLowerCase()) ||
       c._id.toLowerCase().includes(search.toLowerCase())
   );
+  const withEmailCount = clients.filter((c: Client) => Boolean(c.email)).length;
+  const vatRegisteredCount = clients.filter((c: Client) => c.vatRegistered !== false).length;
+  const manufacturingAccounts = clients.filter((c: Client) =>
+    (c.industry ?? "").toLowerCase().includes("manufact")
+  ).length;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="space-y-1 px-1">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-1 bg-primary rounded-full" />
-          <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">Order Pipeline</h1>
+    <div className="space-y-8 pb-8 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-1 bg-primary rounded-full" />
+            <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">Client Accounts</h1>
+            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground max-w-xl">
+            Manage customer organizations, key contacts, and tax profile details for order-to-cash flows.
+          </p>
         </div>
-        <p className="text-sm font-medium text-muted-foreground">Logistics, fulfillment status, and lifecycle monitoring</p>
+
+        <div className="hidden lg:flex items-center gap-6 px-6 py-3 bg-secondary/50 rounded-2xl backdrop-blur-sm border border-border/50">
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">VAT registered</p>
+            <p className="text-sm font-mono font-bold">{vatRegisteredCount}</p>
+          </div>
+          <div className="h-8 w-px bg-border" />
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Profiles with email</p>
+            <p className="text-sm font-mono font-bold text-success">{withEmailCount}</p>
+          </div>
+        </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Partner Network", value: clients.length, icon: Users, color: "text-primary", bg: "bg-primary/10" },
-          { label: "Enterprise Accounts", value: clients.filter((c: Client) => c.industry === "Manufacturing").length, icon: FileStack, color: "text-success", bg: "bg-success/10" },
-          { label: "Recent Expansion", value: "+2", icon: Layers, color: "text-info", bg: "bg-info/10" },
-          { label: "Active Locations", value: "8", icon: Hash, color: "text-warning", bg: "bg-warning/10" }
+          { label: "Manufacturing Accounts", value: manufacturingAccounts, icon: FileStack, color: "text-success", bg: "bg-success/10" },
+          { label: "VAT Registered", value: vatRegisteredCount, icon: Layers, color: "text-info", bg: "bg-info/10" },
+          { label: "Profiles With Email", value: withEmailCount, icon: Hash, color: "text-warning", bg: "bg-warning/10" }
         ].map((stat, idx) => (
-          <Card key={idx} className="border-none shadow-md bg-card/60 backdrop-blur-md overflow-hidden group">
-            <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full blur-3xl opacity-10 ${stat.bg}`} />
+          <Card key={idx} className="relative overflow-hidden group rounded-2xl border-border/70 bg-card/60 backdrop-blur-md shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
+            <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
             <CardContent className="p-5 flex items-center gap-4">
               <div className={`h-12 w-12 rounded-xl ${stat.bg} flex items-center justify-center transition-transform group-hover:scale-110 duration-300`}>
                 <stat.icon className={`h-6 w-6 ${stat.color}`} />
@@ -166,8 +188,8 @@ export default function Clients() {
       </div>
 
       {/* Main Container */}
-      <Card className="border-none shadow-xl bg-card/60 backdrop-blur-xl overflow-hidden">
-        <CardHeader className="pb-6 border-b border-white/5 bg-white/5">
+      <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
+        <CardHeader className="pb-6 border-b border-border/60 bg-muted/10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -177,7 +199,7 @@ export default function Clients() {
               <p className="text-sm font-medium text-muted-foreground">Customer relationships, industrial sectors, and contact data</p>
             </div>
             <Button 
-              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5" 
+              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5" 
               onClick={() => {
                 setSelectedClient(null);
                 setEditingClient(null);
@@ -206,7 +228,7 @@ export default function Clients() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/10">
-                <TableRow className="hover:bg-transparent border-white/5">
+                <TableRow className="hover:bg-transparent border-border/50">
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground pl-6 h-12">Corporate Entity</TableHead>
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden md:table-cell">Communication Channel</TableHead>
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden lg:table-cell">Direct Link</TableHead>
@@ -231,7 +253,7 @@ export default function Clients() {
                   filtered.map((client) => (
                     <TableRow
                       key={client._id}
-                      className="cursor-pointer transition-colors hover:bg-white/5 border-white/5 group/row"
+                      className="cursor-pointer transition-colors hover:bg-muted/30 border-border/50 group/row"
                       onClick={() => setSelectedClient(client)}
                     >
                       <TableCell className="pl-6">

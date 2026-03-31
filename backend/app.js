@@ -325,13 +325,17 @@ app.get('/api/boms/:id', getBom);
 app.put('/api/boms/:id', updateBom);
 app.delete('/api/boms/:id', deleteBom);
 
-app.get('/api/production', getJobs);
+app.get('/api/production', authorizePerm(P.DASHBOARD_MFG), getJobs);
 app.post('/api/production', createJob);
 app.post('/api/production/from-order', createJobFromOrder);
-app.get('/api/production/capacity/plan', getCapacityPlan);
-app.get('/api/production/kpis', getProductionKpis);
+app.get(
+  '/api/production/capacity/plan',
+  authorizePerm(P.DASHBOARD_MFG),
+  getCapacityPlan
+);
+app.get('/api/production/kpis', authorizePerm(P.DASHBOARD_MFG), getProductionKpis);
 app.post('/api/production/:id/reserve-materials', reserveJobMaterials);
-app.get('/api/production/:id', getJob);
+app.get('/api/production/:id', authorizePerm(P.DASHBOARD_MFG), getJob);
 app.put('/api/production/:id', updateJob);
 app.delete('/api/production/:id', deleteJob);
 app.post('/api/production/:id/sync-operations', syncJobOperations);
@@ -348,12 +352,12 @@ app.patch('/api/production/:id/costing', updateJobCosting);
 const mc = manufacturingController;
 app.get('/api/manufacturing/work-centers', mc.listWorkCenters);
 app.post('/api/manufacturing/work-centers', mc.createWorkCenter);
-app.get('/api/manufacturing/assets', mc.listAssets);
+app.get('/api/manufacturing/assets', authorizePerm(P.DASHBOARD_MFG), mc.listAssets);
 app.post('/api/manufacturing/assets', mc.createAsset);
 app.get('/api/manufacturing/pm-schedules', mc.listPmSchedules);
 app.post('/api/manufacturing/pm-schedules', mc.createPmSchedule);
 app.post('/api/manufacturing/pm-schedules/:id/complete', mc.completePm);
-app.get('/api/manufacturing/downtime', mc.listDowntime);
+app.get('/api/manufacturing/downtime', authorizePerm(P.DASHBOARD_MFG), mc.listDowntime);
 app.post('/api/manufacturing/downtime', mc.createDowntime);
 app.post('/api/manufacturing/downtime/:id/end', mc.endDowntime);
 app.get('/api/manufacturing/inspections', mc.listInspections);
@@ -376,39 +380,31 @@ app.put('/api/orders/:id', updateOrder);
 app.delete('/api/orders/:id', deleteOrder);
 app.post('/api/orders/:orderId/reserve-line', reserveOrderLine);
 
-app.get(
-  '/api/shipments',
-  authorize('Admin', 'warehouse_head', 'finance_head', 'finance_viewer', 'purchasing_head'),
-  listShipments
-);
+app.get('/api/shipments', authorizePerm(P.SHIPMENTS_VIEW), listShipments);
 app.get(
   '/api/shipments/order/:orderId',
-  authorize('Admin', 'warehouse_head', 'finance_head', 'finance_viewer'),
+  authorizePerm(P.SHIPMENTS_VIEW),
   listShipmentsForOrder
 );
 app.get(
   '/api/shipments/:id/delivery-note.html',
-  authorize('Admin', 'warehouse_head', 'finance_head', 'finance_viewer', 'purchasing_head'),
+  authorizePerm(P.SHIPMENTS_VIEW),
   getDeliveryNoteHtml
 );
-app.get(
-  '/api/shipments/:id',
-  authorize('Admin', 'warehouse_head', 'finance_head', 'finance_viewer'),
-  getShipment
-);
+app.get('/api/shipments/:id', authorizePerm(P.SHIPMENTS_VIEW), getShipment);
 app.post(
   '/api/shipments',
-  authorize('Admin', 'warehouse_head'),
+  authorizePerm(P.SHIPMENTS_MANAGE),
   createShipment
 );
 app.put(
   '/api/shipments/:id/status',
-  authorize('Admin', 'warehouse_head'),
+  authorizePerm(P.SHIPMENTS_MANAGE),
   updateShipmentStatus
 );
 app.post(
   '/api/shipments/:id/ship',
-  authorize('Admin', 'warehouse_head'),
+  authorizePerm(P.SHIPMENTS_MANAGE),
   shipShipment
 );
 

@@ -287,12 +287,12 @@ export default function EmployeeHr() {
         </StickyModuleTabs>
 
         <TabsContent value="attendance">
-          <Card className="bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl shadow-2xl">
-            <CardHeader className="pb-4 border-b border-white/5">
+          <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border/60 bg-muted/10">
               <CardTitle className="text-base font-black uppercase tracking-wide">My Attendance History</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-3">
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-3">
                 <Label className="text-xs font-semibold">Manual attendance entry</Label>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                   <div>
@@ -401,8 +401,8 @@ export default function EmployeeHr() {
         </TabsContent>
 
         <TabsContent value="leaves">
-          <Card className="bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl shadow-2xl">
-            <CardHeader className="pb-4 border-b border-white/5">
+          <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border/60 bg-muted/10">
               <CardTitle className="text-base flex items-center gap-2 font-black uppercase tracking-wide">
                 <Calendar className="h-4 w-4" /> Request Leave
               </CardTitle>
@@ -583,8 +583,8 @@ export default function EmployeeHr() {
         </TabsContent>
 
         <TabsContent value="corrections">
-          <Card className="bg-card/40 backdrop-blur-xl border-white/5 overflow-hidden rounded-3xl shadow-2xl">
-            <CardHeader className="pb-4 border-b border-white/5">
+          <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border/60 bg-muted/10">
               <CardTitle className="text-base font-black uppercase tracking-wide">
                 Attendance Correction Request
               </CardTitle>

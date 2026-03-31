@@ -4,10 +4,18 @@ import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   allowedRoles?: Role[];
+  /** User must have at least one of these (unless requireAllPermissions). */
+  requiredPermissions?: string[];
+  /** When true, user must have every permission in requiredPermissions. */
+  requireAllPermissions?: boolean;
 }
 
-export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
-  const { isAuthenticated, user, isLoading } = useAuth();
+export const ProtectedRoute = ({
+  allowedRoles,
+  requiredPermissions,
+  requireAllPermissions = false,
+}: ProtectedRouteProps) => {
+  const { isAuthenticated, user, isLoading, can } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -26,6 +34,15 @@ export const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
     // Role not authorized, redirect to home page or show forbidden page
     return <Navigate to="/" replace />;
+  }
+
+  if (requiredPermissions && requiredPermissions.length > 0 && user) {
+    const ok = requireAllPermissions
+      ? requiredPermissions.every((p) => can(p))
+      : requiredPermissions.some((p) => can(p));
+    if (!ok) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return <Outlet />;

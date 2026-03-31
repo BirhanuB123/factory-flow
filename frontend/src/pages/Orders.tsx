@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  Search, Plus, ShoppingCart, Eye, Trash2, DollarSign, Layers, Hash, Factory, Package, Link2, Download,
+  Search, Plus, ShoppingCart, Eye, Trash2, DollarSign, Layers, Hash, Factory, Package, Link2, Download, Sparkles,
 } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
 import { useEthiopianDateDisplay } from "@/hooks/use-ethiopian-date";
@@ -204,15 +204,33 @@ export default function Orders() {
   const activeOrders = orders.filter((o: Order) => o.status !== "delivered" && o.status !== "cancelled").length;
   const totalRev = orders.reduce((sum: number, o: Order) => sum + (o.totalAmount || 0), 0);
   const shippedToday = orders.filter((o: Order) => o.status === "shipped").length; // Simplified for demo
+  const settledOrders = orders.filter((o: Order) => o.status === "delivered").length;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="space-y-1 px-1">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-1 bg-primary rounded-full" />
-          <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">Order Pipeline</h1>
+    <div className="space-y-8 pb-8 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-1 bg-primary rounded-full" />
+            <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">Order Pipeline</h1>
+            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground max-w-xl">
+            Logistics, fulfillment status, and customer order flow from demand to shipped output.
+          </p>
         </div>
-        <p className="text-sm font-medium text-muted-foreground">Logistics, fulfillment status, and lifecycle monitoring</p>
+
+        <div className="hidden lg:flex items-center gap-6 px-6 py-3 bg-secondary/50 rounded-2xl backdrop-blur-sm border border-border/50">
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">In-flight orders</p>
+            <p className="text-sm font-mono font-bold">{activeOrders}</p>
+          </div>
+          <div className="h-8 w-px bg-border" />
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Delivered orders</p>
+            <p className="text-sm font-mono font-bold text-success">{settledOrders}</p>
+          </div>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -223,8 +241,8 @@ export default function Orders() {
           { label: "Orders in Transit", value: shippedToday, icon: Layers, color: "text-info", bg: "bg-info/10" },
           { label: "Unfulfilled", value: activeOrders, icon: Hash, color: "text-warning", bg: "bg-warning/10" }
         ].map((stat, idx) => (
-          <Card key={idx} className="border-none shadow-md bg-card/60 backdrop-blur-md overflow-hidden group">
-            <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full blur-3xl opacity-10 ${stat.bg}`} />
+          <Card key={idx} className="relative overflow-hidden group rounded-2xl border-border/70 bg-card/60 backdrop-blur-md shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
+            <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
             <CardContent className="p-5 flex items-center gap-4">
               <div className={`h-12 w-12 rounded-xl ${stat.bg} flex items-center justify-center transition-transform group-hover:scale-110 duration-300`}>
                 <stat.icon className={`h-6 w-6 ${stat.color}`} />
@@ -239,8 +257,8 @@ export default function Orders() {
       </div>
 
       {/* MRP / demand → supply */}
-      <Card className="border-none shadow-xl bg-card/60 backdrop-blur-xl overflow-hidden border-l-4 border-l-amber-500/80">
-        <CardHeader className="pb-2 border-b border-white/5">
+      <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden border-l-4 border-l-amber-500/80">
+        <CardHeader className="pb-2 border-b border-border/60 bg-muted/10">
           <div className="flex items-center gap-2">
             <Factory className="h-5 w-5 text-amber-500" />
             <CardTitle className="text-lg font-black uppercase tracking-tight">
@@ -321,8 +339,8 @@ export default function Orders() {
       </Card>
 
       {/* Main Container */}
-      <Card className="border-none shadow-xl bg-card/60 backdrop-blur-xl overflow-hidden">
-        <CardHeader className="pb-6 border-b border-white/5 bg-white/5">
+      <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
+        <CardHeader className="pb-6 border-b border-border/60 bg-muted/10">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
@@ -393,7 +411,7 @@ export default function Orders() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/10">
-                <TableRow className="hover:bg-transparent border-white/5">
+                <TableRow className="hover:bg-transparent border-border/50">
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground pl-6 h-12">System ID</TableHead>
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12">Customer Account</TableHead>
                   <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 text-right">Total Value</TableHead>
@@ -436,7 +454,7 @@ export default function Orders() {
                   filtered.map((order) => (
                     <TableRow 
                       key={order._id} 
-                      className="cursor-pointer transition-colors hover:bg-white/5 border-white/5 group/row" 
+                      className="cursor-pointer transition-colors hover:bg-muted/30 border-border/50 group/row" 
                       onClick={() => setSelectedOrder(order)}
                     >
                       <TableCell className="pl-6 font-mono text-[10px] font-bold text-muted-foreground opacity-50 group-hover/row:opacity-100 transition-opacity">

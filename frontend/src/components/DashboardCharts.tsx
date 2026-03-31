@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import type { TenantModuleFlags } from "@/lib/api";
 import { productionApi, inventoryApi } from "@/lib/api";
+import { PERMS } from "@/lib/permissions";
 
 const BAR_PALETTE = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#ec4899", "#6366f1"];
 
@@ -74,9 +75,9 @@ function inventoryByCategory(products: Array<{ category?: string; stock?: number
 }
 
 export function DashboardCharts() {
-  const { user } = useAuth();
-  const mfgEnabled = moduleEnabled(user, "manufacturing");
-  const invEnabled = moduleEnabled(user, "inventory");
+  const { user, can } = useAuth();
+  const mfgEnabled = moduleEnabled(user, "manufacturing") && can(PERMS.DASHBOARD_MFG);
+  const invEnabled = moduleEnabled(user, "inventory") && can(PERMS.DASHBOARD_INVENTORY);
 
   const { data: jobs = [], isLoading: jobsLoading } = useQuery({
     queryKey: ["productions"],
@@ -103,9 +104,13 @@ export function DashboardCharts() {
           <span className="text-[10px] text-muted-foreground">Last 7 days · completed vs due</span>
         </CardHeader>
         <CardContent>
-          {!mfgEnabled ? (
+          {!moduleEnabled(user, "manufacturing") ? (
             <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground px-4 text-center">
               Manufacturing is disabled for this tenant. Enable the module to see production trends.
+            </div>
+          ) : !can(PERMS.DASHBOARD_MFG) ? (
+            <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground px-4 text-center">
+              You do not have permission to view production trends.
             </div>
           ) : jobsLoading ? (
             <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">Loading…</div>
@@ -179,9 +184,13 @@ export function DashboardCharts() {
           <span className="text-[10px] text-muted-foreground">Units on hand</span>
         </CardHeader>
         <CardContent>
-          {!invEnabled ? (
+          {!moduleEnabled(user, "inventory") ? (
             <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground px-4 text-center">
               Inventory is disabled for this tenant. Enable the module to see stock distribution.
+            </div>
+          ) : !can(PERMS.DASHBOARD_INVENTORY) ? (
+            <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground px-4 text-center">
+              You do not have permission to view inventory distribution.
             </div>
           ) : invLoading ? (
             <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">Loading…</div>

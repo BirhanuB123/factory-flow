@@ -6,6 +6,7 @@ import { Circle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TenantModuleFlags } from "@/lib/api";
 import { manufacturingApi } from "@/lib/api";
+import { PERMS } from "@/lib/permissions";
 
 type AssetRow = {
   _id: string;
@@ -56,8 +57,8 @@ function uptimePctLast7d(assetId: string, downtime: DowntimeRow[]): number {
 
 export function MachineStatus() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const mfgEnabled = moduleEnabled(user, "manufacturing");
+  const { user, can } = useAuth();
+  const mfgEnabled = moduleEnabled(user, "manufacturing") && can(PERMS.DASHBOARD_MFG);
 
   const { data: assets = [], isLoading: assetsLoading } = useQuery({
     queryKey: ["manufacturing-assets"],

@@ -19,6 +19,7 @@ import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocale } from "@/contexts/LocaleContext";
 import type { TenantModuleKey } from "@/lib/api";
+import { PERMS } from "@/lib/permissions";
 import {
   Sidebar,
   SidebarContent,
@@ -33,29 +34,29 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-// Defining nav items with required roles (no roles array = accessible by all authenticated users)
+/** Nav: optional `permissions` (any) or `roles` (legacy self-service). No filter = any authenticated user. */
 const allNavItems = [
-  { titleKey: "nav.dashboard", url: "/", icon: LayoutDashboard },
-  { titleKey: "nav.production", url: "/production", icon: Factory },
-  { titleKey: "nav.jobs", url: "/production-jobs", icon: Wrench },
-  { titleKey: "nav.boms", url: "/boms", icon: FileStack },
+  { titleKey: "nav.dashboard", url: "/", icon: LayoutDashboard, permissions: [PERMS.DASHBOARD_VIEW] },
+  { titleKey: "nav.production", url: "/production", icon: Factory, permissions: [PERMS.DASHBOARD_MFG] },
+  { titleKey: "nav.jobs", url: "/production-jobs", icon: Wrench, permissions: [PERMS.DASHBOARD_MFG] },
+  { titleKey: "nav.boms", url: "/boms", icon: FileStack, permissions: [PERMS.DASHBOARD_MFG] },
   { titleKey: "nav.orders", url: "/orders", icon: ShoppingCart },
   { titleKey: "nav.clients", url: "/clients", icon: Users },
-  { titleKey: "nav.inventory", url: "/inventory", icon: Package },
-  { titleKey: "nav.purchasing", url: "/purchase-orders", icon: Truck },
+  { titleKey: "nav.inventory", url: "/inventory", icon: Package, permissions: [PERMS.DASHBOARD_INVENTORY] },
+  { titleKey: "nav.purchasing", url: "/purchase-orders", icon: Truck, permissions: [PERMS.PO_VIEW] },
   {
     titleKey: "nav.shipments",
     url: "/shipments",
     icon: PackageCheck,
-    roles: ["Admin", "warehouse_head", "finance_head", "finance_viewer", "purchasing_head"],
+    permissions: [PERMS.SHIPMENTS_VIEW],
   },
-  { titleKey: "nav.hr", url: "/hr", icon: UserCog, roles: ["Admin", "hr_head", "finance_head"] },
-  { titleKey: "nav.hr", url: "/my-hr", icon: UserCog, roles: ["employee"] },
+  { titleKey: "nav.hr", url: "/hr", icon: UserCog, permissions: [PERMS.HR_FULL] },
+  { titleKey: "nav.hr", url: "/my-hr", icon: UserCog, roles: ["employee"] as const },
   {
     titleKey: "nav.finance",
     url: "/finance",
     icon: CircleDollarSign,
-    roles: ["Admin", "finance_head", "finance_viewer"],
+    permissions: [PERMS.FINANCE_READ],
   },
   { titleKey: "nav.smeBundle", url: "/sme-bundle", icon: Layers },
   {
@@ -86,7 +87,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const currentPath = location.pathname;
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const { t } = useLocale();
 
   const navItems = allNavItems.filter((item) => {
@@ -97,10 +98,15 @@ export function AppSidebar() {
     if (moduleKey && user?.tenantModuleFlags?.[moduleKey] === false) {
       return false;
     }
-    if (!("roles" in item)) return true;
-    const allowed = item.roles as readonly string[];
-    if (user && allowed.includes(user.role)) return true;
-    return false;
+    if ("permissions" in item && item.permissions?.length) {
+      return item.permissions.some((p) => can(p));
+    }
+    if ("roles" in item && item.roles) {
+      const allowed = item.roles as readonly string[];
+      if (user && allowed.includes(user.role)) return true;
+      return false;
+    }
+    return true;
   });
 
   return (

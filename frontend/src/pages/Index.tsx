@@ -12,7 +12,7 @@ import { useSettings } from "@/hooks/use-settings";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertTriangle, Ban, CalendarClock, CheckCircle2, Sparkles, Zap } from "lucide-react";
-import type { TenantModuleFlags } from "@/lib/api";
+import { PERMS } from "@/lib/permissions";
 
 function subscriptionBadgeVariant(
   status?: string
@@ -40,9 +40,10 @@ function dashboardMfgEnabled(
 }
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
   const { settings } = useSettings();
-  const mfgDash = dashboardMfgEnabled(user);
+  const mfgDash = dashboardMfgEnabled(user) && can(PERMS.DASHBOARD_MFG);
+  const showOpsDashboard = can(PERMS.DASHBOARD_MFG) || can(PERMS.DASHBOARD_INVENTORY);
 
   const { data: kpis } = useQuery({
     queryKey: ["production-kpis", "30d"],
@@ -211,18 +212,22 @@ const Index = () => {
         </Card>
       )}
 
-      <KpiCards />
+      {showOpsDashboard ? (
+        <>
+          <KpiCards />
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 space-y-6">
-          <DashboardCharts />
-          <ProductionJobsTable />
-        </div>
-        <div className="space-y-6">
-          <QuickActions />
-          <MachineStatus />
-        </div>
-      </div>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-2 space-y-6">
+              <DashboardCharts />
+              {can(PERMS.DASHBOARD_MFG) ? <ProductionJobsTable /> : null}
+            </div>
+            <div className="space-y-6">
+              <QuickActions />
+              {can(PERMS.DASHBOARD_MFG) ? <MachineStatus /> : null}
+            </div>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 };

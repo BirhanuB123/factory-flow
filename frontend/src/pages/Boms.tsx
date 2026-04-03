@@ -18,8 +18,9 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  Search, Plus, FileStack, Eye, Copy, Layers, DollarSign, Hash, Trash2, Sparkles,
+  Search, Plus, FileStack, Eye, Copy, Layers, DollarSign, Hash, Trash2,
 } from "lucide-react";
+import { useLocale } from "@/contexts/LocaleContext";
 
 type BomStatus = "Active" | "Draft" | "Archived";
 
@@ -74,7 +75,8 @@ function calcBomCost(components: BomComponent[]) {
   return components.reduce((sum, c) => sum + c.quantity * (c.product?.unitCost || 0), 0);
 }
 
-export default function Boms() {
+export default function Boms({ embedded = false }: { embedded?: boolean }) {
+  const { t } = useLocale();
   const queryClient = useQueryClient();
   const { symbol } = useCurrency();
   const [search, setSearch] = useState("");
@@ -251,100 +253,105 @@ export default function Boms() {
   const archivedCount = bomsData.filter((b) => b.status === "Archived").length;
 
   return (
-    <div className="space-y-8 pb-8 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-1 bg-primary rounded-full" />
-            <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">
-              Bill of Materials
-            </h1>
-            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-          </div>
-          <p className="text-sm font-medium text-muted-foreground max-w-xl">
-            Manage product structures, revisions, and routing definitions for repeatable production planning.
-          </p>
-        </div>
+    <div className={`${embedded ? "space-y-6" : "space-y-8"} pb-8 animate-in fade-in duration-500`}>
+      {!embedded && (
+        <>
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.boms.title")}</h1>
+              <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.boms.subtitle")}</p>
+            </div>
 
-        <div className="hidden lg:flex items-center gap-6 px-6 py-3 bg-secondary/50 rounded-2xl backdrop-blur-sm border border-border/50">
-          <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Active BOMs</p>
-            <p className="text-sm font-mono font-bold text-success">{activeCount}</p>
+            <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
+                <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{activeCount}</p>
+              </div>
+              <div className="h-8 w-px bg-border/70" />
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Draft</p>
+                <p className="text-sm font-semibold text-foreground">{draftCount}</p>
+              </div>
+              <div className="h-8 w-px bg-border/70" />
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Archived</p>
+                <p className="text-sm font-semibold text-muted-foreground">{archivedCount}</p>
+              </div>
+            </div>
           </div>
-          <div className="h-8 w-px bg-border" />
-          <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Draft + Archived</p>
-            <p className="text-sm font-mono font-bold">
-              {draftCount + archivedCount}
-            </p>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Total BOMs", value: bomsData.length, icon: FileStack, color: "text-primary", bg: "bg-primary/10" },
+              { label: "Active", value: activeCount, icon: Layers, color: "text-success", bg: "bg-success/10" },
+              { label: "Total components", value: totalComponents, icon: Hash, color: "text-warning", bg: "bg-warning/10" },
+              { label: "Avg BOM cost", value: `${symbol}${avgCost.toFixed(2)}`, icon: DollarSign, color: "text-info", bg: "bg-info/10" },
+            ].map((stat, idx) => (
+              <Card
+                key={idx}
+                className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+              >
+                <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
+                  >
+                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                    <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Total BOMs", value: bomsData.length, icon: FileStack, color: "text-primary", bg: "bg-primary/10" },
-          { label: "Active", value: activeCount, icon: Layers, color: "text-success", bg: "bg-success/10" },
-          { label: "Total Components", value: totalComponents, icon: Hash, color: "text-warning", bg: "bg-warning/10" },
-          { label: "Avg BOM Cost", value: `${symbol}${avgCost.toFixed(2)}`, icon: DollarSign, color: "text-info", bg: "bg-info/10" }
-        ].map((stat, idx) => (
-          <Card key={idx} className="relative overflow-hidden group rounded-2xl border-border/70 bg-card/60 backdrop-blur-md shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
-            <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className={`h-12 w-12 rounded-xl ${stat.bg} flex items-center justify-center transition-transform group-hover:scale-110 duration-300`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                <p className="text-2xl font-black tracking-tighter">{stat.value}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Main Container */}
-      <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
-        <CardHeader className="pb-6 border-b border-border/60 bg-muted/10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-1 bg-primary rounded-full" />
-                <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">
-                  Product Manifest (BOM)
-                </h1>
-              </div>
-              <p className="text-sm font-medium text-muted-foreground">Technical specifications and bill of materials ledger</p>
+      {/* Search & filters — matches jobs / production pattern */}
+      <Card className="rounded-2xl border-0 bg-card shadow-erp">
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          <div className="flex flex-col gap-4 border-b border-border/50 pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold tracking-tight text-[#1a2744]">
+                {embedded ? "BOM library" : "Search & filters"}
+              </h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {embedded ? "Filter and open engineering records" : "Lifecycle chips and quick lookup"}
+              </p>
             </div>
             <Button
-              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5"
-              onClick={() => { resetForm(); setFormOpen(true); }}
+              className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+              onClick={() => {
+                resetForm();
+                setFormOpen(true);
+              }}
             >
-              <Plus className="h-4 w-4" /> 
-              <span className="font-bold">Engineer New BOM</span>
+              <Plus className="h-4 w-4" />
+              Engineer new BOM
             </Button>
           </div>
-
-          <div className="flex flex-col lg:flex-row gap-4 pt-6">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="group relative min-w-0 flex-1">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
               <Input
                 placeholder="Search specs, part numbers, or system IDs..."
-                className="pl-10 bg-background/50 border-border/50 focus-visible:ring-primary/20 h-11 rounded-xl transition-all"
+                className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-10 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="flex items-center p-1 bg-secondary/40 border border-border/60 rounded-xl gap-1">
+            <div className="flex flex-wrap items-center gap-1 rounded-full border border-border/60 bg-muted/40 p-1">
               {(["All", "Active", "Draft", "Archived"] as const).map((s) => (
                 <button
                   key={s}
+                  type="button"
                   onClick={() => setStatusFilter(s)}
-                  className={`px-4 py-1.5 text-xs font-black uppercase tracking-tight rounded-lg transition-all ${
-                    statusFilter === s 
-                    ? "bg-primary text-primary-foreground shadow-md" 
-                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+                    statusFilter === s
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "border border-transparent bg-muted/30 text-muted-foreground hover:bg-muted/50"
                   }`}
                 >
                   {s}
@@ -352,68 +359,79 @@ export default function Boms() {
               ))}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* BOM register */}
+      <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+        <CardHeader className="border-b border-border/50 bg-muted/20 pb-4 pt-5">
+          <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">BOM register</CardTitle>
+          <p className="text-sm font-medium text-muted-foreground">
+            Click a row for components, routing, output SKU, and effectivity
+          </p>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="bg-muted/10">
-                <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground pl-6 h-12">System ID</TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12">Product Name</TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden sm:table-cell">Output SKU</TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden md:table-cell">Engineering Part #</TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden lg:table-cell text-center">Version</TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 text-center">Components</TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden lg:table-cell text-right">Est. Cost</TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12">Lifecycle</TableHead>
-                  <TableHead className="w-[80px] pr-6"></TableHead>
+              <TableHeader className="bg-muted/25">
+                <TableRow className="border-border/40 hover:bg-transparent">
+                  <TableHead className="h-12 pl-6 text-xs font-bold text-foreground">System ID</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Product name</TableHead>
+                  <TableHead className="hidden h-12 text-xs font-bold text-foreground sm:table-cell">Output SKU</TableHead>
+                  <TableHead className="hidden h-12 text-xs font-bold text-foreground md:table-cell">Part #</TableHead>
+                  <TableHead className="hidden h-12 text-center text-xs font-bold text-foreground lg:table-cell">Version</TableHead>
+                  <TableHead className="h-12 text-center text-xs font-bold text-foreground">Components</TableHead>
+                  <TableHead className="hidden h-12 text-right text-xs font-bold text-foreground lg:table-cell">Est. cost</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Lifecycle</TableHead>
+                  <TableHead className="h-12 w-[80px] pr-6 text-xs font-bold text-foreground" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-20 text-muted-foreground font-medium italic">
-                      Synchronizing with engineering database...
+                    <TableCell colSpan={9} className="py-20 text-center font-medium text-muted-foreground">
+                      Loading BOMs…
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-20 text-muted-foreground font-medium">
-                      No matching specifications found in repository.
+                    <TableCell colSpan={9} className="py-20 text-center font-medium text-muted-foreground">
+                      No BOMs match the current filters.
                     </TableCell>
                   </TableRow>
                 ) : (
                   filtered.map((bom) => (
                     <TableRow
                       key={bom._id}
-                      className="cursor-pointer transition-colors hover:bg-muted/30 border-border/50 group/row"
+                      className="group/row cursor-pointer border-border/40 transition-colors hover:bg-muted/35"
                       onClick={() => setSelectedBom(bom)}
                     >
-                      <TableCell className="pl-6 font-mono text-[10px] font-bold text-muted-foreground opacity-50 group-hover/row:opacity-100 transition-opacity">
-                        {bom._id.substring(0, 8)}...
+                      <TableCell className="pl-6 font-mono text-[10px] font-medium text-muted-foreground opacity-60 transition-opacity group-hover/row:opacity-100">
+                        {bom._id.substring(0, 8)}…
                       </TableCell>
                       <TableCell>
-                        <span className="font-black text-[13px] tracking-tight text-foreground">{bom.name}</span>
+                        <span className="text-[13px] font-semibold tracking-tight text-foreground">{bom.name}</span>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell font-mono text-[10px] text-muted-foreground">
+                      <TableCell className="hidden font-mono text-[10px] text-muted-foreground sm:table-cell">
                         {typeof bom.outputProduct === "object" && bom.outputProduct?.sku
                           ? bom.outputProduct.sku
                           : "—"}
                       </TableCell>
-                      <TableCell className="hidden md:table-cell font-mono text-[11px] font-bold text-primary italic">
+                      <TableCell className="hidden font-mono text-[11px] font-semibold text-primary md:table-cell">
                         {bom.partNumber}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell text-center">
-                        <Badge variant="outline" className="text-[10px] font-black uppercase rounded-md border-primary/30 px-2">
+                      <TableCell className="hidden text-center lg:table-cell">
+                        <Badge variant="outline" className="rounded-md border-primary/30 px-2 text-[10px] font-semibold uppercase">
                           {bom.revision}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center font-mono text-[13px] font-black">{bom.components.length}</TableCell>
-                      <TableCell className="hidden lg:table-cell text-right font-mono text-[13px] font-black text-info">
-                        {symbol}{calcBomCost(bom.components).toFixed(2)}
+                      <TableCell className="text-center font-mono text-[13px] font-semibold">{bom.components.length}</TableCell>
+                      <TableCell className="hidden text-right font-mono text-[13px] font-semibold text-info lg:table-cell">
+                        {symbol}
+                        {calcBomCost(bom.components).toFixed(2)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant[bom.status]} className="text-[10px] font-black uppercase tracking-tight py-0 px-2 rounded-md">
+                        <Badge variant={statusVariant[bom.status]} className="rounded-md px-2 py-0 text-[10px] font-semibold uppercase tracking-tight">
                           {bom.status}
                         </Badge>
                       </TableCell>
@@ -421,8 +439,11 @@ export default function Boms() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-lg opacity-0 group-hover/row:opacity-100 transition-all hover:bg-primary hover:text-primary-foreground"
-                          onClick={(e) => { e.stopPropagation(); setSelectedBom(bom); }}
+                          className="h-8 w-8 rounded-full opacity-0 transition-all group-hover/row:opacity-100 hover:bg-primary/10 hover:text-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedBom(bom);
+                          }}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -438,10 +459,10 @@ export default function Boms() {
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedBom} onOpenChange={(open) => !open && setSelectedBom(null)}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 shadow-erp sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileStack className="h-5 w-5 text-primary" />
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-[#1a2744]">
+              <FileStack className="h-5 w-5 shrink-0 text-primary" />
               {selectedBom?.name}
             </DialogTitle>
             <DialogDescription>
@@ -468,7 +489,7 @@ export default function Boms() {
               {/* Components Table */}
               <div>
                 <h4 className="text-sm font-semibold text-foreground mb-2">Components</h4>
-                <div className="border rounded-lg overflow-hidden">
+                <div className="overflow-hidden rounded-xl border border-border/60">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -555,6 +576,7 @@ export default function Boms() {
                 </div>
                 <Button
                   size="sm"
+                  className="rounded-full"
                   disabled={!editOutputProductId || updateBomMutation.isPending}
                   onClick={() =>
                     selectedBom &&
@@ -678,6 +700,7 @@ export default function Boms() {
                     type="button"
                     size="sm"
                     variant="outline"
+                    className="rounded-full"
                     onClick={() =>
                       setEditRouting((p) => [
                         ...p,
@@ -697,6 +720,7 @@ export default function Boms() {
                   </Button>
                   <Button
                     size="sm"
+                    className="rounded-full"
                     disabled={updateBomMutation.isPending || !selectedBom}
                     onClick={() =>
                       selectedBom &&
@@ -713,7 +737,12 @@ export default function Boms() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => selectedBom && openForDuplicate(selectedBom)}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 rounded-full"
+              onClick={() => selectedBom && openForDuplicate(selectedBom)}
+            >
               <Copy className="h-3.5 w-3.5" /> Duplicate BOM
             </Button>
           </DialogFooter>
@@ -722,9 +751,11 @@ export default function Boms() {
 
       {/* New / Duplicate BOM Form */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 shadow-erp sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{duplicateSource ? "Duplicate BOM" : "New BOM"}</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-[#1a2744]">
+              {duplicateSource ? "Duplicate BOM" : "New BOM"}
+            </DialogTitle>
             <DialogDescription>
               {duplicateSource ? "Create a copy with a new name and part number." : "Add a new bill of materials."}
             </DialogDescription>
@@ -832,9 +863,12 @@ export default function Boms() {
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-full" onClick={() => setFormOpen(false)}>
+              Cancel
+            </Button>
             <Button
+              className="rounded-full"
               onClick={() => {
                 if (!formName.trim() || !formPartNumber.trim()) {
                   toast.error("Name and Part Number are required");

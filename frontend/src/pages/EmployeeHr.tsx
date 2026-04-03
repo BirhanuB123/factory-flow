@@ -6,10 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Calendar, Clock, Edit2, Trash2, Save } from "lucide-react";
+import { Loader2, Calendar, Clock, Edit2, Trash2, Save, ClipboardList, CheckCircle2, FileQuestion } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ModuleDashboardLayout,
   StickyModuleTabs,
   moduleTabsListClassName,
   moduleTabsTriggerClassName,
@@ -20,8 +19,10 @@ import {
   type EmployeeAttendanceRow,
   type AttendanceCorrectionRow,
 } from "@/lib/api";
+import { useLocale } from "@/contexts/LocaleContext";
 
 export default function EmployeeHr() {
+  const { t } = useLocale();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [today, setToday] = useState<EmployeeAttendanceRow | null>(null);
@@ -240,38 +241,114 @@ export default function EmployeeHr() {
     [leaves]
   );
 
+  const pendingCorrections = useMemo(
+    () => corrections.filter((c) => c.status === "pending").length,
+    [corrections]
+  );
+
   return (
-    <ModuleDashboardLayout
-      title="My HR Dashboard"
-      description="Self-service attendance, leave, and correction requests."
-      icon={Calendar}
-      healthStats={[
-        { label: "Today", value: `${today?.checkIn || "--:--"} - ${today?.checkOut || "--:--"}` },
-        { label: "Pending leaves", value: String(pendingLeaves), accent: "text-warning" },
-        { label: "Sync", value: syncing ? "Syncing..." : "Auto 30s", accent: syncing ? "text-primary" : undefined },
-      ]}
-      actions={
-        <div className="flex flex-wrap gap-2">
-          <Button
-            onClick={onCheckIn}
-            disabled={loading || !!today?.checkIn}
-            className="h-10 font-black uppercase text-xs"
-          >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Clock className="h-4 w-4 mr-2" />}
-            Check in
-          </Button>
-          <Button
-            variant="outline"
-            onClick={onCheckOut}
-            disabled={loading || !today?.checkIn || !!today?.checkOut}
-            className="h-10 font-black uppercase text-xs"
-          >
-            Check out
-          </Button>
+    <>
+      <div className="space-y-8 pb-8 animate-in fade-in duration-500">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.myHr.title")}</h1>
+            <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.myHr.subtitle")}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={onCheckIn}
+              disabled={loading || !!today?.checkIn}
+              className="h-10 gap-2 rounded-full px-5 font-semibold shadow-sm"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
+              {t("pages.myHr.checkIn")}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onCheckOut}
+              disabled={loading || !today?.checkIn || !!today?.checkOut}
+              className="h-10 rounded-full border-border/60 px-5 font-semibold shadow-erp-sm"
+            >
+              {t("pages.myHr.checkOut")}
+            </Button>
+          </div>
         </div>
-      }
-    >
-      <Tabs defaultValue="attendance" className="space-y-6">
+
+        <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Today</p>
+            <p className="text-sm font-semibold text-foreground">
+              {today?.checkIn || "—"} – {today?.checkOut || "—"}
+            </p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pending leaves</p>
+            <p className={`text-sm font-semibold ${pendingLeaves > 0 ? "text-amber-600" : "text-muted-foreground"}`}>
+              {pendingLeaves}
+            </p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Sync</p>
+            <p className={`text-sm font-semibold ${syncing ? "text-primary" : "text-muted-foreground"}`}>
+              {syncing ? "Syncing…" : "Auto 30s"}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              label: "History rows",
+              value: String(history.length),
+              icon: ClipboardList,
+              color: "text-primary",
+              bg: "bg-primary/10",
+            },
+            {
+              label: "Pending leaves",
+              value: String(pendingLeaves),
+              icon: Calendar,
+              color: "text-warning",
+              bg: "bg-warning/10",
+            },
+            {
+              label: "Corrections (pending)",
+              value: String(pendingCorrections),
+              icon: FileQuestion,
+              color: "text-info",
+              bg: "bg-info/10",
+            },
+            {
+              label: "Decided leaves",
+              value: String(reviewedLeaves.length),
+              icon: CheckCircle2,
+              color: "text-success",
+              bg: "bg-success/10",
+            },
+          ].map((stat, idx) => (
+            <Card
+              key={idx}
+              className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
+              <CardContent className="flex items-center gap-4 p-5">
+                <div
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
+                >
+                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                  <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Tabs defaultValue="attendance" className="space-y-6">
         <StickyModuleTabs>
           <TabsList className={moduleTabsListClassName()}>
             <TabsTrigger value="attendance" className={moduleTabsTriggerClassName()}>
@@ -401,10 +478,10 @@ export default function EmployeeHr() {
         </TabsContent>
 
         <TabsContent value="leaves">
-          <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
-            <CardHeader className="pb-4 border-b border-border/60 bg-muted/10">
-              <CardTitle className="text-base flex items-center gap-2 font-black uppercase tracking-wide">
-                <Calendar className="h-4 w-4" /> Request Leave
+          <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+            <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg font-bold tracking-tight text-[#1a2744]">
+                <Calendar className="h-5 w-5 text-primary" /> Request leave
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
@@ -583,11 +660,9 @@ export default function EmployeeHr() {
         </TabsContent>
 
         <TabsContent value="corrections">
-          <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
-            <CardHeader className="pb-4 border-b border-border/60 bg-muted/10">
-              <CardTitle className="text-base font-black uppercase tracking-wide">
-                Attendance Correction Request
-              </CardTitle>
+          <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+            <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
+              <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">Attendance correction</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -692,6 +767,7 @@ export default function EmployeeHr() {
           </Card>
         </TabsContent>
       </Tabs>
-    </ModuleDashboardLayout>
+      </div>
+    </>
   );
 }

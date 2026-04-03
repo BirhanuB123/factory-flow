@@ -13,6 +13,7 @@ import {
   PackageCheck,
   Layers,
   Shield,
+  BarChart3,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -33,6 +34,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 /** Nav: optional `permissions` (any) or `roles` (legacy self-service). No filter = any authenticated user. */
 const allNavItems = [
@@ -51,7 +53,7 @@ const allNavItems = [
     permissions: [PERMS.SHIPMENTS_VIEW],
   },
   { titleKey: "nav.hr", url: "/hr", icon: UserCog, permissions: [PERMS.HR_FULL] },
-  { titleKey: "nav.hr", url: "/my-hr", icon: UserCog, roles: ["employee"] as const },
+  { titleKey: "nav.myHr", url: "/my-hr", icon: UserCog, roles: ["employee"] as const },
   {
     titleKey: "nav.finance",
     url: "/finance",
@@ -65,6 +67,7 @@ const allNavItems = [
     icon: Shield,
     platformSuperAdmin: true,
   },
+  { titleKey: "nav.reports", url: "/reports", icon: BarChart3, permissions: [PERMS.DASHBOARD_VIEW] },
   { titleKey: "nav.settings", url: "/settings", icon: Settings },
 ] as const;
 
@@ -110,22 +113,23 @@ export function AppSidebar() {
   });
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
-      <SidebarHeader className="p-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white/90 p-0">
-            <img
-              src="/integra-logo.svg"
-              alt="Integra logo"
-              className="h-full w-full object-contain"
-            />
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border z-20">
+      <SidebarHeader className="p-4 pb-2">
+        <div className="flex items-center gap-3">
+          <div
+            className="grid shrink-0 grid-cols-2 gap-0.5 rounded-lg p-1"
+            aria-hidden
+            style={{ width: collapsed ? 36 : 40, height: collapsed ? 36 : 40 }}
+          >
+            <span className="h-[15px] w-[15px] rounded-[3px] bg-[hsl(221,83%,53%)]" />
+            <span className="h-[15px] w-[15px] rounded-[3px] bg-[hsl(152,69%,42%)]" />
+            <span className="h-[15px] w-[15px] rounded-[3px] bg-[hsl(32,95%,52%)]" />
+            <span className="h-[15px] w-[15px] rounded-[3px] bg-[hsl(262,83%,58%)]" />
           </div>
           {!collapsed && (
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-sidebar-accent-foreground tracking-tight">
-                INTEGRA
-              </span>
-              <span className="text-[10px] text-sidebar-muted uppercase tracking-widest">
+            <div className="flex min-w-0 flex-col">
+              <span className="text-lg font-bold tracking-tight text-sidebar-foreground">Integra</span>
+              <span className="text-[11px] font-medium text-sidebar-muted">
                 {t("nav.erpSubtitle")}
               </span>
             </div>
@@ -133,29 +137,39 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-2">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-muted text-[10px] uppercase tracking-widest">
+          <SidebarGroupLabel className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-widest text-sidebar-muted">
             {t("nav.navigation")}
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-0.5">
               {navItems.map((item) => {
                 const active =
                   item.url === "/"
                     ? currentPath === "/"
                     : currentPath === item.url || currentPath.startsWith(item.url + "/");
                 return (
-                  <SidebarMenuItem key={item.titleKey}>
-                    <SidebarMenuButton asChild isActive={active}>
+                  <SidebarMenuItem key={`${item.titleKey}-${item.url}`}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      size="lg"
+                      className="h-11 rounded-xl px-3 transition-colors data-[active=true]:shadow-sm"
+                    >
                       <NavLink
                         to={item.url}
                         end
-                        className="hover:bg-sidebar-accent"
-                        activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                        className="text-sidebar-foreground/80 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground"
+                        activeClassName="!bg-sidebar-accent !text-[hsl(221,83%,45%)] !font-semibold"
                       >
-                        <item.icon className="mr-2 h-4 w-4" />
-                        {!collapsed && <span>{t(item.titleKey)}</span>}
+                        <item.icon
+                          className={[
+                            "!h-[18px] !w-[18px] shrink-0",
+                            active ? "text-[hsl(221,83%,53%)]" : "text-sidebar-muted",
+                          ].join(" ")}
+                        />
+                        {!collapsed && <span className="truncate">{t(item.titleKey)}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -166,10 +180,13 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="flex flex-col gap-2 p-4 pt-2">
+        <div className={collapsed ? "flex justify-center" : "flex justify-start"}>
+          <ThemeToggle compact={collapsed} />
+        </div>
         {!collapsed && (
-          <div className="text-[14px] text-sidebar-muted">
-            v1.0.0 — Integra ERP
+          <div className="rounded-xl border border-sidebar-border/80 bg-muted/40 px-3 py-2 text-[11px] text-sidebar-muted">
+            {t("sidebar.version")}
           </div>
         )}
       </SidebarFooter>

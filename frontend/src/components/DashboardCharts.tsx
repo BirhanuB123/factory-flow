@@ -1,9 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  AreaChart,
-  Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -12,14 +12,33 @@ import {
   BarChart,
   Bar,
   Cell,
-  Legend,
 } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
 import type { TenantModuleFlags } from "@/lib/api";
 import { productionApi, inventoryApi } from "@/lib/api";
 import { PERMS } from "@/lib/permissions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { useLocale } from "@/contexts/LocaleContext";
 
-const BAR_PALETTE = ["#0ea5e9", "#8b5cf6", "#10b981", "#f59e0b", "#ec4899", "#6366f1"];
+const BAR_BLUE = "hsl(221, 83%, 53%)";
+const LINE_PRIMARY = "hsl(221, 83%, 53%)";
+const LINE_SECONDARY = "hsl(152, 69%, 42%)";
+
+const RANGE_DAYS: Record<string, number | null> = {
+  "1d": 1,
+  "1w": 7,
+  "1m": 30,
+  "3m": 90,
+  "1y": 365,
+  All: null,
+};
 
 function moduleEnabled(
   user: { platformRole?: string; tenantModuleFlags?: Partial<TenantModuleFlags> } | null | undefined,
@@ -31,16 +50,21 @@ function moduleEnabled(
 }
 
 function buildProductionTrend(
-  jobs: Array<{ status: string; dueDate?: string; updatedAt?: string; createdAt?: string }>
+  jobs: Array<{ status: string; dueDate?: string; updatedAt?: string; createdAt?: string }>,
+  days: number
 ) {
   const rows: { name: string; completion: number; due: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
+  const n = Math.min(Math.max(days, 1), 90);
+  for (let i = n - 1; i >= 0; i--) {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() - i);
     const start = d.getTime();
     const end = start + 86400000;
-    const label = d.toLocaleDateString(undefined, { weekday: "short" });
+    const label =
+      n <= 14
+        ? d.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+        : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
     const completion = jobs.filter((j) => {
       if (j.status !== "Completed") return false;
       const t = new Date(j.updatedAt || j.dueDate || 0).getTime();
@@ -57,27 +81,42 @@ function buildProductionTrend(
   return rows;
 }
 
-function inventoryByCategory(products: Array<{ category?: string; stock?: number }>) {
-  const map = new Map<string, number>();
+function inventoryWeeklyBars(products: Array<{ category?: string; stock?: number }>) {
+  const total = products.reduce((s, p) => s + Number(p.stock || 0), 0);
+  const byCat = new Map<string, number>();
   for (const p of products) {
     const raw = (p.category || "").trim();
     const cat = raw || "Uncategorized";
-    map.set(cat, (map.get(cat) || 0) + Number(p.stock || 0));
+    byCat.set(cat, (byCat.get(cat) || 0) + Number(p.stock || 0));
   }
-  return [...map.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8)
-    .map(([name, value], i) => ({
-      name,
-      value,
-      color: BAR_PALETTE[i % BAR_PALETTE.length],
-    }));
+  const sorted = [...byCat.entries()].sort((a, b) => b[1] - a[1]).slice(0, 7);
+  if (sorted.length === 0) {
+    return [
+      { name: "Week 1", value: Math.max(0, Math.round(total * 0.15)), shade: 0.78 },
+      { name: "Week 2", value: Math.max(0, Math.round(total * 0.22)), shade: 0.86 },
+      { name: "Week 3", value: Math.max(0, Math.round(total * 0.18)), shade: 0.82 },
+      { name: "Week 4", value: Math.max(0, Math.round(total * 0.25)), shade: 0.9 },
+    ];
+  }
+  return sorted.map(([name, value], i) => ({
+    name: name.length > 10 ? name.slice(0, 9) + "…" : name,
+    value,
+    shade: 0.75 + (i % 3) * 0.08,
+  }));
 }
 
 export function DashboardCharts() {
+  const { t } = useLocale();
   const { user, can } = useAuth();
   const mfgEnabled = moduleEnabled(user, "manufacturing") && can(PERMS.DASHBOARD_MFG);
   const invEnabled = moduleEnabled(user, "inventory") && can(PERMS.DASHBOARD_INVENTORY);
+
+  const [lineRange, setLineRange] = useState<keyof typeof RANGE_DAYS>("1m");
+  const [sortBy, setSortBy] = useState("month");
+  const [barSortBy, setBarSortBy] = useState("month");
+
+  const rawDays = RANGE_DAYS[lineRange];
+  const days = rawDays == null ? 90 : rawDays;
 
   const { data: jobs = [], isLoading: jobsLoading } = useQuery({
     queryKey: ["productions"],
@@ -91,137 +130,183 @@ export function DashboardCharts() {
     enabled: invEnabled,
   });
 
-  const productionSeries = useMemo(() => buildProductionTrend(jobs as { status: string }[]), [jobs]);
-  const inventoryBars = useMemo(() => inventoryByCategory(inventory as { category?: string; stock?: number }[]), [inventory]);
+  const productionSeries = useMemo(
+    () => buildProductionTrend(jobs as { status: string }[], Math.min(days, 60)),
+    [jobs, days]
+  );
+
+  const inventoryBars = useMemo(
+    () => inventoryWeeklyBars(inventory as { category?: string; stock?: number }[]),
+    [inventory]
+  );
+
+  const rangePills: (keyof typeof RANGE_DAYS)[] = ["1d", "1w", "1m", "3m", "1y", "All"];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <Card className="shadow-sm border-none bg-card/50 backdrop-blur-sm">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Production Trend
-          </CardTitle>
-          <span className="text-[10px] text-muted-foreground">Last 7 days · completed vs due</span>
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <Card className="rounded-2xl border-0 bg-card shadow-erp">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-2">
+          <CardTitle className="text-base font-bold text-foreground">{t("charts.assetValue")}</CardTitle>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="h-9 w-[150px] rounded-full border-border/60 bg-muted/40 text-xs font-medium">
+              <SelectValue placeholder={t("charts.sortByPlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">{t("charts.sortMonth")}</SelectItem>
+              <SelectItem value="week">{t("charts.sortWeek")}</SelectItem>
+              <SelectItem value="day">{t("charts.sortDay")}</SelectItem>
+            </SelectContent>
+          </Select>
         </CardHeader>
         <CardContent>
           {!moduleEnabled(user, "manufacturing") ? (
-            <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground px-4 text-center">
-              Manufacturing is disabled for this tenant. Enable the module to see production trends.
+            <div className="flex h-[260px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
+              {t("charts.mfgDisabled")}
             </div>
           ) : !can(PERMS.DASHBOARD_MFG) ? (
-            <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground px-4 text-center">
-              You do not have permission to view production trends.
+            <div className="flex h-[260px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
+              {t("charts.noPermChart")}
             </div>
           ) : jobsLoading ? (
-            <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">Loading…</div>
-          ) : (
-            <div className="h-[240px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={productionSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorComp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="colorDue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                    allowDecimals={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      borderColor: "hsl(var(--border))",
-                      borderRadius: "8px",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Area
-                    type="monotone"
-                    dataKey="completion"
-                    name="Completed"
-                    stroke="#0ea5e9"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorComp)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="due"
-                    name="Due (open jobs)"
-                    stroke="#8b5cf6"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorDue)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
+              {t("common.loading")}
             </div>
+          ) : (
+            <>
+              <div className="h-[240px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={productionSeries} margin={{ top: 12, right: 12, left: -8, bottom: 4 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(228 24% 90%)" />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: "hsl(215 16% 46%)" }}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: "hsl(215 16% 46%)" }}
+                      allowDecimals={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(0 0% 100%)",
+                        borderColor: "hsl(228 24% 90%)",
+                        borderRadius: "12px",
+                        fontSize: "12px",
+                        boxShadow: "0 4px 24px -4px rgba(15, 23, 42, 0.08)",
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="completion"
+                      name={t("charts.legendCompleted")}
+                      stroke={LINE_PRIMARY}
+                      strokeWidth={2.5}
+                      dot={{ r: 3, fill: LINE_PRIMARY, strokeWidth: 0 }}
+                      activeDot={{ r: 5 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="due"
+                      name={t("charts.legendScheduled")}
+                      stroke={LINE_SECONDARY}
+                      strokeWidth={2.5}
+                      dot={{ r: 3, fill: LINE_SECONDARY, strokeWidth: 0 }}
+                      activeDot={{ r: 5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-3 flex flex-wrap justify-center gap-1.5 border-t border-border/50 pt-3">
+                {rangePills.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setLineRange(key)}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                      lineRange === key
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    {t(key === "All" ? "charts.range.all" : `charts.range.${key}`)}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      <Card className="shadow-sm border-none bg-card/50 backdrop-blur-sm">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            Inventory by category
-          </CardTitle>
-          <span className="text-[10px] text-muted-foreground">Units on hand</span>
+      <Card className="rounded-2xl border-0 bg-card shadow-erp">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-2">
+          <CardTitle className="text-base font-bold text-foreground">{t("charts.stockByCategory")}</CardTitle>
+          <Select value={barSortBy} onValueChange={setBarSortBy}>
+            <SelectTrigger className="h-9 w-[150px] rounded-full border-border/60 bg-muted/40 text-xs font-medium">
+              <SelectValue placeholder={t("charts.sortByPlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">{t("charts.sortMonth")}</SelectItem>
+              <SelectItem value="week">{t("charts.sortWeek")}</SelectItem>
+              <SelectItem value="value">{t("charts.sortValue")}</SelectItem>
+            </SelectContent>
+          </Select>
         </CardHeader>
         <CardContent>
           {!moduleEnabled(user, "inventory") ? (
-            <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground px-4 text-center">
-              Inventory is disabled for this tenant. Enable the module to see stock distribution.
+            <div className="flex h-[260px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
+              {t("charts.invDisabled")}
             </div>
           ) : !can(PERMS.DASHBOARD_INVENTORY) ? (
-            <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground px-4 text-center">
-              You do not have permission to view inventory distribution.
+            <div className="flex h-[260px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
+              {t("charts.noPermChart")}
             </div>
           ) : invLoading ? (
-            <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">Loading…</div>
+            <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
+              {t("common.loading")}
+            </div>
           ) : inventoryBars.length === 0 ? (
-            <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">No inventory yet.</div>
+            <div className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
+              {t("charts.noInventory")}
+            </div>
           ) : (
-            <div className="h-[240px] w-full">
+            <div className="h-[260px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={inventoryBars} layout="vertical" margin={{ top: 5, right: 30, left: 8, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis type="number" hide />
-                  <YAxis
-                    type="category"
+                <BarChart data={inventoryBars} margin={{ top: 12, right: 12, left: 4, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(228 24% 90%)" />
+                  <XAxis
                     dataKey="name"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    width={100}
+                    tick={{ fontSize: 11, fill: "hsl(215 16% 46%)" }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 11, fill: "hsl(215 16% 46%)" }}
+                    allowDecimals={false}
                   />
                   <Tooltip
-                    cursor={{ fill: "transparent" }}
+                    cursor={{ fill: "hsl(221 91% 97%)" }}
                     contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      borderColor: "hsl(var(--border))",
-                      borderRadius: "8px",
+                      backgroundColor: "hsl(0 0% 100%)",
+                      borderColor: "hsl(228 24% 90%)",
+                      borderRadius: "12px",
                       fontSize: "12px",
+                      boxShadow: "0 4px 24px -4px rgba(15, 23, 42, 0.08)",
                     }}
                   />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
+                  <Bar dataKey="value" radius={[10, 10, 0, 0]} maxBarSize={48}>
                     {inventoryBars.map((entry, index) => (
-                      <Cell key={`cell-${entry.name}-${index}`} fill={entry.color} />
+                      <Cell
+                        key={`cell-${entry.name}-${index}`}
+                        fill={BAR_BLUE}
+                        opacity={typeof entry.shade === "number" ? entry.shade : 0.85}
+                      />
                     ))}
                   </Bar>
                 </BarChart>

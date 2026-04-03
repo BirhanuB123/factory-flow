@@ -22,10 +22,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  Search, Plus, ShoppingCart, Eye, Trash2, DollarSign, Layers, Hash, Factory, Package, Link2, Download, Sparkles,
+  Search, Plus, ShoppingCart, Eye, Trash2, DollarSign, Layers, Hash, Factory, Package, Link2, Download,
 } from "lucide-react";
 import { useCurrency } from "@/hooks/use-currency";
 import { useEthiopianDateDisplay } from "@/hooks/use-ethiopian-date";
+import { useLocale } from "@/contexts/LocaleContext";
 
 type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
 
@@ -62,7 +63,8 @@ interface Order {
   orderDate: string;
 }
 
-export default function Orders() {
+export default function Orders({ embedded = false }: { embedded?: boolean }) {
+  const { t } = useLocale();
   const queryClient = useQueryClient();
   const { format, formatAmount, symbol } = useCurrency();
   const { formatDate } = useEthiopianDateDisplay();
@@ -205,68 +207,82 @@ export default function Orders() {
   const totalRev = orders.reduce((sum: number, o: Order) => sum + (o.totalAmount || 0), 0);
   const shippedToday = orders.filter((o: Order) => o.status === "shipped").length; // Simplified for demo
   const settledOrders = orders.filter((o: Order) => o.status === "delivered").length;
+  const pendingCount = orders.filter((o: Order) => o.status === "pending").length;
+
+  const statusCounts = (orders as Order[]).reduce(
+    (acc, o) => {
+      acc[o.status] = (acc[o.status] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
   return (
-    <div className="space-y-8 pb-8 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-1 bg-primary rounded-full" />
-            <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">Order Pipeline</h1>
-            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-          </div>
-          <p className="text-sm font-medium text-muted-foreground max-w-xl">
-            Logistics, fulfillment status, and customer order flow from demand to shipped output.
-          </p>
-        </div>
+    <div className={`${embedded ? "space-y-6" : "space-y-8"} pb-8 animate-in fade-in duration-500`}>
+      {!embedded && (
+        <>
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.orders.title")}</h1>
+              <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.orders.subtitle")}</p>
+            </div>
 
-        <div className="hidden lg:flex items-center gap-6 px-6 py-3 bg-secondary/50 rounded-2xl backdrop-blur-sm border border-border/50">
-          <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">In-flight orders</p>
-            <p className="text-sm font-mono font-bold">{activeOrders}</p>
+            <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Open pipeline</p>
+                <p className="text-sm font-semibold text-foreground">{activeOrders}</p>
+              </div>
+              <div className="h-8 w-px bg-border/70" />
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pending</p>
+                <p className="text-sm font-semibold text-muted-foreground">{pendingCount}</p>
+              </div>
+              <div className="h-8 w-px bg-border/70" />
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Delivered</p>
+                <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{settledOrders}</p>
+              </div>
+            </div>
           </div>
-          <div className="h-8 w-px bg-border" />
-          <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Delivered orders</p>
-            <p className="text-sm font-mono font-bold text-success">{settledOrders}</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Pipeline Depth", value: orders.length, icon: ShoppingCart, color: "text-primary", bg: "bg-primary/10" },
-          { label: "Active Revenue", value: format(totalRev), icon: DollarSign, color: "text-success", bg: "bg-success/10" },
-          { label: "Orders in Transit", value: shippedToday, icon: Layers, color: "text-info", bg: "bg-info/10" },
-          { label: "Unfulfilled", value: activeOrders, icon: Hash, color: "text-warning", bg: "bg-warning/10" }
-        ].map((stat, idx) => (
-          <Card key={idx} className="relative overflow-hidden group rounded-2xl border-border/70 bg-card/60 backdrop-blur-md shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
-            <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className={`h-12 w-12 rounded-xl ${stat.bg} flex items-center justify-center transition-transform group-hover:scale-110 duration-300`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                <p className="text-2xl font-black tracking-tighter">{stat.value}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Pipeline depth", value: orders.length, icon: ShoppingCart, color: "text-primary", bg: "bg-primary/10" },
+              { label: "Active revenue", value: format(totalRev), icon: DollarSign, color: "text-success", bg: "bg-success/10" },
+              { label: "In transit", value: shippedToday, icon: Layers, color: "text-info", bg: "bg-info/10" },
+              { label: "Unfulfilled", value: activeOrders, icon: Hash, color: "text-warning", bg: "bg-warning/10" },
+            ].map((stat, idx) => (
+              <Card
+                key={idx}
+                className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+              >
+                <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
+                  >
+                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                    <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* MRP / demand → supply */}
-      <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden border-l-4 border-l-amber-500/80">
-        <CardHeader className="pb-2 border-b border-border/60 bg-muted/10">
+      <Card className="overflow-hidden rounded-2xl border-0 border-l-4 border-l-amber-500/80 bg-card shadow-erp">
+        <CardHeader className="border-b border-border/50 bg-muted/20 pb-3">
           <div className="flex items-center gap-2">
-            <Factory className="h-5 w-5 text-amber-500" />
-            <CardTitle className="text-lg font-black uppercase tracking-tight">
-              MRP — make suggestions
-            </CardTitle>
+            <Factory className="h-5 w-5 shrink-0 text-amber-500" />
+            <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">MRP suggestions</CardTitle>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Open orders with a BOM on the line. Reserve FG from stock or create a linked production job.
+          <p className="text-sm text-muted-foreground">
+            Open demand with a BOM on the line — reserve FG or create a linked production job.
           </p>
         </CardHeader>
         <CardContent className="p-0 max-h-[280px] overflow-y-auto">
@@ -277,43 +293,43 @@ export default function Orders() {
                 processing orders for those finished goods.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2">
-                <Button asChild variant="outline" size="sm" className="h-8">
+                <Button asChild variant="outline" size="sm" className="h-9 rounded-full border-primary/20">
                   <Link to="/boms">BOMs</Link>
                 </Button>
-                <Button asChild variant="outline" size="sm" className="h-8">
+                <Button asChild variant="outline" size="sm" className="h-9 rounded-full border-primary/20">
                   <Link to="/inventory">Inventory</Link>
                 </Button>
-                <Button asChild variant="secondary" size="sm" className="h-8">
+                <Button asChild variant="secondary" size="sm" className="h-9 rounded-full">
                   <Link to="/production-jobs">Production jobs</Link>
                 </Button>
               </div>
             </div>
           ) : (
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-[10px] uppercase font-black pl-4">Client</TableHead>
-                  <TableHead className="text-[10px] uppercase font-black">SKU</TableHead>
-                  <TableHead className="text-[10px] uppercase font-black text-right">Order</TableHead>
-                  <TableHead className="text-[10px] uppercase font-black text-right">ATP</TableHead>
-                  <TableHead className="text-[10px] uppercase font-black text-right">Suggest make</TableHead>
-                  <TableHead className="text-[10px] uppercase font-black pr-4">Action</TableHead>
+              <TableHeader className="bg-muted/25">
+                <TableRow className="border-border/40 hover:bg-transparent">
+                  <TableHead className="h-11 pl-4 text-xs font-bold text-foreground">Client</TableHead>
+                  <TableHead className="h-11 text-xs font-bold text-foreground">SKU</TableHead>
+                  <TableHead className="h-11 text-right text-xs font-bold text-foreground">Order</TableHead>
+                  <TableHead className="h-11 text-right text-xs font-bold text-foreground">ATP</TableHead>
+                  <TableHead className="h-11 text-right text-xs font-bold text-foreground">Suggest make</TableHead>
+                  <TableHead className="h-11 pr-4 text-xs font-bold text-foreground">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {mrpRows.slice(0, 12).map((row, idx) => (
-                  <TableRow key={`${row.orderId}-${row.lineIndex}-${idx}`}>
+                  <TableRow key={`${row.orderId}-${row.lineIndex}-${idx}`} className="border-border/40">
                     <TableCell className="pl-4 text-xs font-medium">{row.clientName}</TableCell>
                     <TableCell className="font-mono text-xs">{row.sku}</TableCell>
                     <TableCell className="text-right text-xs">{row.orderQty}</TableCell>
                     <TableCell className="text-right text-xs text-muted-foreground">{row.availableToPromise}</TableCell>
-                    <TableCell className="text-right font-bold text-amber-600">{row.suggestedMakeQty}</TableCell>
+                    <TableCell className="text-right text-xs font-semibold text-amber-600">{row.suggestedMakeQty}</TableCell>
                     <TableCell className="pr-4">
                       {row.suggestedMakeQty > 0 && !row.productionJobId && (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-[10px] font-bold uppercase"
+                          className="h-8 gap-1 rounded-full border-amber-500/30 text-[10px] font-semibold"
                           disabled={createJobFromOrderMutation.isPending}
                           onClick={() =>
                             createJobFromOrderMutation.mutate({
@@ -323,11 +339,13 @@ export default function Orders() {
                             })
                           }
                         >
-                          <Link2 className="h-3 w-3 mr-1" /> Job
+                          <Link2 className="h-3 w-3" /> Job
                         </Button>
                       )}
                       {row.productionJobId && (
-                        <Badge variant="secondary" className="text-[9px]">Linked</Badge>
+                        <Badge variant="secondary" className="text-[10px] font-medium">
+                          Linked
+                        </Badge>
                       )}
                     </TableCell>
                   </TableRow>
@@ -338,21 +356,22 @@ export default function Orders() {
         </CardContent>
       </Card>
 
-      {/* Main Container */}
-      <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
-        <CardHeader className="pb-6 border-b border-border/60 bg-muted/10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-1 bg-primary rounded-full" />
-                <CardTitle className="text-xl font-black tracking-tighter uppercase italic">Sales Log</CardTitle>
-              </div>
-              <p className="text-xs font-medium text-muted-foreground tracking-wide">Customer orders, fulfillment status, and logistics</p>
+      {/* Search & filters */}
+      <Card className="rounded-2xl border-0 bg-card shadow-erp">
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          <div className="flex flex-col gap-4 border-b border-border/50 pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold tracking-tight text-[#1a2744]">
+                {embedded ? "Order library" : "Search & filters"}
+              </h2>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {embedded ? "Filter and open sales orders" : "Lifecycle chips, saved views, and export"}
+              </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
-                className="gap-2 rounded-xl h-11"
+                className="h-10 gap-2 rounded-full border-primary/20 shadow-erp-sm"
                 onClick={() =>
                   downloadReportCsv("/reports/export/orders", `orders-${Date.now()}.csv`).catch(() =>
                     toast.error("Export failed (check permissions)")
@@ -363,7 +382,7 @@ export default function Orders() {
                 Export CSV
               </Button>
               <Button
-                className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5"
+                className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
                 onClick={() => {
                   setFormClient("");
                   setFormItems([{ productId: "", quantity: 1, price: 0 }]);
@@ -371,32 +390,58 @@ export default function Orders() {
                 }}
               >
                 <Plus className="h-4 w-4" />
-                <span className="font-bold">Register New Order</span>
+                New order
               </Button>
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 pt-6">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+            <div className="group relative min-w-0 flex-1">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
               <Input
                 placeholder="Search by client or system identifier..."
-                className="pl-10 bg-background/50 border-border/50 focus-visible:ring-primary/20 h-11 rounded-xl transition-all"
+                className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-10 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-[200px] bg-background/50 border-border/50 h-11 rounded-xl">
-                <SelectValue placeholder="Lifecycle Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Global Pipeline</SelectItem>
-                {(["pending", "processing", "shipped", "delivered", "cancelled"] as const).map((s) => (
-                  <SelectItem key={s} value={s} className="uppercase font-bold text-[10px] tracking-widest">{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 p-1">
+              {(
+                [
+                  { key: "all" as const, label: "All" },
+                  { key: "pending" as const, label: "Pending" },
+                  { key: "processing" as const, label: "Processing" },
+                  { key: "shipped" as const, label: "Shipped" },
+                  { key: "delivered" as const, label: "Delivered" },
+                  { key: "cancelled" as const, label: "Cancelled" },
+                ] as const
+              ).map(({ key, label }) => {
+                const count =
+                  key === "all" ? orders.length : (statusCounts[key as OrderStatus] ?? 0);
+                const active = statusFilter === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setStatusFilter(key)}
+                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+                      active
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "border border-transparent bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    {label}
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                        active ? "bg-primary-foreground/20" : "bg-background/80 text-muted-foreground"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <SavedViewsBar
             module="orders"
@@ -406,44 +451,53 @@ export default function Orders() {
               if (f.statusFilter != null) setStatusFilter(String(f.statusFilter));
             }}
           />
+        </CardContent>
+      </Card>
+
+      {/* Order register */}
+      <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+        <CardHeader className="border-b border-border/50 bg-muted/20 pb-4 pt-5">
+          <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">Order register</CardTitle>
+          <p className="text-sm font-medium text-muted-foreground">
+            Click a row for lines, reservations, production links, and status
+          </p>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="bg-muted/10">
-                <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground pl-6 h-12">System ID</TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12">Customer Account</TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 text-right">Total Value</TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12">Fulfillment</TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground h-12 hidden md:table-cell">Dispatch Date</TableHead>
-                  <TableHead className="w-[80px] pr-6"></TableHead>
+              <TableHeader className="bg-muted/25">
+                <TableRow className="border-border/40 hover:bg-transparent">
+                  <TableHead className="h-12 pl-6 text-xs font-bold text-foreground">System ID</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Customer</TableHead>
+                  <TableHead className="h-12 text-right text-xs font-bold text-foreground">Total</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Status</TableHead>
+                  <TableHead className="hidden h-12 text-xs font-bold text-foreground md:table-cell">Order date</TableHead>
+                  <TableHead className="h-12 w-[80px] pr-6 text-xs font-bold text-foreground" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-20 text-muted-foreground font-medium italic">
-                      Polling sales network...
+                    <TableCell colSpan={6} className="py-20 text-center font-medium text-muted-foreground">
+                      Loading orders…
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-16">
-                      <div className="max-w-md mx-auto space-y-3 text-muted-foreground">
-                        <p className="text-sm font-medium">No orders match your search or status filter.</p>
+                    <TableCell colSpan={6} className="py-16 text-center">
+                      <div className="mx-auto max-w-md space-y-3 text-muted-foreground">
+                        <p className="text-sm font-medium">No orders match the current filters.</p>
                         <p className="text-xs">
-                          New tenant? Set up clients and products first, then register an order. Use MRP above to
-                          reserve stock or create jobs.
+                          Add clients and products, then create an order. Use MRP above to reserve stock or create jobs.
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                          <Button asChild variant="outline" size="sm" className="h-8">
+                          <Button asChild variant="outline" size="sm" className="h-9 rounded-full">
                             <Link to="/clients">Clients</Link>
                           </Button>
-                          <Button asChild variant="outline" size="sm" className="h-8">
+                          <Button asChild variant="outline" size="sm" className="h-9 rounded-full">
                             <Link to="/inventory">Products</Link>
                           </Button>
-                          <Button asChild variant="secondary" size="sm" className="h-8">
+                          <Button asChild variant="secondary" size="sm" className="h-9 rounded-full">
                             <Link to="/sme-bundle">SME workflow</Link>
                           </Button>
                         </div>
@@ -452,34 +506,42 @@ export default function Orders() {
                   </TableRow>
                 ) : (
                   filtered.map((order) => (
-                    <TableRow 
-                      key={order._id} 
-                      className="cursor-pointer transition-colors hover:bg-muted/30 border-border/50 group/row" 
+                    <TableRow
+                      key={order._id}
+                      className="group/row cursor-pointer border-border/40 transition-colors hover:bg-muted/35"
                       onClick={() => setSelectedOrder(order)}
                     >
-                      <TableCell className="pl-6 font-mono text-[10px] font-bold text-muted-foreground opacity-50 group-hover/row:opacity-100 transition-opacity">
+                      <TableCell className="pl-6 font-mono text-[10px] font-medium text-muted-foreground opacity-60 transition-opacity group-hover/row:opacity-100">
                         {order._id.slice(-6)}
                       </TableCell>
                       <TableCell>
-                        <span className="font-black text-[13px] tracking-tight text-foreground">{order.client?.name ?? "—"}</span>
+                        <span className="text-[13px] font-semibold tracking-tight text-foreground">
+                          {order.client?.name ?? "—"}
+                        </span>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-[13px] font-black text-success">
+                      <TableCell className="text-right font-mono text-[13px] font-semibold text-[hsl(152,69%,36%)]">
                         {format(order.totalAmount)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant[order.status]} className="text-[10px] font-black uppercase tracking-tight py-0 px-2 rounded-md">
+                        <Badge
+                          variant={statusVariant[order.status]}
+                          className="rounded-md px-2 py-0 text-[10px] font-semibold capitalize"
+                        >
                           {order.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-muted-foreground font-bold text-[11px] italic">
+                      <TableCell className="hidden text-[11px] font-medium text-muted-foreground md:table-cell">
                         {formatDate(order.orderDate)}
                       </TableCell>
                       <TableCell className="pr-6 text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 rounded-lg opacity-0 group-hover/row:opacity-100 transition-all hover:bg-primary hover:text-primary-foreground" 
-                          onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-full opacity-0 transition-all group-hover/row:opacity-100 hover:bg-primary/10 hover:text-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedOrder(order);
+                          }}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -494,10 +556,10 @@ export default function Orders() {
       </Card>
 
       <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 shadow-erp sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-[#1a2744]">
+              <ShoppingCart className="h-5 w-5 shrink-0 text-primary" />
               Order {selectedOrder?._id.slice(-6)}
             </DialogTitle>
             <DialogDescription>
@@ -512,7 +574,9 @@ export default function Orders() {
                   value={selectedOrder.status}
                   onValueChange={(value) => updateMutation.mutate({ id: selectedOrder._id, data: { status: value } })}
                 >
-                  <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-[160px] rounded-full border-border/60 bg-muted/40">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {(["pending", "processing", "shipped", "delivered", "cancelled"] as const).map((s) => (
                       <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -523,7 +587,7 @@ export default function Orders() {
                   Delivered/cancelled releases FG reservations.
                 </span>
               </div>
-              <div className="border rounded-lg overflow-hidden">
+              <div className="overflow-hidden rounded-xl border border-border/60">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -619,15 +683,22 @@ export default function Orders() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="destructive" size="sm" onClick={() => selectedOrder && setDeleteTarget(selectedOrder)}>Delete Order</Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="rounded-full"
+              onClick={() => selectedOrder && setDeleteTarget(selectedOrder)}
+            >
+              Delete order
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 shadow-erp sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>New Order</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-[#1a2744]">New order</DialogTitle>
             <DialogDescription>Create a sales order for a client.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
@@ -698,9 +769,12 @@ export default function Orders() {
             </div>
             <p className="text-sm font-medium">Total: {format(totalAmount)}</p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancel</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-full" onClick={() => setFormOpen(false)}>
+              Cancel
+            </Button>
             <Button
+              className="rounded-full"
               onClick={() => {
                 if (!formClient) { toast.error("Select a client"); return; }
                 const items = formItems.filter((r) => r.productId && r.quantity > 0).map((r) => ({ product: r.productId, quantity: r.quantity, price: r.price }));
@@ -710,21 +784,24 @@ export default function Orders() {
               }}
               disabled={createMutation.isPending}
             >
-              Create Order
+              Create order
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl border border-border/60 shadow-erp">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete order?</AlertDialogTitle>
             <AlertDialogDescription>This will permanently delete this order. This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget._id)}>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget._id)}
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

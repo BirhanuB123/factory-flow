@@ -16,8 +16,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Search, Plus, Users, Eye, Edit, Trash2, FileStack, Layers, Hash, Sparkles } from "lucide-react";
+import { Search, Plus, Users, Eye, Edit, Trash2, FileStack, Layers, Hash } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useLocale } from "@/contexts/LocaleContext";
 
 interface Client {
   _id: string;
@@ -53,7 +54,8 @@ function apiErrorMessage(err: unknown): string {
   return ax?.message || "Request failed";
 }
 
-export default function Clients() {
+export default function Clients({ embedded = false }: { embedded?: boolean }) {
+  const { t } = useLocale();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -138,68 +140,67 @@ export default function Clients() {
   ).length;
 
   return (
-    <div className="space-y-8 pb-8 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-1 bg-primary rounded-full" />
-            <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">Client Accounts</h1>
-            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-          </div>
-          <p className="text-sm font-medium text-muted-foreground max-w-xl">
-            Manage customer organizations, key contacts, and tax profile details for order-to-cash flows.
-          </p>
-        </div>
+    <div className={`${embedded ? "space-y-6" : "space-y-8"} pb-8 animate-in fade-in duration-500`}>
+      {!embedded && (
+        <>
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.clients.title")}</h1>
+              <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.clients.subtitle")}</p>
+            </div>
 
-        <div className="hidden lg:flex items-center gap-6 px-6 py-3 bg-secondary/50 rounded-2xl backdrop-blur-sm border border-border/50">
-          <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">VAT registered</p>
-            <p className="text-sm font-mono font-bold">{vatRegisteredCount}</p>
+            <div className="hidden items-center gap-6 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">VAT registered</p>
+                <p className="text-sm font-semibold text-foreground">{vatRegisteredCount}</p>
+              </div>
+              <div className="h-8 w-px bg-border/70" />
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">With email</p>
+                <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{withEmailCount}</p>
+              </div>
+            </div>
           </div>
-          <div className="h-8 w-px bg-border" />
-          <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Profiles with email</p>
-            <p className="text-sm font-mono font-bold text-success">{withEmailCount}</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Partner Network", value: clients.length, icon: Users, color: "text-primary", bg: "bg-primary/10" },
-          { label: "Manufacturing Accounts", value: manufacturingAccounts, icon: FileStack, color: "text-success", bg: "bg-success/10" },
-          { label: "VAT Registered", value: vatRegisteredCount, icon: Layers, color: "text-info", bg: "bg-info/10" },
-          { label: "Profiles With Email", value: withEmailCount, icon: Hash, color: "text-warning", bg: "bg-warning/10" }
-        ].map((stat, idx) => (
-          <Card key={idx} className="relative overflow-hidden group rounded-2xl border-border/70 bg-card/60 backdrop-blur-md shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
-            <div className={`absolute top-0 right-0 w-24 h-24 -mr-6 -mt-6 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className={`h-12 w-12 rounded-xl ${stat.bg} flex items-center justify-center transition-transform group-hover:scale-110 duration-300`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                <p className="text-2xl font-black tracking-tighter">{stat.value}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Partner network", value: clients.length, icon: Users, color: "text-primary", bg: "bg-primary/10" },
+              { label: "Manufacturing", value: manufacturingAccounts, icon: FileStack, color: "text-success", bg: "bg-success/10" },
+              { label: "VAT registered", value: vatRegisteredCount, icon: Layers, color: "text-info", bg: "bg-info/10" },
+              { label: "With email", value: withEmailCount, icon: Hash, color: "text-warning", bg: "bg-warning/10" },
+            ].map((stat, idx) => (
+              <Card
+                key={idx}
+                className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+              >
+                <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
+                  >
+                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                    <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Main Container */}
-      <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
-        <CardHeader className="pb-6 border-b border-border/60 bg-muted/10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-1 bg-primary rounded-full" />
-                <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">CRM / Accounts</h1>
-              </div>
-              <p className="text-sm font-medium text-muted-foreground">Customer relationships, industrial sectors, and contact data</p>
+      <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+        <CardHeader className="border-b border-border/50 bg-muted/20 pb-6">
+          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-[#1a2744]">CRM / accounts</h2>
+              <p className="mt-1 text-sm font-medium text-muted-foreground">Relationships, sectors, and contact data</p>
             </div>
-            <Button 
-              className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-6 h-11 transition-all hover:-translate-y-0.5" 
+            <Button
+              className="h-11 gap-2 rounded-full bg-primary px-6 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
               onClick={() => {
                 setSelectedClient(null);
                 setEditingClient(null);
@@ -207,17 +208,17 @@ export default function Clients() {
                 setFormOpen(true);
               }}
             >
-              <Plus className="h-4 w-4" /> 
-              <span className="font-bold">Onboard Partner</span>
+              <Plus className="h-4 w-4" />
+              Onboard partner
             </Button>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4 pt-6">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <div className="flex flex-col gap-4 pt-6 md:flex-row">
+            <div className="group relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
               <Input
                 placeholder="Search by corporate name, email, or system identifier..."
-                className="pl-10 bg-background/50 border-border/50 focus-visible:ring-primary/20 h-11 rounded-xl transition-all"
+                className="h-11 rounded-full border-0 bg-[#EEF2F7] pl-10 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />

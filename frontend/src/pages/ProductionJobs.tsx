@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { productionApi, bomApi, downloadReportCsv } from "@/lib/api";
 import { SavedViewsBar } from "@/components/SavedViewsBar";
 import { toast } from "sonner";
+import { useLocale } from "@/contexts/LocaleContext";
 
 type JobStatus = "Scheduled" | "In Progress" | "On Hold" | "Completed" | "Cancelled";
 type Priority = "Low" | "Medium" | "High" | "Urgent";
@@ -105,13 +106,15 @@ import {
   Play,
   CheckCircle2,
   Timer,
+  Layers,
 } from "lucide-react";
 
 const ITEMS_PER_PAGE = 8;
 
 import { ProductionMetrics } from "@/components/ProductionMetrics";
 
-const ProductionJobs = () => {
+const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
+  const { t } = useLocale();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
@@ -346,47 +349,168 @@ const ProductionJobs = () => {
     {} as Record<string, number>,
   );
 
-  return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Metrics Section */}
-      <ProductionMetrics />
+  const jobStats = useMemo(() => {
+    const list = allJobs as Job[];
+    const now = Date.now();
+    const weekEnd = now + 7 * 86400000;
+    return {
+      total: list.length,
+      inProgress: list.filter((j) => j.status === "In Progress").length,
+      scheduled: list.filter((j) => j.status === "Scheduled").length,
+      completed: list.filter((j) => j.status === "Completed").length,
+      openPipeline: list.filter((j) => j.status !== "Completed" && j.status !== "Cancelled").length,
+      dueWithinWeek: list.filter((j) => {
+        if (j.status === "Completed" || j.status === "Cancelled") return false;
+        const t = new Date(j.dueDate).getTime();
+        return t >= now && t <= weekEnd;
+      }).length,
+    };
+  }, [allJobs]);
 
-      {/* Control Bar */}
-      <Card className="border-none shadow-sm bg-card/60 backdrop-blur-md">
-        <CardContent className="p-4 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2 border-b border-border/50">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-1 bg-primary rounded-full" />
-                <h1 className="text-2xl font-black tracking-tighter text-foreground uppercase">
-                  Production Ledger
-                </h1>
-              </div>
-              <p className="text-sm font-medium text-muted-foreground">Command center for all active and scheduled manufacturing cycles</p>
+  return (
+    <div
+      className={`${embedded ? "space-y-6" : "space-y-6 pb-8"} animate-in fade-in duration-500 slide-in-from-bottom-4`}
+    >
+      {!embedded && (
+        <>
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.jobs.title")}</h1>
+              <p className="mt-1 text-sm font-medium text-muted-foreground">{t("pages.jobs.subtitle")}</p>
             </div>
-            
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                className="gap-2 rounded-xl h-10"
-                onClick={() =>
-                  downloadReportCsv("/reports/export/production", `production-${Date.now()}.csv`).catch(() =>
-                    toast.error("Export failed")
-                  )
-                }
-              >
-                <Download className="h-4 w-4" />
-                Export CSV
-              </Button>
-              <Button
-                className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 rounded-xl h-10"
-                onClick={() => setNewJobOpen(true)}
-              >
-                <Plus className="h-4 w-4" />
-                <span className="font-bold">New Production Job</span>
-              </Button>
+            <div className="hidden items-center gap-6 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Open pipeline</p>
+                <p className="text-sm font-semibold text-foreground">{jobStats.openPipeline}</p>
+              </div>
+              <div className="h-8 w-px bg-border/70" />
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">In progress</p>
+                <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{jobStats.inProgress}</p>
+              </div>
+              <div className="h-8 w-px bg-border/70" />
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Due ≤ 7 days</p>
+                <p className="text-sm font-semibold text-foreground">{jobStats.dueWithinWeek}</p>
+              </div>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              {
+                label: "Total jobs",
+                value: jobStats.total,
+                icon: Layers,
+                color: "text-primary",
+                bg: "bg-primary/10",
+              },
+              {
+                label: "In progress",
+                value: jobStats.inProgress,
+                icon: Wrench,
+                color: "text-[hsl(152,69%,36%)]",
+                bg: "bg-[hsl(152,69%,42%)]/10",
+              },
+              {
+                label: "Scheduled",
+                value: jobStats.scheduled,
+                icon: Clock,
+                color: "text-[hsl(221,83%,53%)]",
+                bg: "bg-primary/10",
+              },
+              {
+                label: "Completed",
+                value: jobStats.completed,
+                icon: CheckCircle2,
+                color: "text-muted-foreground",
+                bg: "bg-muted",
+              },
+            ].map((stat, idx) => (
+              <Card
+                key={idx}
+                className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+              >
+                <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
+                <CardContent className="flex items-center gap-4 p-5">
+                  <div
+                    className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
+                  >
+                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                    <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Ring metrics — Production hub only (avoid duplicating KPI rows on full jobs page) */}
+      {embedded ? <ProductionMetrics /> : null}
+
+      {/* Control Bar */}
+      <Card className="rounded-2xl border-0 bg-card shadow-erp">
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          {!embedded ? (
+            <div className="flex flex-col gap-4 border-b border-border/50 pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-bold tracking-tight text-[#1a2744]">Search & filters</h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">Status chips, saved views, and export</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="h-10 gap-2 rounded-full border-primary/20 shadow-erp-sm"
+                  onClick={() =>
+                    downloadReportCsv("/reports/export/production", `production-${Date.now()}.csv`).catch(() =>
+                      toast.error("Export failed")
+                    )
+                  }
+                >
+                  <Download className="h-4 w-4" />
+                  Export CSV
+                </Button>
+                <Button
+                  className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+                  onClick={() => setNewJobOpen(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                  New production job
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 border-b border-border/50 pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium text-muted-foreground">
+                Open jobs, filters, and floor actions
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="h-10 gap-2 rounded-full border-primary/20 shadow-erp-sm"
+                  onClick={() =>
+                    downloadReportCsv("/reports/export/production", `production-${Date.now()}.csv`).catch(() =>
+                      toast.error("Export failed")
+                    )
+                  }
+                >
+                  <Download className="h-4 w-4" />
+                  Export CSV
+                </Button>
+                <Button
+                  className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+                  onClick={() => setNewJobOpen(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                  New production job
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -394,10 +518,10 @@ const ProductionJobs = () => {
                 setStatusFilter("all");
                 setPage(1);
               }}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-bold transition-all ${
+              className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold transition-all ${
                 statusFilter === "all"
-                  ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                  : "bg-background text-muted-foreground border-border hover:bg-accent"
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/50"
               }`}
             >
               All Jobs
@@ -409,10 +533,10 @@ const ProductionJobs = () => {
                   setStatusFilter(statusFilter === status ? "all" : status);
                   setPage(1);
                 }}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-bold transition-all ${
+                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold transition-all ${
                   statusFilter === status
-                    ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                    : "bg-background text-muted-foreground border-border hover:bg-accent"
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                    : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/50"
                 }`}
               >
                 {status}
@@ -433,7 +557,7 @@ const ProductionJobs = () => {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="pl-9 bg-background/50 border-border/80 focus-visible:ring-primary/20 h-10 rounded-xl"
+                className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-9 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
               />
             </div>
             <div className="flex flex-col gap-2 w-full sm:w-auto">
@@ -455,7 +579,7 @@ const ProductionJobs = () => {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="w-[160px] bg-background/50 border-border/80 h-10 rounded-xl">
+                <SelectTrigger className="h-10 w-[160px] rounded-full border-border/60 bg-muted/40">
                   <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
@@ -475,7 +599,7 @@ const ProductionJobs = () => {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="w-[140px] bg-background/50 border-border/80 h-10 rounded-xl">
+                <SelectTrigger className="h-10 w-[140px] rounded-full border-border/60 bg-muted/40">
                   <SelectValue placeholder="Priority" />
                 </SelectTrigger>
                 <SelectContent>
@@ -493,42 +617,28 @@ const ProductionJobs = () => {
       </Card>
 
       {/* Jobs Table */}
-      <Card className="border-none shadow-md bg-card/60 backdrop-blur-md overflow-hidden">
+      <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+        <CardHeader className="border-b border-border/50 bg-muted/20 pb-4 pt-5">
+          <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">Job register</CardTitle>
+          <p className="text-sm font-medium text-muted-foreground">Open a row for shop-floor operations and materials</p>
+        </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="hover:bg-transparent border-border/50">
-                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground pl-6 h-12">
+              <TableHeader className="bg-muted/25">
+                <TableRow className="border-border/40 hover:bg-transparent">
+                  <TableHead className="h-12 pl-6 text-xs font-bold text-foreground">
                     Job ID
                   </TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
-                    Client
-                  </TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
-                    Part Name
-                  </TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
-                    Machine
-                  </TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
-                    Priority
-                  </TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
-                    Qty
-                  </TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
-                    Due Date
-                  </TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
-                    Status
-                  </TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground h-12">
-                    Progress
-                  </TableHead>
-                  <TableHead className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground pr-6 h-12">
-                    Actions
-                  </TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Client</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Part Name</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Machine</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Priority</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Qty</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Due Date</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Status</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Progress</TableHead>
+                  <TableHead className="h-12 pr-6 text-xs font-bold text-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -540,8 +650,8 @@ const ProductionJobs = () => {
                   </TableRow>
                 ) : paginated.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-20 text-muted-foreground font-medium">
-                      Critical: No active jobs found matching filters.
+                    <TableCell colSpan={10} className="py-20 text-center font-medium text-muted-foreground">
+                      No jobs match the current filters.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -613,28 +723,28 @@ const ProductionJobs = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 border-t border-border/50 bg-muted/10">
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+            <div className="flex flex-col items-stretch justify-between gap-3 border-t border-border/50 bg-muted/10 px-6 py-4 sm:flex-row sm:items-center">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Showing {(page - 1) * ITEMS_PER_PAGE + 1}–{Math.min(page * ITEMS_PER_PAGE, filtered.length)} of{" "}
-                {filtered.length} active jobs
+                {filtered.length} jobs
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-2 sm:justify-end">
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-9 w-9 border-border/50 bg-background/50 rounded-xl"
+                  className="h-9 w-9 rounded-full border-border/60 bg-card shadow-erp-sm"
                   disabled={page === 1}
                   onClick={() => setPage(page - 1)}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <div className="flex items-center gap-1 px-3 py-1 bg-background/50 border border-border/50 rounded-xl font-mono text-xs font-bold">
+                <div className="flex items-center gap-1 rounded-full border border-border/60 bg-card px-3 py-1 font-mono text-xs font-bold shadow-erp-sm">
                   {page} <span className="text-muted-foreground">/</span> {totalPages}
                 </div>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-9 w-9 border-border/50 bg-background/50 rounded-xl"
+                  className="h-9 w-9 rounded-full border-border/60 bg-card shadow-erp-sm"
                   disabled={page === totalPages}
                   onClick={() => setPage(page + 1)}
                 >
@@ -648,7 +758,7 @@ const ProductionJobs = () => {
 
       {/* Job Detail Dialog */}
       <Dialog open={!!selectedJob} onOpenChange={() => setSelectedJob(null)}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 shadow-erp sm:max-w-3xl">
           {selectedJob && (
             <>
               <DialogHeader>
@@ -661,11 +771,11 @@ const ProductionJobs = () => {
                 <DialogDescription>{selectedJob.bom?.name} · {selectedJob.bom?.partNumber}</DialogDescription>
               </DialogHeader>
 
-              <div className="flex flex-wrap gap-2 py-2 border-b">
+              <div className="flex flex-wrap gap-2 border-b py-2">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 gap-1"
+                  className="h-9 gap-1 rounded-full border-primary/20"
                   disabled={syncOpsMut.isPending}
                   onClick={() => syncOpsMut.mutate(selectedJob._id)}
                 >
@@ -676,7 +786,7 @@ const ProductionJobs = () => {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="h-8 gap-1"
+                    className="h-9 gap-1 rounded-full"
                     onClick={() =>
                       window.open(
                         `${travelerBase}/api/production/traveler/${selectedJob.travelerToken}.html`,
@@ -692,15 +802,13 @@ const ProductionJobs = () => {
               </div>
 
               <div className="space-y-3 py-3">
-                <p className="text-xs font-black uppercase text-muted-foreground tracking-widest">
-                  Shop floor — operations
-                </p>
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Shop floor — operations</p>
                 {!selectedJob.operations?.length ? (
                   <p className="text-sm text-muted-foreground">
                     No operations yet. Add routing to the BOM, then <strong>Sync ops from BOM</strong>.
                   </p>
                 ) : (
-                  <div className="rounded-lg border overflow-x-auto">
+                  <div className="overflow-x-auto rounded-xl border border-border/60">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="bg-muted/50 border-b">
@@ -896,10 +1004,12 @@ const ProductionJobs = () => {
               )}
 
               <DialogFooter className="gap-2 sm:gap-0">
-                <Button variant="outline" onClick={() => setSelectedJob(null)}>
+                <Button variant="outline" className="rounded-full" onClick={() => setSelectedJob(null)}>
                   Close
                 </Button>
-                <Button onClick={() => setUpdateStatusJob(selectedJob)}>Update Status</Button>
+                <Button className="rounded-full" onClick={() => setUpdateStatusJob(selectedJob)}>
+                  Update status
+                </Button>
               </DialogFooter>
             </>
           )}
@@ -908,10 +1018,10 @@ const ProductionJobs = () => {
 
       {/* New Job Dialog */}
       <Dialog open={newJobOpen} onOpenChange={setNewJobOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="rounded-2xl border border-border/60 shadow-erp sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>New Production Job</DialogTitle>
-            <DialogDescription>Create a new production order from a BOM.</DialogDescription>
+            <DialogTitle className="text-lg font-bold text-[#1a2744]">New production job</DialogTitle>
+            <DialogDescription>Create a work order from an active BOM.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
@@ -1002,9 +1112,12 @@ const ProductionJobs = () => {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNewJobOpen(false)}>Cancel</Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-full" onClick={() => setNewJobOpen(false)}>
+              Cancel
+            </Button>
             <Button
+              className="rounded-full"
               onClick={() => {
                 if (!newJobForm.jobId || !newJobForm.bom || !newJobForm.dueDate) {
                   toast.error("Job ID, BOM, and Due Date are required");
@@ -1031,9 +1144,9 @@ const ProductionJobs = () => {
 
       {/* Update Status Dialog */}
       <Dialog open={!!updateStatusJob} onOpenChange={(open) => !open && setUpdateStatusJob(null)}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="rounded-2xl border border-border/60 shadow-erp sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Update Job Status</DialogTitle>
+            <DialogTitle className="font-bold text-[#1a2744]">Update job status</DialogTitle>
             <DialogDescription>{updateStatusJob?.jobId}</DialogDescription>
           </DialogHeader>
           <div className="py-2">
@@ -1048,7 +1161,9 @@ const ProductionJobs = () => {
                 });
               }}
             >
-              <SelectTrigger className="mt-2"><SelectValue placeholder="Select status" /></SelectTrigger>
+              <SelectTrigger className="mt-2 rounded-full border-border/60 bg-muted/40">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
               <SelectContent>
                 {(["Scheduled", "In Progress", "On Hold", "Completed", "Cancelled"] as const).map((s) => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>

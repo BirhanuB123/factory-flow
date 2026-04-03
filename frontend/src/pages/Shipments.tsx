@@ -2,18 +2,12 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { shipmentsApi, ordersApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
-import {
-  ModuleDashboardLayout,
-  StickyModuleTabs,
-  moduleTabsListClassName,
-  moduleTabsTriggerClassName,
-} from "@/components/ModuleDashboardLayout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -30,11 +24,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Truck, Plus, PackageCheck, Search, Loader2, FileText } from "lucide-react";
+import {
+  Truck,
+  Plus,
+  PackageCheck,
+  Search,
+  Loader2,
+  FileText,
+  Layers,
+  CheckCircle2,
+  ClipboardList,
+} from "lucide-react";
 import { useEthiopianDateDisplay } from "@/hooks/use-ethiopian-date";
 import { toast } from "sonner";
+import { useLocale } from "@/contexts/LocaleContext";
+
+const STATUS_FILTERS = ["all", "draft", "picked", "packed", "shipped"] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+
+const STATUS_LABELS: Record<Exclude<StatusFilter, "all">, string> = {
+  draft: "Draft",
+  picked: "Picked",
+  packed: "Packed",
+  shipped: "Shipped",
+};
 
 export default function Shipments() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const { formatDate } = useEthiopianDateDisplay();
   const qc = useQueryClient();
@@ -48,6 +64,7 @@ export default function Shipments() {
   const [carrier, setCarrier] = useState("");
   const [tracking, setTracking] = useState("");
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const { data: shipments = [], isLoading } = useQuery({
     queryKey: ["shipments"],
@@ -61,7 +78,7 @@ export default function Shipments() {
   });
 
   const selectedOrder = (orders as { _id: string; items: { quantity: number; shippedQty?: number }[] }[]).find(
-    (o) => o._id === orderId
+    (o) => o._id === orderId,
   );
 
   const createMut = useMutation({
@@ -81,8 +98,7 @@ export default function Shipments() {
   });
 
   const statusMut = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      shipmentsApi.updateStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: string }) => shipmentsApi.updateStatus(id, status),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shipments"] });
       toast.success("Status updated");
@@ -105,16 +121,26 @@ export default function Shipments() {
       toast.error(e?.response?.data?.message || "Failed"),
   });
 
+  const openCount = shipments.filter((s) => s.status !== "shipped").length;
+  const shippedCount = shipments.filter((s) => s.status === "shipped").length;
+  const draftCount = shipments.filter((s) => s.status === "draft").length;
+
+  const statusCount = (st: StatusFilter) => {
+    if (st === "all") return shipments.length;
+    return shipments.filter((s) => s.status === st).length;
+  };
+
   const filtered = shipments.filter((s) => {
     const num = s.shipmentNumber?.toLowerCase() ?? "";
     const tr = (s.trackingNumber ?? "").toLowerCase();
     const oid = typeof s.order === "object" ? s.order._id : s.order;
-    return (
+    const searchOk =
       !q.trim() ||
       num.includes(q.toLowerCase()) ||
       tr.includes(q.toLowerCase()) ||
-      String(oid).toLowerCase().includes(q.toLowerCase())
-    );
+      String(oid).toLowerCase().includes(q.toLowerCase());
+    const statusOk = statusFilter === "all" || s.status === statusFilter;
+    return searchOk && statusOk;
   });
 
   const statusColor: Record<string, "secondary" | "default" | "success"> = {
@@ -124,243 +150,384 @@ export default function Shipments() {
     shipped: "success",
   };
 
-  return (
-    <ModuleDashboardLayout
-      title="Shipments"
-      description="Pick, pack, ship — partial shipments and tracking. Finance invoices per shipment when applicable."
-      icon={Truck}
-      healthStats={[
-        { label: "Open drafts", value: shipments.filter((s) => s.status !== "shipped").length },
-        { label: "Shipped", value: shipments.filter((s) => s.status === "shipped").length },
-      ]}
-      actions={
-        canShip ? (
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button className="h-11 rounded-xl font-black uppercase text-xs gap-2">
-                <Plus className="h-4 w-4" />
-                New shipment
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create shipment</DialogTitle>
-                <DialogDescription>Approved orders only. Quantities cannot exceed remaining per line.</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-3 py-2">
-                <div>
-                  <Label>Order</Label>
-                  <Select value={orderId} onValueChange={setOrderId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select order" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      {(orders as { _id: string; client?: { name: string }; status: string }[])
-                        .filter((o) => o.status !== "cancelled")
-                        .map((o) => (
-                          <SelectItem key={o._id} value={o._id}>
-                            {o.client?.name ?? "—"} · …{o._id.slice(-6)}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {selectedOrder && (
-                  <p className="text-[10px] text-muted-foreground">
-                    Lines:{" "}
-                    {selectedOrder.items.map((it, i) => (
-                      <span key={i} className="mr-2">
-                        #{i}: qty {it.quantity}, shipped {it.shippedQty ?? 0}
-                      </span>
-                    ))}
-                  </p>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label>Line index</Label>
-                    <Input value={lineIdx} onChange={(e) => setLineIdx(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label>Quantity</Label>
-                    <Input value={lineQty} onChange={(e) => setLineQty(e.target.value)} />
-                  </div>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  disabled={!orderId || createMut.isPending}
-                  onClick={() => createMut.mutate()}
-                >
-                  Create draft
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        ) : null
-      }
-    >
-      <Tabs defaultValue="list" className="space-y-6">
-        <StickyModuleTabs>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <TabsList className={moduleTabsListClassName()}>
-              <TabsTrigger value="list" className={moduleTabsTriggerClassName()}>
-                <PackageCheck className="h-4 w-4 shrink-0" />
-                All shipments
-              </TabsTrigger>
-            </TabsList>
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+  const newShipmentControl = canShip ? (
+    <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <DialogTrigger asChild>
+        <Button className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
+          <Plus className="h-4 w-4" />
+          New shipment
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="rounded-2xl border border-border/60 shadow-erp sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold text-[#1a2744]">Create shipment</DialogTitle>
+          <DialogDescription>Approved orders only. Quantities cannot exceed remaining per line.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div>
+            <Label>Order</Label>
+            <Select value={orderId} onValueChange={setOrderId}>
+              <SelectTrigger className="h-10 rounded-full border-border/60">
+                <SelectValue placeholder="Select order" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {(orders as { _id: string; client?: { name: string }; status: string }[])
+                  .filter((o) => o.status !== "cancelled")
+                  .map((o) => (
+                    <SelectItem key={o._id} value={o._id}>
+                      {o.client?.name ?? "—"} · …{o._id.slice(-6)}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {selectedOrder && (
+            <p className="text-[10px] text-muted-foreground">
+              Lines:{" "}
+              {selectedOrder.items.map((it, i) => (
+                <span key={i} className="mr-2">
+                  #{i}: qty {it.quantity}, shipped {it.shippedQty ?? 0}
+                </span>
+              ))}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label>Line index</Label>
               <Input
-                className="pl-10 h-10 rounded-xl bg-background/50 border-border/60 focus-visible:ring-primary/20"
-                placeholder="Search #, tracking, order…"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
+                className="h-10 rounded-full border-border/60"
+                value={lineIdx}
+                onChange={(e) => setLineIdx(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Quantity</Label>
+              <Input
+                className="h-10 rounded-full border-border/60"
+                value={lineQty}
+                onChange={(e) => setLineQty(e.target.value)}
               />
             </div>
           </div>
-        </StickyModuleTabs>
+        </div>
+        <DialogFooter>
+          <Button
+            className="rounded-full"
+            disabled={!orderId || createMut.isPending}
+            onClick={() => createMut.mutate()}
+          >
+            Create draft
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  ) : null;
 
-        <TabsContent value="list" className="mt-0">
-          <div className="rounded-2xl border border-border/70 bg-background/70 overflow-hidden">
-            {isLoading ? (
-              <div className="flex justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <Table>
-                <TableHeader className="bg-muted/10">
-                  <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="pl-6 h-12 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Shipment</TableHead>
-                    <TableHead className="h-12 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Order</TableHead>
-                    <TableHead className="h-12 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Status</TableHead>
-                    <TableHead className="h-12 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Lines</TableHead>
-                    <TableHead className="h-12 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Carrier / Tracking</TableHead>
-                    <TableHead className="h-12 text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Shipped</TableHead>
-                    <TableHead className="w-[52px] h-12 text-center text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Note</TableHead>
-                    {canShip && <TableHead className="pr-6 h-12 text-right text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Actions</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={canShip ? 8 : 7} className="text-center py-16 text-muted-foreground">
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">No shipments match your search.</p>
-                          <p className="text-xs">Create a draft shipment from an active order to begin pick-pack-ship flow.</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filtered.map((s) => {
-                      const oid = typeof s.order === "object" ? s.order._id : s.order;
-                      return (
-                        <TableRow key={s._id} className="border-border/50 hover:bg-muted/30 transition-colors">
-                          <TableCell className="pl-6 font-mono text-xs font-bold">{s.shipmentNumber}</TableCell>
-                          <TableCell className="font-mono text-[10px] text-muted-foreground">
-                            …{String(oid).slice(-8)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={statusColor[s.status] ?? "secondary"} className="text-[10px] uppercase">
-                              {s.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs">
-                            {s.lines?.map((l) => `L${l.lineIndex}×${l.quantity}`).join(", ") || "—"}
-                          </TableCell>
-                          <TableCell className="text-xs max-w-[200px] truncate">
-                            {s.carrier || "—"} {s.trackingNumber ? `· ${s.trackingNumber}` : ""}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground max-w-[200px]">
-                            {s.shippedAt ? formatDate(s.shippedAt, { withTime: true }) : "—"}
-                          </TableCell>
-                          <TableCell className="text-center p-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              title="Delivery note (EN + አማርኛ)"
-                              onClick={async () => {
-                                try {
-                                  await shipmentsApi.openDeliveryNoteHtml(s._id);
-                                } catch {
-                                  toast.error("Could not open delivery note");
-                                }
-                              }}
-                            >
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                          {canShip && (
-                            <TableCell className="pr-6 text-right space-x-1">
-                              {s.status === "draft" && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8 text-[10px]"
-                                  onClick={() => statusMut.mutate({ id: s._id, status: "picked" })}
-                                >
-                                  Picked
-                                </Button>
-                              )}
-                              {s.status === "picked" && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8 text-[10px]"
-                                  onClick={() => statusMut.mutate({ id: s._id, status: "packed" })}
-                                >
-                                  Packed
-                                </Button>
-                              )}
-                              {s.status !== "shipped" && (
-                                <Button
-                                  size="sm"
-                                  className="h-8 text-[10px]"
-                                  onClick={() => setShipOpen(s._id)}
-                                >
-                                  Ship
-                                </Button>
-                              )}
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            )}
+  const filtersCard = (
+    <Card className="rounded-2xl border-0 bg-card shadow-erp">
+      <CardContent className="space-y-4 p-4 sm:p-5">
+        <div className="flex flex-col gap-4 border-b border-border/50 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-bold tracking-tight text-[#1a2744]">Search & filters</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              Shipment #, tracking, order id, and lifecycle status
+            </p>
           </div>
-        </TabsContent>
-      </Tabs>
+          {newShipmentControl}
+        </div>
+
+        <div className="group relative">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
+          <Input
+            className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-10 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
+            placeholder="Search #, tracking, order…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 p-1">
+          {STATUS_FILTERS.map((key) => {
+            const label = key === "all" ? "All" : STATUS_LABELS[key];
+            const count = statusCount(key);
+            const active = statusFilter === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setStatusFilter(key)}
+                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+                  active
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "border border-transparent bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                }`}
+              >
+                {label}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                    active ? "bg-primary-foreground/20" : "bg-background/80 text-muted-foreground"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const actionCol = canShip ? 1 : 0;
+  const colCount = 7 + actionCol;
+
+  const registerCard = (
+    <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+      <CardHeader className="border-b border-border/50 bg-muted/20 pb-4 pt-5">
+        <div className="flex items-center gap-2">
+          <PackageCheck className="h-5 w-5 text-primary" />
+          <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">Shipment register</CardTitle>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Pick → pack → ship; delivery note and finance invoicing per shipment when applicable
+        </p>
+      </CardHeader>
+      <CardContent className="p-0">
+        {isLoading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-muted/25">
+                <TableRow className="border-border/40 hover:bg-transparent">
+                  <TableHead className="h-12 pl-6 text-xs font-bold text-foreground">Shipment</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Order</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Status</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Lines</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Carrier / tracking</TableHead>
+                  <TableHead className="h-12 text-xs font-bold text-foreground">Shipped</TableHead>
+                  <TableHead className="h-12 w-[52px] text-center text-xs font-bold text-foreground">Note</TableHead>
+                  {canShip && (
+                    <TableHead className="h-12 pr-6 text-right text-xs font-bold text-foreground">Actions</TableHead>
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={colCount} className="py-16 text-center text-muted-foreground">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">No shipments match your filters.</p>
+                        <p className="text-xs">Create a draft from an active order to start pick-pack-ship.</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((s) => {
+                    const oid = typeof s.order === "object" ? s.order._id : s.order;
+                    return (
+                      <TableRow key={s._id} className="border-border/40 transition-colors hover:bg-muted/35">
+                        <TableCell className="pl-6 font-mono text-xs font-semibold">{s.shipmentNumber}</TableCell>
+                        <TableCell className="font-mono text-[10px] text-muted-foreground">…{String(oid).slice(-8)}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={statusColor[s.status] ?? "secondary"}
+                            className="rounded-md text-[10px] font-semibold uppercase"
+                          >
+                            {s.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {s.lines?.map((l) => `L${l.lineIndex}×${l.quantity}`).join(", ") || "—"}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-xs">
+                          {s.carrier || "—"} {s.trackingNumber ? `· ${s.trackingNumber}` : ""}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] text-xs text-muted-foreground">
+                          {s.shippedAt ? formatDate(s.shippedAt, { withTime: true }) : "—"}
+                        </TableCell>
+                        <TableCell className="p-1 text-center">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary"
+                            title="Delivery note (EN + አማርኛ)"
+                            onClick={async () => {
+                              try {
+                                await shipmentsApi.openDeliveryNoteHtml(s._id);
+                              } catch {
+                                toast.error("Could not open delivery note");
+                              }
+                            }}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                        {canShip && (
+                          <TableCell className="space-x-1 pr-6 text-right">
+                            {s.status === "draft" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 rounded-full px-3 text-[10px] font-semibold"
+                                onClick={() => statusMut.mutate({ id: s._id, status: "picked" })}
+                              >
+                                Picked
+                              </Button>
+                            )}
+                            {s.status === "picked" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 rounded-full px-3 text-[10px] font-semibold"
+                                onClick={() => statusMut.mutate({ id: s._id, status: "packed" })}
+                              >
+                                Packed
+                              </Button>
+                            )}
+                            {s.status !== "shipped" && (
+                              <Button
+                                size="sm"
+                                className="h-8 rounded-full px-3 text-[10px] font-semibold"
+                                onClick={() => setShipOpen(s._id)}
+                              >
+                                Ship
+                              </Button>
+                            )}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <>
+      <div className="space-y-8 pb-8 animate-in fade-in duration-500">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.shipments.title")}</h1>
+            <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.shipments.subtitle")}</p>
+          </div>
+
+          <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total</p>
+              <p className="text-sm font-semibold text-foreground">{shipments.length}</p>
+            </div>
+            <div className="h-8 w-px bg-border/70" />
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Open</p>
+              <p className="text-sm font-semibold text-amber-600">{openCount}</p>
+            </div>
+            <div className="h-8 w-px bg-border/70" />
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Shipped</p>
+              <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{shippedCount}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              label: "All shipments",
+              value: String(shipments.length),
+              icon: Truck,
+              color: "text-primary",
+              bg: "bg-primary/10",
+            },
+            {
+              label: "Open pipeline",
+              value: String(openCount),
+              icon: Layers,
+              color: "text-warning",
+              bg: "bg-warning/10",
+            },
+            {
+              label: "Drafts",
+              value: String(draftCount),
+              icon: ClipboardList,
+              color: "text-muted-foreground",
+              bg: "bg-muted/40",
+            },
+            {
+              label: "Shipped",
+              value: String(shippedCount),
+              icon: CheckCircle2,
+              color: "text-success",
+              bg: "bg-success/10",
+            },
+          ].map((stat, idx) => (
+            <Card
+              key={idx}
+              className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
+              <CardContent className="flex items-center gap-4 p-5">
+                <div
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
+                >
+                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                  <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {filtersCard}
+        {registerCard}
+      </div>
 
       <Dialog open={!!shipOpen} onOpenChange={(o) => !o && setShipOpen(null)}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl border border-border/60 shadow-erp sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm ship</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-[#1a2744]">Confirm ship</DialogTitle>
             <DialogDescription>Updates order shipped quantities and order status.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-2">
             <div>
               <Label>Carrier</Label>
-              <Input value={carrier} onChange={(e) => setCarrier(e.target.value)} placeholder="UPS, FedEx…" />
+              <Input
+                className="h-10 rounded-full border-border/60"
+                value={carrier}
+                onChange={(e) => setCarrier(e.target.value)}
+                placeholder="UPS, FedEx…"
+              />
             </div>
             <div>
               <Label>Tracking #</Label>
-              <Input value={tracking} onChange={(e) => setTracking(e.target.value)} />
+              <Input
+                className="h-10 rounded-full border-border/60"
+                value={tracking}
+                onChange={(e) => setTracking(e.target.value)}
+              />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShipOpen(null)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-full" onClick={() => setShipOpen(null)}>
               Cancel
             </Button>
-            <Button disabled={shipMut.isPending} onClick={() => shipOpen && shipMut.mutate(shipOpen)}>
+            <Button className="rounded-full" disabled={shipMut.isPending} onClick={() => shipOpen && shipMut.mutate(shipOpen)}>
               Mark shipped
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </ModuleDashboardLayout>
+    </>
   );
 }

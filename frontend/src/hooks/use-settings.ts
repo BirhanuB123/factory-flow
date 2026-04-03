@@ -32,6 +32,23 @@ export const defaultSettings = {
   defaultJobView: "table",
 };
 
+export type ErpSettings = typeof defaultSettings;
+
+/** Merge into `erp-settings` in localStorage and notify listeners (keeps other keys intact). */
+export function mergeErpSettings(partial: Partial<ErpSettings>) {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    const current = raw
+      ? { ...defaultSettings, ...JSON.parse(raw) }
+      : { ...defaultSettings };
+    const next = { ...current, ...partial };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+    window.dispatchEvent(new Event("erp-settings-updated"));
+  } catch (e) {
+    console.error("Failed to merge erp-settings", e);
+  }
+}
+
 export function useSettings() {
   const [settings, setSettings] = useState(() => {
     try {

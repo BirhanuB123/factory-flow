@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocale } from '@/contexts/LocaleContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +15,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
+  const { t } = useLocale();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -22,7 +24,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailOrId || !password) {
-      toast.error('Please fill in all fields');
+      toast.error(t('auth.errorFillAll'));
       return;
     }
 
@@ -44,7 +46,7 @@ export default function Login() {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success('Logged in successfully');
+        toast.success(t('auth.successLogin'));
         login(data as Record<string, unknown>, data.token);
         if ((data as { mustChangePassword?: boolean }).mustChangePassword) {
           navigate('/account/change-password', { replace: true });
@@ -52,11 +54,11 @@ export default function Login() {
           navigate(from, { replace: true });
         }
       } else {
-        toast.error(data.message || 'Invalid credentials');
+        toast.error(data.message || t('auth.errorInvalid'));
       }
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Failed to connect to server');
+      toast.error(t('auth.errorNetwork'));
     } finally {
       setIsLoading(false);
     }
@@ -88,14 +90,13 @@ export default function Login() {
             <Building2 className="h-9 w-9 text-white" aria-hidden />
           </div>
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
-            Manufacturing ERP
+            {t("auth.heroKicker")}
           </p>
           <h2 className="mb-5 text-4xl font-extrabold leading-[1.1] tracking-tight text-white drop-shadow-md xl:text-[2.65rem]">
-            Integra - ERP
+            {t("auth.heroTitle")}
           </h2>
           <p className="max-w-md text-base font-medium leading-relaxed text-white/88 xl:text-lg">
-            Streamline manufacturing from the shop floor to the top floor—clearer operations,
-            better productivity, and one place for your team to work.
+            {t("auth.heroSubtitle")}
           </p>
         </div>
       </div>
@@ -124,14 +125,14 @@ export default function Login() {
               </div>
               <div>
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">
-                  Integra
+                  {t("auth.brandKicker")}
                 </p>
                 <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                  Sign in
+                  {t("auth.signIn")}
                 </h1>
               </div>
               <p className="text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-                Use your company email or employee ID and password to continue.
+                {t("auth.signInHint")}
               </p>
             </div>
 
@@ -142,7 +143,7 @@ export default function Login() {
                     htmlFor="emailOrId"
                     className="text-sm font-medium transition-colors group-focus-within:text-primary"
                   >
-                    Email or employee ID
+                    {t("auth.emailOrId")}
                   </Label>
                   <Input
                     id="emailOrId"
@@ -161,7 +162,7 @@ export default function Login() {
                     htmlFor="password"
                     className="text-sm font-medium transition-colors group-focus-within:text-primary"
                   >
-                    Password
+                    {t("auth.password")}
                   </Label>
                   <Input
                     id="password"
@@ -185,10 +186,10 @@ export default function Login() {
                 {isLoading ? (
                   <span className="flex items-center gap-2">
                     <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-                    Signing in…
+                    {t("auth.signingIn")}
                   </span>
                 ) : (
-                  'Sign in'
+                  t("auth.signIn")
                 )}
               </Button>
             </form>
@@ -196,7 +197,7 @@ export default function Login() {
 
           <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">
             <Shield className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-            <span>Your session is protected with industry-standard security.</span>
+            <span>{t("auth.sessionNote")}</span>
           </p>
         </div>
       </div>

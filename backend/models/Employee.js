@@ -61,7 +61,9 @@ const employeeSchema = mongoose.Schema({
   },
   email: {
     type: String,
-    required: false
+    required: false,
+    trim: true,
+    lowercase: true,
   },
   phone: {
     type: String,
@@ -115,6 +117,9 @@ employeeSchema.methods.matchPassword = async function(enteredPassword) {
 
 // Encrypt password using bcrypt (async hook: do not call next — Mongoose 8+)
 employeeSchema.pre('save', async function () {
+  if (typeof this.email === 'string') {
+    this.email = this.email.trim().toLowerCase();
+  }
   if (!this.isModified('password')) return;
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);

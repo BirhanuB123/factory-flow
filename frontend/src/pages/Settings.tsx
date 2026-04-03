@@ -28,7 +28,6 @@ import {
   Sliders,
   ShieldCheck,
   Zap,
-  Settings as SettingsIcon,
   ListTree,
   Loader2,
   Scale,
@@ -45,11 +44,11 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ModuleDashboardLayout,
   StickyModuleTabs,
   moduleTabsListClassName,
   moduleTabsTriggerClassName,
 } from "@/components/ModuleDashboardLayout";
+import { useLocale } from "@/contexts/LocaleContext";
 import {
   Table,
   TableBody,
@@ -107,6 +106,7 @@ const defaultSettings = {
 };
 
 export default function Settings() {
+  const { t } = useLocale();
   const { user, refreshPermissions } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -314,6 +314,21 @@ export default function Settings() {
     }
   }, []);
 
+  useEffect(() => {
+    const syncDarkFromStorage = () => {
+      try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw) as { darkMode?: unknown };
+        if (typeof saved.darkMode === "boolean") setDarkMode(saved.darkMode);
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener("erp-settings-updated", syncDarkFromStorage);
+    return () => window.removeEventListener("erp-settings-updated", syncDarkFromStorage);
+  }, []);
+
   const getSettingsSnapshot = () => ({
     shopName,
     shopAddress,
@@ -385,118 +400,157 @@ export default function Settings() {
     startChapaCheckout.mutate({ plan, returnPath: "/settings", email: shopEmail || user?.email });
   };
 
-  return (
-    <ModuleDashboardLayout
-      className="max-w-[1600px] mx-auto"
-      title="CONTROL CENTER"
-      description="Manage enterprise identity, regional preferences, and security policies"
-      icon={SettingsIcon}
-      healthStats={[
-        { label: "Core Build", value: "1.2.0", accent: "text-primary" },
-        { label: "Regional", value: timezone.split("/").pop() ?? timezone, accent: "text-blue-500" },
-        { label: "Currency", value: currency, accent: "text-emerald-500" },
-      ]}
-      actions={
-        <div className="flex flex-wrap items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={handleExport}
-            className="h-12 px-6 rounded-2xl font-black uppercase text-[10px] tracking-widest border-border/40 bg-background/40 backdrop-blur-sm hover:scale-[1.02] active:scale-95 transition-all shadow-sm"
-          >
-            <Globe className="mr-2 h-4 w-4 opacity-50" />
-            Export Data
-          </Button>
-          <Button
-            onClick={handleSave}
-            className="h-12 px-10 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all bg-primary"
-          >
-            <Save className="mr-2 h-4.5 w-4.5" />
-            Commit Changes
-          </Button>
-        </div>
-      }
-    >
-      <Tabs defaultValue="shop" className="space-y-8">
-        <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden group">
-          <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-primary to-purple-500" />
-          <CardContent className="p-8">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="h-1.5 w-10 bg-primary/40 rounded-full" />
-              <p className="text-[11px] font-black uppercase tracking-[0.4em] text-foreground/50 italic">
-                Data Sovereignty & Persistence
-              </p>
-            </div>
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="group/card flex gap-5 rounded-3xl border border-border/10 bg-background/40 p-6 transition-all hover:border-primary/20 hover:bg-background/60 shadow-sm">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-secondary/50 border border-border/10 group-hover/card:text-primary group-hover/card:border-primary/20 transition-all">
-                  <Globe className="h-7 w-7" />
-                </div>
-                <div className="min-w-0 space-y-2">
-                  <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-black px-3 py-1 rounded-md border-none bg-muted/20">
-                    {DEVICE_ONLY_LABEL}
-                  </Badge>
-                  <p className="text-[13px] font-medium text-muted-foreground/80 leading-relaxed pr-4 italic">
-                    Identity, notifications, and local preferences are stored in this browser's secure cache.
-                  </p>
-                </div>
-              </div>
-              <div className="group/card flex gap-5 rounded-3xl border border-primary/10 bg-primary/5 p-6 transition-all hover:bg-primary/10 shadow-sm">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary">
-                  <ShieldCheck className="h-7 w-7" />
-                </div>
-                <div className="min-w-0 space-y-2">
-                  <Badge variant="default" className="text-[10px] uppercase tracking-widest font-black px-3 py-1 rounded-md shadow-lg shadow-primary/10">
-                    {TENANT_WIDE_LABEL}
-                  </Badge>
-                  <p className="text-[13px] font-medium text-muted-foreground/80 leading-relaxed pr-4 italic">
-                    Access roles, compliance logs, and tax profiles are synchronized across all company nodes.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <StickyModuleTabs>
-          <TabsList className={moduleTabsListClassName()}>
-            <TabsTrigger value="shop" className={moduleTabsTriggerClassName()}>
-              <Factory className="mr-2 h-4 w-4" />
-              Company
-            </TabsTrigger>
-            <TabsTrigger value="user" className={moduleTabsTriggerClassName()}>
-              <User className="mr-2 h-4 w-4" />
-              Identity
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className={moduleTabsTriggerClassName()}>
-              <Bell className="mr-2 h-4 w-4" />
-              Alerts
-            </TabsTrigger>
-            <TabsTrigger value="system" className={moduleTabsTriggerClassName()}>
-              <Sliders className="mr-2 h-4 w-4" />
-              System
-            </TabsTrigger>
-            <TabsTrigger value="access" className={moduleTabsTriggerClassName()}>
-              <ShieldCheck className="mr-2 h-4 w-4" />
-              Access
-            </TabsTrigger>
-            {canAudit && (
-              <TabsTrigger value="audit" className={moduleTabsTriggerClassName()}>
-                <ListTree className="mr-2 h-4 w-4" />
-                Audit Log
-              </TabsTrigger>
-            )}
-            {canFinance && (
-              <TabsTrigger value="ethiopia-tax" className={moduleTabsTriggerClassName()}>
-                <Scale className="mr-2 h-4 w-4" />
-                Tax Profile
-              </TabsTrigger>
-            )}
-          </TabsList>
-        </StickyModuleTabs>
+  const regionalLabel = timezone.split("/").pop() ?? timezone;
+  const settingsHeroStats = [
+    { label: "Core build", value: "1.2.0", icon: Sparkles, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Regional", value: regionalLabel, icon: Globe, color: "text-info", bg: "bg-info/10" },
+    { label: "Currency", value: currency, icon: Percent, color: "text-success", bg: "bg-success/10" },
+  ] as const;
 
-        {/* Shop Configuration */}
-        <TabsContent value="shop" className="space-y-8">
+  return (
+    <>
+      <div className="mx-auto max-w-[1600px] space-y-8 pb-8 animate-in fade-in duration-500">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.settings.title")}</h1>
+            <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.settings.subtitle")}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              className="h-10 gap-2 rounded-full border-primary/20 font-semibold shadow-erp-sm"
+            >
+              <Globe className="h-4 w-4" />
+              Export data
+            </Button>
+            <Button onClick={handleSave} className="h-10 gap-2 rounded-full font-semibold shadow-erp-sm">
+              <Save className="h-4 w-4" />
+              Save changes
+            </Button>
+          </div>
+        </div>
+
+        <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Core build</p>
+            <p className="text-sm font-semibold text-primary">1.2.0</p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Regional</p>
+            <p className="text-sm font-semibold text-foreground">{regionalLabel}</p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Currency</p>
+            <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{currency}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {settingsHeroStats.map((stat, idx) => (
+            <Card
+              key={idx}
+              className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
+              <CardContent className="flex items-center gap-4 p-5">
+                <div
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
+                >
+                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+                  <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Tabs defaultValue="shop" className="space-y-8">
+          <Card className="group overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+            <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-primary to-purple-500" />
+            <CardContent className="p-8">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="h-1.5 w-10 bg-primary/40 rounded-full" />
+                <p className="text-[11px] font-black uppercase tracking-[0.4em] text-foreground/50 italic">
+                  Data Sovereignty & Persistence
+                </p>
+              </div>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="group/card flex gap-5 rounded-3xl border border-border/10 bg-background/40 p-6 transition-all hover:border-primary/20 hover:bg-background/60 shadow-sm">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-secondary/50 border border-border/10 group-hover/card:text-primary group-hover/card:border-primary/20 transition-all">
+                    <Globe className="h-7 w-7" />
+                  </div>
+                  <div className="min-w-0 space-y-2">
+                    <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-black px-3 py-1 rounded-md border-none bg-muted/20">
+                      {DEVICE_ONLY_LABEL}
+                    </Badge>
+                    <p className="text-[13px] font-medium text-muted-foreground/80 leading-relaxed pr-4 italic">
+                      Identity, notifications, and local preferences are stored in this browser's secure cache.
+                    </p>
+                  </div>
+                </div>
+                <div className="group/card flex gap-5 rounded-3xl border border-primary/10 bg-primary/5 p-6 transition-all hover:bg-primary/10 shadow-sm">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary">
+                    <ShieldCheck className="h-7 w-7" />
+                  </div>
+                  <div className="min-w-0 space-y-2">
+                    <Badge variant="default" className="text-[10px] uppercase tracking-widest font-black px-3 py-1 rounded-md shadow-lg shadow-primary/10">
+                      {TENANT_WIDE_LABEL}
+                    </Badge>
+                    <p className="text-[13px] font-medium text-muted-foreground/80 leading-relaxed pr-4 italic">
+                      Access roles, compliance logs, and tax profiles are synchronized across all company nodes.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <StickyModuleTabs>
+            <TabsList className={moduleTabsListClassName()}>
+              <TabsTrigger value="shop" className={moduleTabsTriggerClassName()}>
+                <Factory className="mr-2 h-4 w-4" />
+                Company
+              </TabsTrigger>
+              <TabsTrigger value="user" className={moduleTabsTriggerClassName()}>
+                <User className="mr-2 h-4 w-4" />
+                Identity
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className={moduleTabsTriggerClassName()}>
+                <Bell className="mr-2 h-4 w-4" />
+                Alerts
+              </TabsTrigger>
+              <TabsTrigger value="system" className={moduleTabsTriggerClassName()}>
+                <Sliders className="mr-2 h-4 w-4" />
+                System
+              </TabsTrigger>
+              <TabsTrigger value="access" className={moduleTabsTriggerClassName()}>
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                Access
+              </TabsTrigger>
+              {canAudit && (
+                <TabsTrigger value="audit" className={moduleTabsTriggerClassName()}>
+                  <ListTree className="mr-2 h-4 w-4" />
+                  Audit Log
+                </TabsTrigger>
+              )}
+              {canFinance && (
+                <TabsTrigger value="ethiopia-tax" className={moduleTabsTriggerClassName()}>
+                  <Scale className="mr-2 h-4 w-4" />
+                  Tax Profile
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </StickyModuleTabs>
+
+          {/* Shop Configuration */}
+          <TabsContent value="shop" className="space-y-8">
           {tenantSubscription && user?.platformRole !== "super_admin" && (
-            <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-primary/5 bg-gradient-to-br from-primary/10 via-card/40 to-background/40 backdrop-blur-xl overflow-hidden group">
+            <Card className="group overflow-hidden rounded-2xl border-0 border-l-4 border-l-primary/70 bg-card shadow-erp">
               <div className="h-1 w-full bg-gradient-to-r from-primary/20 via-primary to-primary/20" />
               <CardContent className="p-8">
                 <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
@@ -582,7 +636,7 @@ export default function Settings() {
             </Card>
           )}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-            <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl xl:col-span-2 overflow-hidden">
+            <Card className="xl:col-span-2 overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
               <CardHeader className="p-8 pb-4 border-b border-border/10 bg-secondary/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -624,7 +678,7 @@ export default function Settings() {
             </Card>
 
             <div className="space-y-8 xl:col-span-1">
-              <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
+              <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
                 <CardHeader className="p-8 pb-4 border-b border-border/10 bg-secondary/20">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -710,7 +764,7 @@ export default function Settings() {
               </Card>
               </div>
             <div className="space-y-8 xl:col-span-1">
-              <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden group">
+              <Card className="group overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
                 <CardContent className="p-8">
                   <div className="flex items-center justify-between gap-6">
                     <div className="space-y-1.5">
@@ -732,7 +786,7 @@ export default function Settings() {
         {/* User Preferences */}
         <TabsContent value="user" className="space-y-8">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
+            <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
               <CardHeader className="p-8 pb-4 border-b border-border/10 bg-secondary/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -763,7 +817,7 @@ export default function Settings() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
+            <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
               <CardHeader className="p-8 pb-4 border-b border-border/10 bg-secondary/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -838,7 +892,7 @@ export default function Settings() {
         {/* Notifications */}
         <TabsContent value="notifications" className="space-y-8">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
+            <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
               <CardHeader className="p-8 pb-4 border-b border-border/10 bg-secondary/20">
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 text-amber-500 shadow-inner">
@@ -874,7 +928,7 @@ export default function Settings() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
+            <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
               <CardHeader className="p-8 pb-4 border-b border-border/10 bg-secondary/20">
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
@@ -910,7 +964,7 @@ export default function Settings() {
         {/* System */}
         <TabsContent value="system" className="space-y-8">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
+            <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
               <CardHeader className="p-8 pb-4 border-b border-border/10 bg-secondary/20">
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
@@ -954,7 +1008,7 @@ export default function Settings() {
             </Card>
 
             <div className="space-y-8">
-              <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
+              <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
                 <CardHeader className="p-8 pb-4 border-b border-border/10 bg-secondary/20">
                   <div className="flex items-center gap-4">
                     <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
@@ -978,7 +1032,7 @@ export default function Settings() {
                 </CardContent>
               </Card>
 
-              <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-rose-500/5 bg-rose-500/5 overflow-hidden group">
+              <Card className="group overflow-hidden rounded-2xl border-0 border-l-4 border-l-rose-500/70 bg-card shadow-erp">
                 <CardHeader className="p-8 pb-4 border-b border-rose-500/10 bg-rose-500/5">
                   <div className="flex items-center gap-4">
                     <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20 text-rose-500 shadow-inner">
@@ -1009,7 +1063,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="access" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
+          <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
             <CardHeader className="p-10 pb-6 border-b border-border/10 bg-secondary/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -1098,7 +1152,7 @@ export default function Settings() {
 
         {canAudit && (
           <TabsContent value="audit" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
+            <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
               <CardHeader className="p-10 pb-6 border-b border-border/10 bg-secondary/20">
                 <div className="flex items-center gap-4">
                   <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
@@ -1119,7 +1173,7 @@ export default function Settings() {
 
         {canFinance && (
           <TabsContent value="ethiopia-tax" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
+            <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
               <div className="h-1.5 w-full bg-gradient-to-r from-amber-500/50 via-primary/50 to-emerald-500/50" />
               <CardHeader className="p-10 pb-6 border-b border-border/10 bg-secondary/20 relative">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_100%_0%,hsl(var(--primary)/0.05),transparent)] pointer-events-none" />
@@ -1548,6 +1602,7 @@ export default function Settings() {
           </TabsContent>
         )}
       </Tabs>
-    </ModuleDashboardLayout>
+      </div>
+    </>
   );
 }

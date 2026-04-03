@@ -4,8 +4,10 @@ import { WifiOff, RefreshCw, CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getPendingCount, processOfflineQueue } from "@/lib/offlineQueue";
 import { toast } from "sonner";
+import { useLocale } from "@/contexts/LocaleContext";
 
 export function OfflineQueueBanner() {
+  const { t } = useLocale();
   const queryClient = useQueryClient();
   const [online, setOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : true
@@ -31,10 +33,10 @@ export function OfflineQueueBanner() {
             queryClient.invalidateQueries({ queryKey: ["inventory"] });
             queryClient.invalidateQueries({ queryKey: ["inventory-movements"] });
             queryClient.invalidateQueries({ queryKey: ["inventory-alerts"] });
-            toast.success(`Synced ${r.processed} queued action(s)`);
+            toast.success(t("offline.toastSynced", { n: r.processed }));
           }
           if (r.lastError && r.remaining > 0) {
-            toast.error(`Sync paused: ${r.lastError}`);
+            toast.error(t("offline.toastPaused", { msg: r.lastError }));
           }
         } finally {
           setSyncing(false);
@@ -50,11 +52,11 @@ export function OfflineQueueBanner() {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
     };
-  }, [queryClient, refresh]);
+  }, [queryClient, refresh, t]);
 
   const manualSync = async () => {
     if (!navigator.onLine) {
-      toast.message("You're offline — connect to sync the queue.");
+      toast.message(t("offline.offlineMsg"));
       return;
     }
     setSyncing(true);
@@ -65,9 +67,9 @@ export function OfflineQueueBanner() {
         queryClient.invalidateQueries({ queryKey: ["inventory"] });
         queryClient.invalidateQueries({ queryKey: ["inventory-movements"] });
         queryClient.invalidateQueries({ queryKey: ["inventory-alerts"] });
-        toast.success(`Synced ${r.processed} action(s)`);
+        toast.success(t("offline.toastSynced", { n: r.processed }));
       } else if (r.remaining === 0) {
-        toast.message("Queue is empty.");
+        toast.message(t("offline.queueEmpty"));
       }
       if (r.lastError && r.remaining > 0) {
         toast.error(r.lastError);
@@ -89,18 +91,16 @@ export function OfflineQueueBanner() {
         {!online ? (
           <>
             <WifiOff className="h-4 w-4 shrink-0" />
-            <span className="font-semibold">Offline</span>
-            <span className="text-amber-900/80 dark:text-amber-200/90">
-              PO receive and stock receipt/issue/adjustment can be queued and will post when you reconnect.
-            </span>
+            <span className="font-semibold">{t("offline.title")}</span>
+            <span className="text-amber-900/80 dark:text-amber-200/90">{t("offline.detail")}</span>
           </>
         ) : (
           <>
             <CloudUpload className="h-4 w-4 shrink-0" />
-            <span className="font-semibold">{pending} queued</span>
-            <span className="text-amber-900/80 dark:text-amber-200/90">
-              Warehouse actions waiting to sync to the server.
+            <span className="font-semibold">
+              {pending} {t("offline.queued")}
             </span>
+            <span className="text-amber-900/80 dark:text-amber-200/90">{t("offline.queuedDetail")}</span>
           </>
         )}
       </div>
@@ -114,7 +114,7 @@ export function OfflineQueueBanner() {
           onClick={() => manualSync()}
         >
           <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
-          Sync now
+          {t("offline.syncNow")}
         </Button>
       )}
     </div>

@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { Plus, Truck, CheckCircle, Package, Ban, FileText } from "lucide-react";
 import { ModuleDashboardLayout } from "@/components/ModuleDashboardLayout";
+import { useLocale } from "@/contexts/LocaleContext";
 import { useCurrency } from "@/hooks/use-currency";
 import { submitPoReceiveWhenOnline } from "@/lib/offlineCriticalActions";
 
@@ -81,6 +82,7 @@ function poLineTotalFunctional(po: PO) {
 }
 
 export default function PurchaseOrders() {
+  const { t } = useLocale();
   const { format } = useCurrency();
   const { can, user } = useAuth();
   const canPickVendor =
@@ -309,8 +311,8 @@ export default function PurchaseOrders() {
 
   return (
     <ModuleDashboardLayout
-      title="Procurement"
-      description="POs with import landed cost (freight, duty, clearing), FX, and LC tracking."
+      title={t("pages.purchasing.title")}
+      description={t("pages.purchasing.subtitle")}
       icon={Truck}
       actions={
         can(PERM.create) ? (
@@ -321,14 +323,23 @@ export default function PurchaseOrders() {
               setFormOpen(true);
             }}
           >
-            <Plus className="h-4 w-4" /> New PO
+            <Plus className="h-4 w-4" /> {t("pages.purchasing.newPo")}
           </Button>
         ) : null
       }
       healthStats={[
-        { label: "Open POs", value: String((pos as PO[]).filter((p) => p.status !== "received" && p.status !== "cancelled").length) },
-        { label: "Draft", value: String((pos as PO[]).filter((p) => p.status === "draft").length) },
-        { label: "To receive", value: String((pos as PO[]).filter((p) => ["approved", "partial_received"].includes(p.status)).length) },
+        {
+          label: t("pages.purchasing.openPos"),
+          value: String((pos as PO[]).filter((p) => p.status !== "received" && p.status !== "cancelled").length),
+        },
+        {
+          label: t("pages.purchasing.draftPos"),
+          value: String((pos as PO[]).filter((p) => p.status === "draft").length),
+        },
+        {
+          label: t("pages.purchasing.toReceive"),
+          value: String((pos as PO[]).filter((p) => ["approved", "partial_received"].includes(p.status)).length),
+        },
       ]}
     >
       <Card className="border-none shadow-xl bg-card/60 overflow-hidden">

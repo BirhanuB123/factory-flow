@@ -1,11 +1,20 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { productionApi, inventoryApi, manufacturingApi, type TenantModuleFlags } from "@/lib/api";
-import { Wrench, Gauge, AlertTriangle, CheckCircle2 } from "lucide-react";
+import {
+  productionApi,
+  inventoryApi,
+  manufacturingApi,
+  purchaseOrdersApi,
+  type TenantModuleFlags,
+} from "@/lib/api";
+import { Globe, Sun, LayoutGrid, Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSettings } from "@/hooks/use-settings";
 import { PERMS } from "@/lib/permissions";
+import { useLocale } from "@/contexts/LocaleContext";
+import { StatRing } from "@/components/StatRing";
 
 function moduleEnabled(
   user: { platformRole?: string; tenantModuleFlags?: Partial<TenantModuleFlags> } | null | undefined,
@@ -16,125 +25,175 @@ function moduleEnabled(
   return user.tenantModuleFlags?.[key] !== false;
 }
 
-function assetIdFromDowntime(d: { asset: string | { _id?: string }; endedAt?: string | null }): string | null {
-  const a = d.asset;
-  if (a && typeof a === "object" && "_id" in a && a._id) return String(a._id);
-  if (typeof a === "string") return a;
-  return null;
+const currencySymbols: Record<string, string> = {
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  CAD: "C$",
+  ETB: "Br",
+};
+
+function formatMoney(amount: number, currencyCode: string): string {
+  const sym = currencySymbols[currencyCode] || currencyCode + " ";
+  if (!Number.isFinite(amount)) return `${sym}0`;
+  return `${sym}${Math.round(amount).toLocaleString()}`;
+}
+
+function poApproxTotal(po: {
+  lines?: { quantityOrdered?: number; quantity?: number; unitCost?: number }[];
+  totalAmount?: number;
+}): number {
+  if (typeof po.totalAmount === "number" && Number.isFinite(po.totalAmount)) return po.totalAmount;
+  const lines = po.lines || [];
+  return lines.reduce(
+    (s, l) => s + (l.quantityOrdered || l.quantity || 0) * (l.unitCost || 0),
+    0
+  );
 }
 
 export function KpiCards() {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const { user, can } = useAuth();
+  const { settings } = useSettings();
   const mfgEnabled = moduleEnabled(user, "manufacturing") && can(PERMS.DASHBOARD_MFG);
   const invEnabled = moduleEnabled(user, "inventory") && can(PERMS.DASHBOARD_INVENTORY);
+  const poEnabled = moduleEnabled(user, "procurement") && can(PERMS.PO_VIEW);
 
   const { data: jobs = [] } = useQuery({
     queryKey: ["productions"],
     queryFn: productionApi.getAll,
     enabled: mfgEnabled,
   });
+
   const { data: inventory = [] } = useQuery({
     queryKey: ["inventory"],
     queryFn: inventoryApi.getAll,
     enabled: invEnabled,
   });
+
   const { data: assets = [] } = useQuery({
     queryKey: ["manufacturing-assets"],
     queryFn: manufacturingApi.listAssets,
     enabled: mfgEnabled,
   });
-  const { data: downtime = [] } = useQuery({
-    queryKey: ["manufacturing-downtime"],
-    queryFn: () => manufacturingApi.listDowntime({ limit: 200 }),
-    enabled: mfgEnabled,
+
+  const { data: purchaseOrders = [] } = useQuery({
+    queryKey: ["purchase-orders"],
+    queryFn: purchaseOrdersApi.getAll,
+    enabled: poEnabled,
   });
 
-  const activeJobs = jobs.filter((j: { status: string }) => j.status === "In Progress" || j.status === "Scheduled").length;
-  const completedToday = jobs.filter((j: { status: string; dueDate?: string; updatedAt?: string }) => {
-    if (j.status !== "Completed") return false;
-    const t = new Date((j as { updatedAt?: string }).updatedAt || j.dueDate || 0).getTime();
-    return new Date(t).toDateString() === new Date().toDateString();
-  }).length;
-  const lowStockCount = inventory.filter((i: { stock: number; reorderPoint: number }) => i.stock <= i.reorderPoint && i.reorderPoint > 0).length;
-  const outOfStockCount = inventory.filter((i: { stock: number }) => i.stock === 0).length;
+  const metrics = useMemo(() => {
+    const activeAssets = (assets as { active?: boolean }[]).filter((a) => a.active !== false).length;
+    const assetCount = mfgEnabled ? activeAssets : invEnabled ? (inventory as unknown[]).length : 0;
 
-  const fleetAvailabilityPct = useMemo(() => {
-    const list = (assets as { _id: string; active?: boolean }[]).filter((a) => a.active !== false);
-    if (list.length === 0) return null;
-    const open = new Set<string>();
-    for (const d of downtime as { asset: string | { _id?: string }; endedAt?: string | null }[]) {
-      if (d.endedAt) continue;
-      const id = assetIdFromDowntime(d);
-      if (id) open.add(id);
+    let grossValue = 0;
+    let netValue = 0;
+    for (const row of inventory as { stock?: number; unitCost?: number }[]) {
+      const stock = Number(row.stock || 0);
+      const unit = Number(row.unitCost || 0);
+      const line = stock * unit;
+      grossValue += line;
+      if (stock > 0) netValue += line;
     }
-    const downCount = list.filter((a) => open.has(String(a._id))).length;
-    return Math.max(0, Math.min(100, Math.round(100 * (1 - downCount / list.length))));
-  }, [assets, downtime]);
 
-  const workloadPct = useMemo(() => {
-    const pool = jobs.filter((j: { status: string }) => j.status !== "Cancelled").length;
-    if (pool <= 0) return 0;
-    return Math.max(0, Math.min(100, Math.round((100 * activeJobs) / pool)));
-  }, [jobs, activeJobs]);
+    const fyStart = new Date(new Date().getFullYear(), 0, 1).getTime();
+    let fyPurchases = 0;
+    for (const po of purchaseOrders as { createdAt?: string; status?: string }[]) {
+      const t = po.createdAt ? new Date(po.createdAt).getTime() : 0;
+      if (t >= fyStart && po.status !== "cancelled" && po.status !== "Cancelled") {
+        fyPurchases += poApproxTotal(po as Parameters<typeof poApproxTotal>[0]);
+      }
+    }
 
-  const displayUtil = fleetAvailabilityPct != null ? fleetAvailabilityPct : workloadPct;
+    const jobPool = (jobs as { status?: string }[]).filter((j) => j.status !== "Cancelled").length;
+    const activeJobs = (jobs as { status?: string }[]).filter(
+      (j) => j.status === "In Progress" || j.status === "Scheduled"
+    ).length;
+    const workloadPct = jobPool <= 0 ? 0 : Math.round((100 * activeJobs) / jobPool);
+
+    const ring1 =
+      mfgEnabled || invEnabled
+        ? Math.min(100, Math.max(18, 24 + Math.min(assetCount * 4, 56)))
+        : 0;
+    const ring2 =
+      invEnabled && grossValue > 0
+        ? Math.min(100, Math.round(32 + (Math.log10(grossValue + 1) / 5) * 28))
+        : invEnabled
+          ? 32
+          : 0;
+    const ring3 =
+      invEnabled && grossValue > 0
+        ? Math.min(100, Math.round((100 * netValue) / grossValue))
+        : invEnabled
+          ? 48
+          : 0;
+    const ring4 = poEnabled
+      ? fyPurchases > 0
+        ? Math.min(100, Math.round(45 + (Math.log10(fyPurchases + 1) / 6) * 35))
+        : 28
+      : mfgEnabled
+        ? Math.min(100, Math.max(20, workloadPct))
+        : 0;
+
+    return {
+      assetCount,
+      grossValue,
+      netValue,
+      fyPurchases,
+      ring1,
+      ring2,
+      ring3,
+      ring4,
+    };
+  }, [assets, inventory, jobs, purchaseOrders, mfgEnabled, invEnabled, poEnabled]);
+
+  const cur = settings.currency || "USD";
 
   const kpis = [
     {
-      label: "Active Jobs",
-      value: mfgEnabled ? String(activeJobs) : "—",
-      change: "Scheduled + In Progress",
-      icon: Wrench,
-      iconBg: "bg-primary/10",
-      iconColor: "text-primary",
-      alert: false,
-      href: "/production-jobs",
+      label: t("kpi.assetsCount"),
+      value: mfgEnabled || invEnabled ? String(metrics.assetCount) : "—",
+      ring: metrics.ring1,
+      color: "hsl(221, 83%, 53%)",
+      icon: Globe,
+      href: mfgEnabled ? "/production" : "/inventory",
     },
     {
-      label: "Floor availability",
-      value: mfgEnabled ? `${displayUtil}%` : "—",
-      change: fleetAvailabilityPct != null ? "Assets not in open downtime" : "Share of open jobs in progress",
-      icon: Gauge,
-      iconBg: "bg-success/10",
-      iconColor: "text-success",
-      alert: false,
-      href: "/production",
-    },
-    {
-      label: "Low Stock Alerts",
-      value: invEnabled ? String(lowStockCount + outOfStockCount) : "—",
-      change: invEnabled
-        ? lowStockCount + outOfStockCount > 0
-          ? "Requires attention"
-          : "All good"
-        : "Inventory module disabled",
-      icon: AlertTriangle,
-      iconBg: "bg-destructive/10",
-      iconColor: "text-destructive",
-      alert: invEnabled && lowStockCount + outOfStockCount > 0,
+      label: t("kpi.valueOfAssets"),
+      value: invEnabled ? formatMoney(metrics.grossValue, cur) : "—",
+      ring: metrics.ring2,
+      color: "hsl(32, 95%, 52%)",
+      icon: Sun,
       href: "/inventory",
     },
     {
-      label: "Completed Today",
-      value: mfgEnabled ? String(completedToday) : "—",
-      change: "Completed today (by last update)",
-      icon: CheckCircle2,
-      iconBg: "bg-info/10",
-      iconColor: "text-info",
-      alert: false,
-      href: "/production-jobs?status=Completed",
+      label: t("kpi.netAssetsValue"),
+      value: invEnabled ? formatMoney(metrics.netValue, cur) : "—",
+      ring: metrics.ring3,
+      color: "hsl(262, 83%, 58%)",
+      icon: LayoutGrid,
+      href: "/inventory",
+    },
+    {
+      label: t("kpi.purchasesFY"),
+      value: poEnabled ? formatMoney(metrics.fyPurchases, cur) : "—",
+      ring: metrics.ring4,
+      color: "hsl(152, 69%, 42%)",
+      icon: Wallet,
+      href: "/purchase-orders",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {kpis.map((kpi) => (
-        <Card 
-          key={kpi.label} 
+        <Card
+          key={kpi.label}
           role="link"
           tabIndex={0}
-          className="relative overflow-hidden group border-none shadow-md bg-card/60 backdrop-blur-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="cursor-pointer border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl"
           onClick={() => navigate(kpi.href)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -143,31 +202,18 @@ export function KpiCards() {
             }
           }}
         >
-          {/* Subtle gradient overlay */}
-          <div className={`absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 rounded-full blur-3xl opacity-20 transition-opacity group-hover:opacity-30 ${kpi.iconBg}`} />
-          
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between relative z-10">
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">
-                  {kpi.label}
-                </p>
-                <div className="flex items-baseline gap-1">
-                  <h3 className={`text-4xl font-extrabold tracking-tighter ${kpi.alert ? "text-destructive" : "text-foreground"}`}>
-                    {kpi.value}
-                  </h3>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className={`h-1.5 w-1.5 rounded-full ${kpi.alert ? "bg-destructive animate-pulse" : "bg-success"}`} />
-                  <p className="text-[11px] font-medium text-muted-foreground inline-flex items-center">
-                    {kpi.change}
-                  </p>
-                </div>
-              </div>
-              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-inner transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6 ${kpi.iconBg}`}>
-                <kpi.icon className={`h-6 w-6 ${kpi.iconColor}`} />
+          <CardContent className="flex flex-col items-center p-6 pt-7 text-center">
+            <div className="relative mb-4 flex h-[4.5rem] w-[4.5rem] items-center justify-center">
+              <StatRing pct={kpi.ring} color={kpi.color} size={72} stroke={5} />
+              <div
+                className="absolute flex h-11 w-11 items-center justify-center rounded-full bg-muted/50"
+                style={{ color: kpi.color }}
+              >
+                <kpi.icon className="h-5 w-5" strokeWidth={2} />
               </div>
             </div>
+            <p className="text-3xl font-bold tracking-tight text-foreground">{kpi.value}</p>
+            <p className="mt-1.5 text-sm font-medium text-muted-foreground">{kpi.label}</p>
           </CardContent>
         </Card>
       ))}

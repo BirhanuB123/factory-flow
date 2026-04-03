@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-ui-lang="en">
 
 <head>
   <meta charset="UTF-8" />
@@ -13,6 +13,20 @@
   <meta property="og:type" content="website" />
 
   <meta name="twitter:card" content="summary_large_image" />
+  <script>
+    try {
+      var raw = localStorage.getItem("erp-settings");
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (s.darkMode) document.documentElement.classList.add("dark");
+        var ul = s.uiLanguage;
+        if (ul === "am" || ul === "om" || ul === "en") {
+          document.documentElement.lang = ul;
+          document.documentElement.setAttribute("data-ui-lang", ul);
+        }
+      }
+    } catch (e) {}
+  </script>
 </head>
 
 <body>

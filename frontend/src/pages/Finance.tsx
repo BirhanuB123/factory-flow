@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Plus,
   Search,
-  CircleDollarSign,
   TrendingUp,
   TrendingDown,
   Loader2,
@@ -22,7 +21,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { financeExtendedApi, ordersApi } from "@/lib/api";
 import { toast as sonnerToast } from "sonner";
 import {
-  ModuleDashboardLayout,
   StickyModuleTabs,
   moduleTabsListClassName,
   moduleTabsTriggerClassName,
@@ -50,6 +48,7 @@ import {
 import { FinanceMetrics } from "@/components/FinanceMetrics";
 import { FinanceApTab } from "@/components/finance/FinanceApTab";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocale } from "@/contexts/LocaleContext";
 import { downloadReportCsv, ethiopiaTaxApi, shipmentsApi } from "@/lib/api";
 import {
   DropdownMenu,
@@ -102,36 +101,20 @@ function FinanceLedgerTable({
 }) {
   const { formatAmount, symbol } = useCurrency();
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-xl overflow-hidden shadow-xl">
+    <div className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-secondary/30">
+          <TableHeader className="bg-muted/25">
             <TableRow className="border-border/40 hover:bg-transparent">
-              <TableHead className="py-4 pl-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 w-32">
-                Journal ID
-              </TableHead>
-              <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
-                Type
-              </TableHead>
-              <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
-                Category
-              </TableHead>
-              <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
-                Description
-              </TableHead>
-              <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
-                Value
-              </TableHead>
-              <TableHead className="py-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
-                Date
-              </TableHead>
-              <TableHead className="py-4 pr-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 text-right">
-                Status
-              </TableHead>
+              <TableHead className="w-32 py-4 pl-6 text-xs font-bold text-foreground">Journal ID</TableHead>
+              <TableHead className="py-4 text-xs font-bold text-foreground">Type</TableHead>
+              <TableHead className="py-4 text-xs font-bold text-foreground">Category</TableHead>
+              <TableHead className="py-4 text-xs font-bold text-foreground">Description</TableHead>
+              <TableHead className="py-4 text-xs font-bold text-foreground">Value</TableHead>
+              <TableHead className="py-4 text-xs font-bold text-foreground">Date</TableHead>
+              <TableHead className="py-4 pr-6 text-right text-xs font-bold text-foreground">Status</TableHead>
               {onOpenTaxInvoice && (
-                <TableHead className="py-4 pr-6 w-[52px] text-[10px] font-black uppercase tracking-widest text-muted-foreground/70 text-center">
-                  Tax
-                </TableHead>
+                <TableHead className="w-[52px] py-4 pr-6 text-center text-xs font-bold text-foreground">Tax</TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -175,7 +158,7 @@ function FinanceLedgerTable({
               rows.map((t) => (
                 <TableRow
                   key={t.id + t.date + t.type}
-                  className="group/row border-border/30 hover:bg-secondary/20 transition-colors"
+                  className="group/row border-border/40 transition-colors hover:bg-muted/35"
                 >
                   <TableCell className="py-3 pl-6">
                     <span className="font-mono text-[10px] font-bold text-muted-foreground group-hover/row:text-primary transition-colors">
@@ -258,7 +241,7 @@ function FinanceLedgerTable({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary"
+                          className="h-8 w-8 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
                           title="Printable tax invoice"
                           onClick={() => onOpenTaxInvoice(t.sourceId!)}
                         >
@@ -280,6 +263,7 @@ function FinanceLedgerTable({
 }
 
 export default function Finance() {
+  const { t } = useLocale();
   const { user } = useAuth();
   const canWriteFinance = user?.role === "Admin" || user?.role === "finance_head";
   const canFinance = ["Admin", "finance_head", "finance_viewer"].includes(user?.role ?? "");
@@ -490,32 +474,17 @@ export default function Finance() {
   }, [q, transactions]);
 
   return (
-    <ModuleDashboardLayout
-      title="Finance Operations"
-      description="Fiscal intelligence, liquidity, and journal activity—aligned with Production command style."
-      icon={CircleDollarSign}
-      healthStats={[
-        {
-          label: "Revenue",
-          value: format(financeStats.revenue ?? 0),
-          accent: "text-emerald-500",
-        },
-        {
-          label: "Net position",
-          value: format(financeStats.profit ?? 0),
-          accent: (financeStats.profit ?? 0) >= 0 ? "text-primary" : "text-destructive",
-        },
-        {
-          label: "Pending",
-          value: format(financeStats.pending ?? 0),
-          accent: "text-amber-500",
-        },
-      ]}
-      actions={
-        <div className="flex flex-wrap gap-2">
+    <>
+      <div className="space-y-8 pb-8 animate-in fade-in duration-500">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.finance.title")}</h1>
+            <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.finance.subtitle")}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-11 rounded-xl font-black uppercase text-xs gap-2">
+              <Button variant="outline" className="h-10 gap-2 rounded-full border-primary/20 font-semibold shadow-erp-sm">
                 <Download className="h-4 w-4" />
                 Export CSV
               </Button>
@@ -557,16 +526,16 @@ export default function Finance() {
             <>
               <Button
                 variant="outline"
-                className="h-11 rounded-xl font-black uppercase text-xs gap-2 border-amber-500/40 text-amber-700 dark:text-amber-400"
+                className="h-10 gap-2 rounded-full border-amber-500/40 font-semibold text-amber-700 shadow-erp-sm dark:text-amber-400"
                 onClick={() => setEthCsvOpen(true)}
               >
                 <FileText className="h-4 w-4" />
                 Ethiopia tax CSV
               </Button>
               <Dialog open={ethCsvOpen} onOpenChange={setEthCsvOpen}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="rounded-2xl border border-border/60 shadow-erp sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle className="font-black uppercase">Statutory CSV exports</DialogTitle>
+                    <DialogTitle className="text-lg font-bold text-[#1a2744]">Statutory CSV exports</DialogTitle>
                     <DialogDescription className="text-xs">
                       Date range filters invoice/bill dates. See docs for accountant column mapping.
                     </DialogDescription>
@@ -607,14 +576,14 @@ export default function Finance() {
           {canWriteFinance && (
           <Dialog open={invFromOrderOpen} onOpenChange={(o) => { setInvFromOrderOpen(o); if (!o) setInvShipmentId(""); }}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="h-11 rounded-xl font-black uppercase text-xs gap-2">
+              <Button variant="outline" className="h-10 gap-2 rounded-full border-border/60 font-semibold shadow-erp-sm">
                 <FileInput className="h-4 w-4" />
                 Invoice from order
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="rounded-2xl border border-border/60 shadow-erp sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>Invoice from sales order</DialogTitle>
+                <DialogTitle className="text-lg font-bold text-[#1a2744]">Invoice from sales order</DialogTitle>
                 <DialogDescription>
                   If the order has shipped packages, pick a shipment to invoice. Otherwise one full-order invoice.
                 </DialogDescription>
@@ -724,12 +693,12 @@ export default function Finance() {
         {canWriteFinance && (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="h-11 rounded-xl px-6 font-black uppercase italic text-xs tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all gap-2 bg-primary">
+            <Button className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
               <Plus className="h-4 w-4" />
               New entry
             </Button>
           </DialogTrigger>
-              <DialogContent className="sm:max-w-xl bg-card/95 backdrop-blur-2xl border-white/10 shadow-3xl">
+              <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-erp sm:max-w-xl">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-primary to-purple-500" />
                 <DialogHeader className="space-y-4">
                   <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
@@ -818,12 +787,38 @@ export default function Finance() {
               </DialogContent>
         </Dialog>
         )}
+          </div>
         </div>
-      }
-    >
-      <FinanceMetrics stats={financeStats} />
 
-      <Tabs defaultValue="all" className="space-y-6">
+        <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Revenue</p>
+            <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{format(financeStats.revenue ?? 0)}</p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Expenses</p>
+            <p className="text-sm font-semibold text-foreground">{format(financeStats.expenses ?? 0)}</p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Net</p>
+            <p
+              className={`text-sm font-semibold ${(financeStats.profit ?? 0) >= 0 ? "text-primary" : "text-destructive"}`}
+            >
+              {format(financeStats.profit ?? 0)}
+            </p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pending</p>
+            <p className="text-sm font-semibold text-amber-600">{format(financeStats.pending ?? 0)}</p>
+          </div>
+        </div>
+
+        <FinanceMetrics stats={financeStats} />
+
+        <Tabs defaultValue="all" className="space-y-6">
         <StickyModuleTabs>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <TabsList className={moduleTabsListClassName()}>
@@ -859,7 +854,7 @@ export default function Finance() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search ledger…"
-                className="h-10 pl-10 bg-secondary/50 border rounded-xl text-sm"
+                className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-10 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
               />
             </div>
           </div>
@@ -896,13 +891,13 @@ export default function Finance() {
                   { label: "61–90 d", k: "days61_90" as const, t: arPayload.totals.days61_90 },
                   { label: "90+ d", k: "days90plus" as const, t: arPayload.totals.days90plus },
                 ].map((b) => (
-                  <div key={b.k} className="rounded-xl border bg-card/60 p-4">
-                    <p className="text-[10px] font-black uppercase text-muted-foreground">{b.label}</p>
-                    <p className="text-xl font-black">{format(b.t)}</p>
+                  <div key={b.k} className="rounded-2xl border-0 bg-card p-4 shadow-erp-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{b.label}</p>
+                    <p className="text-xl font-bold tracking-tight">{format(b.t)}</p>
                   </div>
                 ))}
               </div>
-              <p className="text-sm font-bold">
+              <p className="text-sm font-semibold text-[#1a2744]">
                 Open AR: {format(arPayload.totals.openAR)}
               </p>
               {(
@@ -914,8 +909,10 @@ export default function Finance() {
                   ["notDue", "Not yet due"],
                 ] as const
               ).map(([bucket, title]) => (
-                <div key={bucket} className="rounded-xl border overflow-hidden">
-                  <p className="text-xs font-black uppercase px-4 py-2 bg-muted/50">{title}</p>
+                <div key={bucket} className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-erp">
+                  <p className="border-b border-border/50 bg-muted/20 px-4 py-2 text-xs font-bold uppercase text-[#1a2744]">
+                    {title}
+                  </p>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -953,6 +950,7 @@ export default function Finance() {
           <FinanceApTab symbol={symbol} canWrite={canWriteFinance} />
         </TabsContent>
       </Tabs>
-    </ModuleDashboardLayout>
+      </div>
+    </>
   );
 }

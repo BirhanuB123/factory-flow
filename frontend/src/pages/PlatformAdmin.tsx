@@ -42,8 +42,8 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { PlatformStepUpDialog } from "@/components/PlatformStepUpDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocale } from "@/contexts/LocaleContext";
 import {
-  ModuleDashboardLayout,
   StickyModuleTabs,
   moduleTabsListClassName,
   moduleTabsTriggerClassName,
@@ -141,6 +141,7 @@ function platformAuditLinks(row: {
 }
 
 export default function PlatformAdmin() {
+  const { t } = useLocale();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { setActAsTenantId } = useAuth();
@@ -386,6 +387,12 @@ export default function PlatformAdmin() {
   });
 
   const metrics = metricsQ.data?.data;
+  const byStatus = metrics?.tenants.byStatus ?? {};
+  const activeTenantCount =
+    (typeof byStatus.active === "number" ? byStatus.active : undefined) ??
+    (typeof (byStatus as Record<string, number>).Active === "number"
+      ? (byStatus as Record<string, number>).Active
+      : 0);
   const tenants = tenantsQ.data?.data ?? [];
   const filteredTenants = useMemo(() => {
     const q = tenantSearchQuery.trim().toLowerCase();
@@ -418,66 +425,83 @@ export default function PlatformAdmin() {
 
   return (
     <>
-      <ModuleDashboardLayout
-        className="max-w-[1600px] mx-auto"
-        title="PLATFORM ADMINISTRATION"
-        description="CENTRAL GOVERNANCE: MANAGE TENANT LIFECYCLE, AUTHORIZATION DOMAINS, AND GLOBAL INFRASTRUCTURE"
-        icon={Building2}
-        healthStats={[
-          { label: "INSTANCES", value: String(metrics?.tenants.total ?? 0), accent: "text-blue-500" },
-          { label: "BIOLOGICALS", value: String(metrics?.employees ?? 0), accent: "text-indigo-500" },
-          { label: "LOG_STREAM", value: String(auditTotal), accent: "text-emerald-500" },
-        ]}
-      >
-        <Tabs defaultValue="overview" className="space-y-8">
+      <div className="mx-auto max-w-[1600px] space-y-8 pb-8 animate-in fade-in duration-500">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.platform.title")}</h1>
+          <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.platform.subtitle")}</p>
+        </div>
+
+        <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Companies</p>
+            <p className="text-sm font-semibold text-foreground">{metrics?.tenants.total ?? 0}</p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
+            <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{activeTenantCount}</p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Employees</p>
+            <p className="text-sm font-semibold text-primary">{metrics?.employees ?? 0}</p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Audit events</p>
+            <p className="text-sm font-semibold text-muted-foreground">{auditTotal}</p>
+          </div>
+        </div>
+
+        <Tabs defaultValue="overview" className="space-y-6">
           <StickyModuleTabs>
             <TabsList className={moduleTabsListClassName()}>
               <TabsTrigger value="overview" className={moduleTabsTriggerClassName()}>
                 <Activity className="h-4 w-4" />
-                DASHBOARD
+                Dashboard
               </TabsTrigger>
               <TabsTrigger value="tenants" className={moduleTabsTriggerClassName()}>
                 <Building2 className="h-4 w-4" />
-                REGISTRY
+                Companies
               </TabsTrigger>
               <TabsTrigger value="audit" className={moduleTabsTriggerClassName()}>
                 <ClipboardList className="h-4 w-4" />
-                AUDIT LOG
+                Audit Log
               </TabsTrigger>
             </TabsList>
           </StickyModuleTabs>
 
-          <TabsContent value="overview" className="space-y-10">
+          <TabsContent value="overview" className="space-y-8">
             {metricsQ.isLoading ? (
               <div className="flex flex-col items-center justify-center gap-4 py-24">
                 <Loader2 className="h-12 w-12 animate-spin text-primary/40" />
-                <p className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground/50">Synchronizing Metrics...</p>
+                <p className="text-sm font-medium text-muted-foreground/50">Loading metrics...</p>
               </div>
             ) : metricsQ.isError ? (
-              <div className="p-8 rounded-3xl bg-destructive/10 border border-destructive/20 text-destructive text-center">
-                <p className="font-black uppercase tracking-widest text-sm italic">Telemetry Error: Could not synchronize metrics.</p>
+              <div className="p-8 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive text-center">
+                <p className="font-bold text-sm">Error: Could not sync metrics.</p>
               </div>
             ) : (
               <>
-                <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                  <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden group relative transition-all hover:translate-y-[-4px]">
-                    <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                      <Building2 className="h-32 w-32 text-blue-500" />
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  <Card className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                      <Building2 className="h-24 w-24 text-blue-500" />
                     </div>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 px-8 pt-8">
-                      <CardTitle className="text-[10px] font-black tracking-[0.3em] text-blue-500 italic uppercase">Operational Units</CardTitle>
-                      <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-500">
-                        <Building2 className="h-5 w-5" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 px-6 pt-6">
+                      <CardTitle className="text-xs font-bold tracking-wider text-blue-500 uppercase">Companies</CardTitle>
+                      <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-500">
+                        <Building2 className="h-4 w-4" />
                       </div>
                     </CardHeader>
-                    <CardContent className="px-8 pb-8 pt-4">
-                      <div className="text-5xl font-black tracking-tighter text-foreground mb-6">{metrics?.tenants.total ?? 0}</div>
-                      <div className="flex flex-wrap gap-2 mt-4">
+                    <CardContent className="px-6 pb-6 pt-2">
+                      <div className="text-4xl font-bold tracking-tight text-foreground mb-4">{metrics?.tenants.total ?? 0}</div>
+                      <div className="flex flex-wrap gap-2">
                         {Object.entries(metrics?.tenants.byStatus ?? {}).map(([k, v]) => (
                           <Badge
                             key={k}
                             variant={statusBadgeVariant(k)}
-                            className="px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-md border-none shadow-sm bg-muted/20"
+                            className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md border-none bg-muted/20"
                           >
                             {k}: {v}
                           </Badge>
@@ -486,72 +510,71 @@ export default function PlatformAdmin() {
                     </CardContent>
                   </Card>
 
-                  <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden group relative transition-all hover:translate-y-[-4px]">
-                    <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                      <Users className="h-32 w-32 text-indigo-500" />
+                  <Card className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                      <Users className="h-24 w-24 text-indigo-500" />
                     </div>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 px-8 pt-8">
-                      <CardTitle className="text-[10px] font-black tracking-[0.3em] text-indigo-500 italic uppercase">Global Population</CardTitle>
-                      <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 text-indigo-500">
-                        <Users className="h-5 w-5" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 px-6 pt-6">
+                      <CardTitle className="text-xs font-bold tracking-wider text-indigo-500 uppercase">Total Employees</CardTitle>
+                      <div className="h-8 w-8 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 text-indigo-500">
+                        <Users className="h-4 w-4" />
                       </div>
                     </CardHeader>
-                    <CardContent className="px-8 pb-8 pt-4">
-                      <div className="text-5xl font-black tracking-tighter text-foreground mb-6">{metrics?.employees ?? 0}</div>
-                      <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                        Synchronized across all units
+                    <CardContent className="px-6 pb-6 pt-2">
+                      <div className="text-4xl font-bold tracking-tight text-foreground mb-4">{metrics?.employees ?? 0}</div>
+                      <p className="text-[10px] font-medium text-muted-foreground/60 flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Active across all companies
                       </p>
                     </CardContent>
                   </Card>
 
-                  <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden group relative transition-all hover:translate-y-[-4px]">
-                    <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                      <Activity className="h-32 w-32 text-emerald-500" />
+                  <Card className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+                    <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                      <Activity className="h-24 w-24 text-emerald-500" />
                     </div>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 px-8 pt-8">
-                      <CardTitle className="text-[10px] font-black tracking-[0.3em] text-emerald-500 italic uppercase">Infrastructure Node</CardTitle>
-                      <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500">
-                        <Activity className="h-5 w-5" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 px-6 pt-6">
+                      <CardTitle className="text-xs font-bold tracking-wider text-emerald-500 uppercase">System Status</CardTitle>
+                      <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500">
+                        <Activity className="h-4 w-4" />
                       </div>
                     </CardHeader>
-                    <CardContent className="px-8 pb-8 pt-4">
-                      <div className="text-4xl font-black tracking-tighter text-foreground mb-6 uppercase italic">Node-01</div>
-                      <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Global Production Layer</p>
+                    <CardContent className="px-6 pb-6 pt-2">
+                      <div className="text-3xl font-bold tracking-tight text-foreground mb-4">Healthy</div>
+                      <p className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">All nodes operational</p>
                     </CardContent>
                   </Card>
                 </div>
 
-                <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
-                  <div className="h-2 w-full bg-gradient-to-r from-blue-500 via-primary to-emerald-500" />
-                  <CardHeader className="p-10 pb-6">
-                    <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
-                          <Activity className="h-6 w-6" />
+                <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+                  <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-emerald-500" />
+                  <CardHeader className="p-8 pb-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                          <Activity className="h-5 w-5" />
                         </div>
-                        <div className="space-y-1">
-                          <CardTitle className="text-xl font-black tracking-tight uppercase italic">Global Protocol Broadcast</CardTitle>
-                          <CardDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60 italic">System-wide dissemination</CardDescription>
+                        <div className="space-y-0.5">
+                          <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">Global announcement</CardTitle>
+                          <CardDescription className="text-xs">Broadcast a message to all users across the platform.</CardDescription>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 px-6 py-3 bg-secondary/30 rounded-2xl border border-border/10 backdrop-blur-sm">
-                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 cursor-pointer">
-                          {globalAnnouncementEnabled ? "TRANSMITTING" : "STANDBY"}
+                      <div className="flex items-center gap-3 px-4 py-2 bg-secondary/30 rounded-xl border border-border/10 backdrop-blur-sm">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 cursor-pointer">
+                          {globalAnnouncementEnabled ? "Active" : "Disabled"}
                         </Label>
                         <Switch
                           checked={globalAnnouncementEnabled}
                           onCheckedChange={setGlobalAnnouncementEnabled}
                           disabled={globalAnnouncementMut.isPending || globalAnnouncementQ.isLoading}
-                          className="data-[state=checked]:bg-primary"
                         />
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-10 pt-0 space-y-8">
-                    <div className="grid gap-8 sm:grid-cols-4 items-end">
-                      <div className="sm:col-span-1 space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Priority Vector</Label>
+                  <CardContent className="p-8 pt-0 space-y-6">
+                    <div className="grid gap-6 sm:grid-cols-4 items-end">
+                      <div className="sm:col-span-1 space-y-2">
+                        <Label className="text-xs font-bold text-muted-foreground/60 ml-1">Priority</Label>
                         <Select
                           value={globalAnnouncementLevel}
                           onValueChange={(v) =>
@@ -559,51 +582,50 @@ export default function PlatformAdmin() {
                           }
                           disabled={globalAnnouncementMut.isPending}
                         >
-                          <SelectTrigger className="h-12 rounded-2xl bg-secondary/20 border-border/10 font-black text-xs uppercase tracking-widest px-5 shadow-none focus:bg-background transition-all">
+                          <SelectTrigger className="h-10 rounded-xl bg-secondary/20 border-border/10 text-sm px-4">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="rounded-2xl border-border/10">
-                            <SelectItem value="info" className="font-bold uppercase text-[10px] tracking-widest">Normal</SelectItem>
-                            <SelectItem value="warning" className="font-bold uppercase text-[10px] tracking-widest text-amber-500">Advisory</SelectItem>
-                            <SelectItem value="maintenance" className="font-bold uppercase text-[10px] tracking-widest text-primary">Emergency</SelectItem>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="info">Information</SelectItem>
+                            <SelectItem value="warning" className="text-amber-500">Warning</SelectItem>
+                            <SelectItem value="maintenance" className="text-primary">Maintenance</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="sm:col-span-3 space-y-3">
-                        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Protocol Content</Label>
+                      <div className="sm:col-span-3 space-y-2">
+                        <Label className="text-xs font-bold text-muted-foreground/60 ml-1">Message Content</Label>
                         <Input
                           id="global-announcement-message"
                           value={globalAnnouncementMessage}
                           onChange={(e) => setGlobalAnnouncementMessage(e.target.value)}
-                          placeholder="Identify system-wide maintenance windows or critical alerts..."
-                          className="h-12 rounded-2xl bg-secondary/20 border-border/10 font-bold text-sm px-5 focus:bg-background transition-all"
+                          placeholder="Type your announcement here..."
+                          className="h-10 rounded-xl bg-secondary/20 border-border/10 text-sm px-4"
                           disabled={globalAnnouncementMut.isPending}
                         />
                       </div>
                     </div>
-                    <div className="flex justify-end pt-4">
+                    <div className="flex justify-end">
                       <Button
-                        size="lg"
-                        className="px-12 h-14 rounded-2xl shadow-2xl shadow-primary/20 bg-primary text-primary-foreground font-black tracking-tight text-sm uppercase hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        className="h-10 rounded-full bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
                         onClick={() =>
                           requestStepUp(
                             async () => {
                               await globalAnnouncementMut.mutateAsync();
                             },
                             {
-                              title: "Authorize Global Broadcast",
-                              description: "This will inject the specified protocol message into 100% of network nodes.",
+                              title: "Authorize Announcement",
+                              description: "This message will be visible to all users.",
                             }
                           )
                         }
                         disabled={globalAnnouncementMut.isPending}
                       >
                         {globalAnnouncementMut.isPending ? (
-                          <Loader2 className="h-6 w-6 animate-spin mr-3" />
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         ) : (
-                          <ArrowRightCircle className="h-6 w-6 mr-3 stroke-[2.5]" />
+                          <ArrowRightCircle className="h-4 w-4 mr-2" />
                         )}
-                        Commit Broadcast
+                        Publish Announcement
                       </Button>
                     </div>
                   </CardContent>
@@ -612,27 +634,24 @@ export default function PlatformAdmin() {
             )}
           </TabsContent>
 
-          <TabsContent value="tenants" className="space-y-10">
-            <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
-              <CardContent className="p-10">
-                <div className="flex flex-col gap-10 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex-1 space-y-8">
-                    <div className="flex items-center gap-4">
-                      <div className="h-2 w-12 bg-primary rounded-full shadow-[0_0_10px_rgba(var(--primary),0.3)]" />
-                      <div className="space-y-1">
-                        <h2 className="text-sm font-black uppercase tracking-[0.4em] text-foreground italic">Registry Nexus</h2>
-                        <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">Global Instance Indexing</p>
-                      </div>
+          <TabsContent value="tenants" className="space-y-8">
+            <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+              <CardContent className="p-6 sm:p-8">
+                <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex-1 space-y-6">
+                    <div>
+                      <h2 className="text-lg font-bold tracking-tight text-[#1a2744]">Company directory</h2>
+                      <p className="mt-0.5 text-sm text-muted-foreground">Search, create, and manage registered companies</p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <div className="relative group max-w-2xl flex-1">
-                        <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                          <Search className="h-5 w-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <div className="group relative max-w-2xl flex-1">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                          <Search className="h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
                         </div>
                         <Input
-                          placeholder="IDENTIFY TENANT BY KEY OR STATUTORY NOMENCLATURE..."
-                          className="h-14 pl-14 pr-14 rounded-2xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold tracking-tight text-sm uppercase placeholder:text-muted-foreground/30"
+                          placeholder="Search companies by name or key..."
+                          className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-11 pr-11 font-medium text-sm shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
                           value={tenantSearchInput}
                           onChange={(e) => setTenantSearchInput(e.target.value)}
                           onKeyDown={(e) => {
@@ -642,25 +661,25 @@ export default function PlatformAdmin() {
                           }}
                         />
                       </div>
-                      <div className="flex gap-3">
+                      <div className="flex gap-2">
                         <Button
                           type="button"
-                          className="h-14 px-10 rounded-2xl bg-primary text-primary-foreground font-black uppercase text-[11px] tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                          className="h-10 rounded-full bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
                           onClick={() => setTenantSearchQuery(tenantSearchInput.trim())}
                         >
-                          Execute Search
+                          Search
                         </Button>
                         {(tenantSearchQuery || tenantSearchInput) && (
                           <Button
                             type="button"
                             variant="secondary"
-                            className="h-14 w-14 rounded-2xl flex items-center justify-center p-0 bg-background/40 border-border/10 hover:bg-background transition-all group"
+                            className="flex h-10 w-10 items-center justify-center rounded-full border-border/60 p-0 shadow-erp-sm"
                             onClick={() => {
                               setTenantSearchInput("");
                               setTenantSearchQuery("");
                             }}
                           >
-                            <Loader2 className="h-5 w-5 opacity-40 rotate-45 group-hover:opacity-100 transition-opacity" />
+                            <Loader2 className="h-4 w-4 opacity-40 rotate-45" />
                           </Button>
                         )}
                       </div>
@@ -670,79 +689,77 @@ export default function PlatformAdmin() {
                   <div className="shrink-0">
                     <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                       <DialogTrigger asChild>
-                        <Button className="h-20 px-12 rounded-[2rem] bg-foreground text-background hover:bg-foreground/90 font-black text-lg shadow-[0_30px_60px_rgba(0,0,0,0.15)] active:scale-95 hover:scale-[1.02] transition-all group">
-                          <div className="h-10 w-10 rounded-xl bg-background/10 flex items-center justify-center mr-4 group-hover:bg-background/20 transition-colors">
-                            <Plus className="h-6 w-6 stroke-[3]" />
-                          </div>
-                          Onboard Instance
+                        <Button className="h-16 px-8 rounded-2xl bg-foreground text-background hover:bg-foreground/90 font-bold text-base shadow-xl active:scale-95 hover:scale-[1.02] transition-all group">
+                          <Plus className="h-5 w-5 mr-3 stroke-[3]" />
+                          Create Company
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-xl rounded-[3rem] border-none shadow-2xl bg-card/90 backdrop-blur-3xl px-12 pt-14 pb-12 overflow-hidden relative">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-primary to-emerald-500" />
-                        <DialogHeader className="space-y-4 text-center sm:text-left relative z-10">
-                          <div className="flex items-center gap-4">
-                            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
-                              <LayoutGrid className="h-8 w-8" />
+                      <DialogContent className="relative rounded-2xl border border-border/60 bg-card px-8 py-10 shadow-erp sm:max-w-lg">
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 to-emerald-500" />
+                        <DialogHeader className="space-y-2 text-center sm:text-left">
+                          <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
+                              <LayoutGrid className="h-6 w-6" />
                             </div>
-                            <div className="space-y-1">
-                              <DialogTitle className="text-3xl font-black tracking-tighter uppercase italic">Initialize Index</DialogTitle>
-                              <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Provision STATUTORY entity profiles</DialogDescription>
+                            <div className="space-y-0.5">
+                              <DialogTitle className="text-2xl font-bold">New Company</DialogTitle>
+                              <DialogDescription className="text-sm">Provision a new company account.</DialogDescription>
                             </div>
                           </div>
                         </DialogHeader>
-                        <div className="grid gap-8 py-10 relative z-10">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-3">
-                              <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Domain Key (Slug)</Label>
+                        <div className="grid gap-6 py-8 relative z-10">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold text-muted-foreground/60 ml-1">Domain Key (Slug)</Label>
                               <Input
                                 placeholder="ACME-GLOBAL"
                                 value={newKey}
                                 onChange={(e) => setNewKey(e.target.value)}
-                                className="h-12 rounded-2xl bg-secondary/30 border-border/10 font-black text-sm px-5 focus:bg-background transition-all uppercase tracking-widest placeholder:opacity-20"
+                                className="h-10 rounded-xl bg-secondary/30 border-border/10 font-bold text-sm px-4 focus:bg-background transition-all uppercase tracking-wider"
                               />
                             </div>
-                            <div className="space-y-3">
-                              <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Provisioning State</Label>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold text-muted-foreground/60 ml-1">Initial Status</Label>
                               <Select value={newStatus} onValueChange={setNewStatus}>
-                                <SelectTrigger className="h-12 rounded-2xl bg-secondary/30 border-border/10 font-black text-[11px] uppercase tracking-widest px-5 shadow-none focus:bg-background transition-all">
+                                <SelectTrigger className="h-10 rounded-xl bg-secondary/30 border-border/10 font-bold text-sm px-4">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="rounded-2xl border-border/10">
+                                <SelectContent className="rounded-xl">
                                   {STATUS_OPTIONS.map((s) => (
-                                    <SelectItem key={s} value={s} className="font-bold uppercase text-[10px] tracking-widest">
-                                      {s}
+                                    <SelectItem key={s} value={s} className="font-bold text-sm">
+                                      {s.charAt(0).toUpperCase() + s.slice(1)}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                             </div>
                           </div>
-                          <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Statutory Identity</Label>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold text-muted-foreground/60 ml-1">Legal Name</Label>
                             <Input
-                              placeholder="ACME GLOBAL MANUFACTURING LTD."
+                              placeholder="Acme Global Manufacturing Ltd."
                               value={newLegal}
                               onChange={(e) => setNewLegal(e.target.value)}
-                              className="h-12 rounded-2xl bg-secondary/30 border-border/10 font-bold text-sm px-5 focus:bg-background transition-all uppercase placeholder:opacity-20"
+                              className="h-10 rounded-xl bg-secondary/30 border-border/10 font-medium text-sm px-4 focus:bg-background transition-all"
                             />
                           </div>
-                          <div className="space-y-3">
-                            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 ml-1">Public Alias</Label>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold text-muted-foreground/60 ml-1">Display Name</Label>
                             <Input
-                              placeholder="ACME HUB"
+                              placeholder="Acme Hub"
                               value={newDisplay}
                               onChange={(e) => setNewDisplay(e.target.value)}
-                              className="h-12 rounded-2xl bg-secondary/30 border-border/10 font-bold text-sm px-5 focus:bg-background transition-all uppercase placeholder:opacity-20"
+                              className="h-10 rounded-xl bg-secondary/30 border-border/10 font-medium text-sm px-4 focus:bg-background transition-all"
                             />
                           </div>
                         </div>
-                        <DialogFooter className="pt-6 relative z-10">
-                          <div className="flex flex-col sm:flex-row gap-4 w-full">
-                            <Button variant="secondary" className="h-14 rounded-2xl font-black uppercase text-[11px] tracking-widest flex-1 bg-background/50 border-none hover:bg-background transition-all" onClick={() => setCreateOpen(false)}>
-                              Abort Session
+                        <DialogFooter className="pt-4">
+                          <div className="flex flex-col sm:flex-row gap-3 w-full">
+                            <Button variant="ghost" className="h-11 rounded-xl font-bold text-sm flex-1" onClick={() => setCreateOpen(false)}>
+                              Cancel
                             </Button>
                             <Button
-                              className="h-14 rounded-2xl bg-primary shadow-2xl shadow-primary/30 font-black uppercase text-[11px] tracking-widest flex-1 hover:scale-[1.02] active:scale-95 transition-all"
+                              className="h-11 rounded-xl bg-primary shadow-lg font-bold text-sm flex-1"
                               disabled={createMut.isPending || !newKey.trim() || !newLegal.trim()}
                               onClick={() =>
                                 requestStepUp(
@@ -750,13 +767,13 @@ export default function PlatformAdmin() {
                                     await createMut.mutateAsync();
                                   },
                                   {
-                                    title: "Authorize Entity Provisioning",
-                                    description: "Level-1 credentials required to commit new indices to global registry.",
+                                    title: "Authorize Creation",
+                                    description: "Credentials required to create a new company account.",
                                   }
                                 )
                               }
                             >
-                              {createMut.isPending ? <Loader2 className="h-6 w-6 animate-spin" /> : "Authorize Deployment"}
+                              {createMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Account"}
                             </Button>
                           </div>
                         </DialogFooter>
@@ -768,63 +785,63 @@ export default function PlatformAdmin() {
             </Card>
 
             {tenantsQ.isLoading ? (
-              <div className="flex flex-col items-center justify-center py-48 bg-secondary/5 rounded-[2.5rem] border border-dashed border-border/20">
-                <Loader2 className="h-12 w-12 animate-spin text-primary/40 mb-4" />
-                <p className="font-black text-[10px] uppercase tracking-[0.4em] text-muted-foreground/40">Synchronizing registry state...</p>
+              <div className="flex flex-col items-center justify-center py-48 bg-secondary/5 rounded-2xl border border-dashed border-border/20">
+                <Loader2 className="h-10 w-10 animate-spin text-primary/40 mb-3" />
+                <p className="font-medium text-sm text-muted-foreground/40">Loading directory...</p>
               </div>
             ) : (
-              <Card className="border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden rounded-[2.5rem]">
-                <CardHeader className="pt-10 pb-6 px-10">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="space-y-1.5">
-                      <CardTitle className="text-2xl font-black tracking-tight uppercase italic flex items-center gap-3">
-                        <LayoutGrid className="h-7 w-7 text-primary" />
-                        Tenant Ledger
+              <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+                <CardHeader className="border-b border-border/50 bg-muted/20 px-8 pb-4 pt-8">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="flex items-center gap-2 text-xl font-bold tracking-tight text-[#1a2744]">
+                        <LayoutGrid className="h-5 w-5 text-primary" />
+                        Company ledger
                       </CardTitle>
-                      <CardDescription className="text-sm font-medium leading-relaxed max-w-2xl">
-                        Real-time inventory of global nodes, operational health metrics, and administrative status.
+                      <CardDescription className="text-xs">
+                        Inventory of global companies, health metrics, and status.
                       </CardDescription>
                     </div>
-                    <div className="flex items-center gap-2 bg-secondary/40 px-4 py-2 rounded-2xl border border-border/10">
-                      <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-foreground/60">{filteredTenants.length} Nodes Active</span>
+                    <div className="flex items-center gap-2 bg-secondary/40 px-3 py-1.5 rounded-xl border border-border/10">
+                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-foreground/60">{filteredTenants.length} Active Nodes</span>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-0 px-10 pb-10">
-                  <div className="rounded-[2rem] border border-border/10 overflow-hidden bg-background/20 shadow-inner">
+                <CardContent className="p-0 px-8 pb-8">
+                  <div className="rounded-xl border border-border/10 overflow-hidden bg-background/20 shadow-inner">
                     <Table>
                       <TableHeader className="bg-secondary/40 border-b border-border/20">
                         <TableRow className="hover:bg-transparent">
-                          <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5 px-6">Domain Identifier</TableHead>
-                          <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5">Statutory Nomenclature</TableHead>
-                          <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5">Operational State</TableHead>
-                          <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5">Governance Status</TableHead>
-                          <TableHead className="font-black text-[10px] uppercase tracking-[0.2em] py-5">Metadata & Registry</TableHead>
-                          <TableHead className="text-right font-black text-[10px] uppercase tracking-[0.2em] py-5 px-6">Controls</TableHead>
+                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4 px-6">Domain Identifier</TableHead>
+                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4">Company Name</TableHead>
+                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4">Quick Status</TableHead>
+                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4">Current State</TableHead>
+                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4">Created & Logs</TableHead>
+                          <TableHead className="text-right font-bold text-[11px] uppercase tracking-wider py-4 px-6">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredTenants.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={6} className="h-48 text-center">
-                              <p className="text-sm font-black uppercase tracking-widest text-muted-foreground/30 italic">No nodes matching specified parameters</p>
+                              <p className="text-sm font-medium text-muted-foreground/30 italic">No companies matching search</p>
                             </TableCell>
                           </TableRow>
                         ) : (
                           filteredTenants.map((t) => (
                             <TableRow key={t._id} className="group transition-all hover:bg-primary/5 border-b border-border/10 last:border-0">
-                              <TableCell className="py-6 px-6">
+                              <TableCell className="py-5 px-6">
                                 <Link
                                   to={`/platform/tenants/${t._id}`}
-                                  className="group/link inline-flex items-center gap-4"
+                                  className="group/link inline-flex items-center gap-3"
                                 >
-                                  <div className="h-11 w-11 rounded-2xl bg-secondary/40 flex items-center justify-center font-black text-xs group-hover/link:bg-primary group-hover/link:text-primary-foreground transition-all shadow-sm">
+                                  <div className="h-10 w-10 rounded-xl bg-secondary/40 flex items-center justify-center font-bold text-xs group-hover/link:bg-primary group-hover/link:text-primary-foreground transition-all shadow-sm">
                                     {t.key.substring(0, 2).toUpperCase()}
                                   </div>
                                   <div className="flex flex-col">
-                                    <span className="font-bold text-sm tracking-tight text-foreground/80 group-hover/link:text-primary transition-colors underline-offset-4 decoration-2 decoration-primary/20 hover:underline">{t.key}</span>
-                                    <span className="text-[9px] font-bold text-muted-foreground/50 uppercase tracking-widest">UID: {t._id.substring(t._id.length - 8)}</span>
+                                    <span className="font-bold text-sm tracking-tight text-foreground/80 group-hover/link:text-primary transition-colors underline-offset-4 hover:underline">{t.key}</span>
+                                    <span className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wider">ID: {t._id.substring(t._id.length - 8)}</span>
                                   </div>
                                 </Link>
                               </TableCell>
@@ -838,7 +855,7 @@ export default function PlatformAdmin() {
                                 <Select
                                   value={t.status}
                                   onValueChange={(status) => {
-                                    const requiresReason = status === "Suspend" || status === "Archived";
+                                    const requiresReason = status === "suspended" || status === "archived";
                                     if (requiresReason) {
                                       setStatusTargetTenant(t);
                                       setStatusTargetValue(status);
@@ -850,28 +867,28 @@ export default function PlatformAdmin() {
                                           await statusMut.mutateAsync({ id: t._id, status, statusReason: "" });
                                         },
                                         {
-                                          title: "Confirm company status change",
-                                          description: `Update "${t.displayName || t.key}" status to ${status}.`,
+                                          title: "Confirm status change",
+                                          description: `Update "${t.displayName || t.key}" to ${status}.`,
                                         }
                                       );
                                     }
                                   }}
                                   disabled={statusMut.isPending}
                                 >
-                                  <SelectTrigger className="w-[130px] h-9 rounded-xl bg-secondary/10 border-border/10 font-black text-[9px] uppercase tracking-widest px-3 shadow-none focus:ring-1 focus:ring-primary/20 transition-all">
+                                  <SelectTrigger className="w-[120px] h-8 rounded-lg bg-secondary/10 border-border/10 font-bold text-[10px] uppercase tracking-wider px-3 shadow-none">
                                     <SelectValue />
                                   </SelectTrigger>
-                                  <SelectContent className="rounded-xl border-border/20">
+                                  <SelectContent className="rounded-xl">
                                     {STATUS_OPTIONS.map((s) => (
-                                      <SelectItem key={s} value={s} className="font-bold uppercase text-[10px] tracking-widest">
-                                        {s}
+                                      <SelectItem key={s} value={s} className="font-bold text-[11px]">
+                                        {s.charAt(0).toUpperCase() + s.slice(1)}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>
                               </TableCell>
                               <TableCell>
-                                <Badge variant={statusBadgeVariant(t.status)} className="px-3 py-1 font-black uppercase text-[9px] tracking-widest rounded-md border-none bg-muted/20">
+                                <Badge variant={statusBadgeVariant(t.status)} className="px-2 py-0.5 font-bold uppercase text-[9px] tracking-wider rounded-md border-none bg-muted/20">
                                   {t.status}
                                 </Badge>
                               </TableCell>
@@ -883,7 +900,7 @@ export default function PlatformAdmin() {
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <Activity className="h-3 w-3 text-muted-foreground/40" />
-                                    <span className="text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.2em]">INTEGRITY VERIFIED</span>
+                                    <span className="text-[10px] font-medium text-muted-foreground/40 uppercase tracking-wider">Integrity Verified</span>
                                   </div>
                                 </div>
                               </TableCell>
@@ -891,24 +908,17 @@ export default function PlatformAdmin() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all"
+                                  className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
                                   asChild
                                 >
                                   <Link to={`/platform/tenants/${t._id}`}>
-                                    <ArrowRight className="h-5 w-5" />
+                                    <ArrowRight className="h-4 w-4" />
                                   </Link>
                                 </Button>
                               </TableCell>
                             </TableRow>
                           ))
                         )}
-                        {!filteredTenants.length ? (
-                          <TableRow>
-                            <TableCell colSpan={6} className="py-12 text-center">
-                              <p className="text-sm font-black uppercase tracking-widest text-muted-foreground/20 italic">No node definitions matching specified query</p>
-                            </TableCell>
-                          </TableRow>
-                        ) : null}
                       </TableBody>
                     </Table>
                   </div>
@@ -926,90 +936,90 @@ export default function PlatformAdmin() {
             ) : null}
           </TabsContent>
 
-          <TabsContent value="audit" className="space-y-10">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between bg-emerald-500/5 p-8 rounded-[2.5rem] border border-emerald-500/10 mb-8">
+          <TabsContent value="audit" className="space-y-8">
+            <div className="mb-6 flex flex-col gap-6 rounded-2xl border-0 bg-card p-6 shadow-erp sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-4">
-                <div className="p-4 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-500/20">
-                  <ClipboardList className="h-8 w-8 text-white stroke-[2.5]" />
+                <div className="rounded-xl bg-emerald-500 p-3.5 shadow-sm">
+                  <ClipboardList className="h-6 w-6 stroke-[2.5] text-white" />
                 </div>
                 <div className="space-y-0.5">
-                  <h2 className="text-2xl font-black tracking-tight uppercase italic">Governance Stream</h2>
-                  <p className="text-[10px] font-bold text-muted-foreground/50 uppercase tracking-widest">Global Platform Audit Trail</p>
+                  <h2 className="text-xl font-bold tracking-tight text-[#1a2744]">Audit stream</h2>
+                  <p className="text-xs font-medium text-muted-foreground">Global activity monitoring</p>
                 </div>
               </div>
-              <div className="flex items-center gap-6 bg-white/50 dark:bg-black/20 backdrop-blur-xl px-8 py-4 rounded-3xl border border-border/10 shadow-sm">
+              <div className="flex items-center gap-6 rounded-2xl border border-border/60 bg-muted/30 px-6 py-3 shadow-erp-sm">
                 <div className="flex flex-col items-end">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Event Density</span>
-                  <span className="text-2xl font-black text-foreground">{auditTotal}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Total Events</span>
+                  <span className="text-xl font-bold text-foreground">{auditTotal}</span>
                 </div>
-                <div className="h-10 w-px bg-border/20" />
+                <div className="h-8 w-px bg-border/20" />
                 <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500/80">Active Monitoring</span>
+                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/80">Active</span>
                 </div>
               </div>
             </div>
 
-            <Card className="rounded-[2.5rem] border-none shadow-2xl shadow-black/5 bg-card/40 backdrop-blur-xl overflow-hidden">
-              <CardHeader className="pt-10 pb-6 px-10">
+            <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+              <CardHeader className="border-b border-border/50 bg-muted/20 px-8 pb-4 pt-8">
                 <div className="flex items-center justify-between">
-                  <div className="space-y-1.5">
-                    <CardTitle className="text-xl font-black tracking-tighter uppercase italic flex items-center gap-3">
-                      <ShieldCheck className="h-6 w-6 text-primary" />
-                      Registry Mutations
+                  <div className="space-y-1">
+                    <CardTitle className="flex items-center gap-2 text-lg font-bold tracking-tight text-[#1a2744]">
+                      <ShieldCheck className="h-5 w-5 text-primary" />
+                      Activity log
                     </CardTitle>
-                    <CardDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Persistent ledger of administrative operations</CardDescription>
+                    <CardDescription className="text-xs font-medium opacity-60">Persistent record of administrative actions</CardDescription>
                   </div>
                   <Button
                     type="button"
                     variant="secondary"
-                    className="h-12 px-6 rounded-xl bg-background/50 border-none font-black text-[10px] uppercase tracking-widest hover:bg-background transition-all shadow-sm group"
+                    className="h-10 px-4 rounded-xl bg-background/50 border border-border/10 font-bold text-[11px] uppercase tracking-wider hover:bg-background transition-all group"
                     disabled={auditExporting}
                     onClick={() => void handleAuditExportCsv()}
                   >
                     {auditExporting ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-3 text-primary" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-2 text-primary" />
                     ) : (
-                      <Download className="h-4 w-4 mr-3 text-primary group-hover:scale-110 transition-transform" />
+                      <Download className="h-3.5 w-3.5 mr-2 text-primary group-hover:scale-110 transition-transform" />
                     )}
                     Export CSV
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-8 px-10 pb-10">
-                <div className="grid gap-6 lg:grid-cols-3 bg-secondary/20 p-8 rounded-[2rem] border border-border/10 shadow-inner">
-                  <div className="space-y-3">
-                    <Label className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/60 ml-1">Mutation Vector</Label>
+              <CardContent className="space-y-6 px-8 pb-8">
+                <div className="grid gap-6 lg:grid-cols-3 bg-secondary/10 p-6 rounded-2xl border border-border/10 shadow-inner">
+                  <div className="space-y-2">
+                    <Label className="text-[11px] font-bold text-muted-foreground/60 ml-1">Event Type</Label>
                     <Select value={auditAction} onValueChange={setAuditAction}>
-                      <SelectTrigger className="w-full h-12 bg-background/40 border-border/10 shadow-none rounded-xl font-black text-[10px] uppercase tracking-widest px-5">
-                        <SelectValue placeholder="Universal History" />
+                      <SelectTrigger className="w-full h-10 bg-background border-border/10 shadow-none rounded-xl font-bold text-[11px] px-4">
+                        <SelectValue placeholder="All Activities" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl border-border/40">
-                        <SelectItem value="all" className="font-bold uppercase text-[10px] tracking-widest">Universal History</SelectItem>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="all" className="font-bold text-[11px]">All Activities</SelectItem>
                         {auditActionOptions.map((a) => (
-                          <SelectItem key={a} value={a} className="font-bold uppercase text-[10px] tracking-widest">
+                          <SelectItem key={a} value={a} className="font-bold text-[11px]">
                             {a.replace(/\./g, ' ')}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-3">
-                    <Label className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/60 ml-1">Range Start</Label>
+                  <div className="space-y-2">
+                    <Label className="text-[11px] font-bold text-muted-foreground/60 ml-1">From</Label>
                     <Input
                       type="date"
                       value={auditDateFrom}
                       onChange={(e) => setAuditDateFrom(e.target.value)}
-                      className="h-12 bg-background/40 border-border/10 shadow-none rounded-xl font-bold text-sm px-5"
+                      className="h-10 bg-background border-border/10 shadow-none rounded-xl font-bold text-sm px-4"
                     />
                   </div>
-                  <div className="space-y-3">
-                    <Label className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/60 ml-1">Range End</Label>
+                  <div className="space-y-2">
+                    <Label className="text-[11px] font-bold text-muted-foreground/60 ml-1">To</Label>
                     <Input
                       type="date"
                       value={auditDateTo}
                       onChange={(e) => setAuditDateTo(e.target.value)}
-                      className="h-12 bg-background/40 border-border/10 shadow-none rounded-xl font-bold text-sm px-5"
+                      className="h-10 bg-background border-border/10 shadow-none rounded-xl font-bold text-sm px-4"
                     />
                   </div>
                 </div>
@@ -1124,7 +1134,7 @@ export default function PlatformAdmin() {
             </Card>
           </TabsContent>
         </Tabs>
-      </ModuleDashboardLayout>
+      </div>
       <PlatformStepUpDialog
         open={stepUpOpen}
         onOpenChange={setStepUpOpen}
@@ -1162,35 +1172,39 @@ export default function PlatformAdmin() {
                 placeholder="e.g. Non-payment, user requested archiving..."
                 value={statusReasonInput}
                 onChange={(e) => setStatusReasonInput(e.target.value)}
-                className="h-14 rounded-2xl bg-secondary/30 border-border/10 focus:bg-background transition-all font-bold text-sm px-6 italic shadow-inner"
               />
             </div>
           </div>
-          <DialogFooter className="bg-secondary/20 p-8 flex gap-3 sm:justify-center">
-            <Button variant="ghost" onClick={() => setStatusDialogOpen(false)} className="rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-background h-12 px-8">Abort</Button>
+          <div className="p-8 pt-0 flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => setStatusDialogOpen(false)} className="rounded-xl font-bold text-[11px] uppercase tracking-wider h-11 px-6">
+              Cancel
+            </Button>
             <Button
-              className="rounded-xl font-black text-[10px] uppercase tracking-widest bg-primary text-primary-foreground shadow-xl shadow-primary/20 h-12 px-8 hover:scale-[1.05] transition-all"
+              className="rounded-xl font-bold text-[11px] uppercase tracking-wider h-11 px-8 bg-amber-600 hover:bg-amber-700 shadow-lg shadow-amber-600/20"
+              disabled={statusMut.isPending}
               onClick={() => {
-                if (!statusTargetTenant) return;
-                setStatusDialogOpen(false);
-                requestStepUp(
-                  async () => {
-                    await statusMut.mutateAsync({
-                      id: statusTargetTenant._id,
-                      status: statusTargetValue,
-                      statusReason: statusReasonInput,
-                    });
-                  },
-                  {
-                    title: "Confirm company status change",
-                    description: `Setting status to ${statusTargetValue} with provided reason.`,
-                  }
-                );
+                if (statusTargetTenant && statusTargetValue) {
+                  requestStepUp(
+                    async () => {
+                      await statusMut.mutateAsync({
+                        id: statusTargetTenant._id,
+                        status: statusTargetValue,
+                        statusReason: statusReasonInput,
+                      });
+                      setStatusDialogOpen(false);
+                    },
+                    {
+                      title: "Confirm status override",
+                      description: `Transition "${statusTargetTenant.displayName || statusTargetTenant.key}" to ${statusTargetValue}.`,
+                    }
+                  );
+                }
               }}
             >
-              Update Protocol
+              {statusMut.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Apply Transition
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

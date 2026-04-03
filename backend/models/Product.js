@@ -62,6 +62,16 @@ const ProductSchema = new mongoose.Schema({
   }
 });
 
+ProductSchema.pre('validate', function normalizeProductKeys(next) {
+  if (typeof this.sku === 'string') this.sku = this.sku.trim().toUpperCase();
+  if (typeof this.barcode === 'string') this.barcode = this.barcode.trim();
+  next();
+});
+
 ProductSchema.index({ tenantId: 1, sku: 1 }, { unique: true });
+ProductSchema.index(
+  { tenantId: 1, barcode: 1 },
+  { unique: true, partialFilterExpression: { barcode: { $type: 'string', $ne: '' } } }
+);
 
 module.exports = mongoose.model('Product', ProductSchema);

@@ -18,6 +18,7 @@ import InviteAccept from "./pages/InviteAccept.tsx";
 import ChangePassword from "./pages/ChangePassword.tsx";
 import Profile from "./pages/Profile.tsx";
 import Index from "./pages/Index.tsx";
+import Reports from "./pages/Reports.tsx";
 import ProductionJobs from "./pages/ProductionJobs.tsx";
 import Inventory from "./pages/Inventory.tsx";
 import Boms from "./pages/Boms.tsx";
@@ -173,7 +174,7 @@ const Layout = () => {
           <DashboardHeader />
           <OfflineQueueBanner />
           <AnnouncementBanner />
-          <main className="flex-1 p-4 lg:p-6 overflow-auto">
+          <main className="flex-1 p-4 lg:p-6 overflow-auto bg-background min-h-0">
             <Outlet />
           </main>
         </div>
@@ -199,6 +200,7 @@ const App = () => {
                   <Route element={<Layout />}>
                   <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_VIEW]} />}>
                     <Route path="/" element={<Index />} />
+                    <Route path="/reports" element={<Reports />} />
                   </Route>
                   <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_MFG]} />}>
                   <Route element={<TenantModuleRoute moduleKey="manufacturing" moduleLabel="Manufacturing & production" />}>

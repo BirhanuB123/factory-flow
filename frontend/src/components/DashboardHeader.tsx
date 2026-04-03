@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Search, Bell, Settings as SettingsIcon, LogOut, User, Shield, AlertTriangle, CheckCircle2, Loader2, Info } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -20,6 +21,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useSettings } from "@/hooks/use-settings";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocale } from "@/contexts/LocaleContext";
 import { SuperTenantSwitcher, TenantContextSelect } from "@/components/SuperTenantSwitcher";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -41,6 +43,7 @@ export function DashboardHeader() {
   const navigate = useNavigate();
   const { settings } = useSettings();
   const { user, token, logout } = useAuth();
+  const { t } = useLocale();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -115,11 +118,11 @@ export function DashboardHeader() {
       if (response.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
         setUnreadCount(0);
-        toast.success("All notifications marked as read");
+        toast.success(t("header.toastAllRead"));
       }
     } catch (error) {
       console.error("Failed to mark all as read:", error);
-      toast.error("Failed to update notifications");
+      toast.error(t("header.toastNotifyFail"));
     }
   };
 
@@ -186,7 +189,7 @@ export function DashboardHeader() {
 
   const handleLogout = () => {
     logout();
-    toast.success("Logged out successfully");
+    toast.success(t("header.toastLoggedOut"));
     navigate("/login");
   };
 
@@ -205,42 +208,57 @@ export function DashboardHeader() {
   };
 
   return (
-    <header className="flex h-14 items-center justify-between border-b px-4 lg:px-6 bg-card sticky top-0 z-30">
-      <div className="flex items-center gap-3 flex-1 max-w-xl">
-        <SidebarTrigger className="text-muted-foreground" />
-        <div className="relative hidden sm:block w-full">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+    <header className="sticky top-0 z-30 flex min-h-[4.25rem] items-center gap-2 border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur-md lg:gap-4 lg:px-5">
+      <SidebarTrigger className="shrink-0 text-muted-foreground" />
+      <div className="relative flex min-w-0 flex-1 justify-center">
+        <div className="relative w-full max-w-2xl">
           <Input
             ref={searchInputRef}
-            placeholder="Search jobs, inventory, clients…"
-            className="w-full pl-9 pr-16 h-9 bg-secondary border-0 text-sm focus-visible:ring-1 focus-visible:ring-primary/20"
+            placeholder={t("header.searchPlaceholder")}
+            className="h-11 w-full rounded-full border-0 bg-muted/80 pl-4 pr-14 text-sm shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary/25 dark:bg-muted/50"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => searchQuery.trim().length > 1 && setShowSearch(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && searchQuery.trim().length > 1) performSearch();
+            }}
           />
+          <Button
+            type="button"
+            size="icon"
+            className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 rounded-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+            aria-label={t("header.searchAria")}
+            onClick={() => {
+              if (searchQuery.trim().length > 1) performSearch();
+              else searchInputRef.current?.focus();
+            }}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
           <span
-            className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center gap-0.5 rounded border bg-muted/80 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+            className="pointer-events-none absolute right-14 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-border/60 bg-background/90 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground xl:inline-flex"
             aria-hidden
           >
             <kbd className="font-sans">Ctrl</kbd>
             <kbd className="font-sans">K</kbd>
           </span>
-          
           {showSearch && (
-            <div className="absolute top-full left-0 w-full mt-1 bg-card border rounded-md shadow-lg p-2 max-h-[400px] overflow-y-auto z-50">
+            <div className="absolute left-0 top-full z-50 mt-2 max-h-[400px] w-full overflow-y-auto rounded-2xl border border-border/60 bg-card p-2 shadow-erp">
               <div className="flex items-center justify-between px-2 py-1 mb-1 border-b">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Search Results</span>
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  {t("header.searchResults")}
+                </span>
                 {isSearching && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
                 <button 
                   onClick={() => setShowSearch(false)}
                   className="text-[10px] text-primary hover:underline"
                 >
-                  Close
+                  {t("common.close")}
                 </button>
               </div>
               {searchResults.length === 0 ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
-                  {isSearching ? "Searching..." : "No results found"}
+                  {isSearching ? t("header.searching") : t("header.noResults")}
                 </div>
               ) : (
                 <div className="grid gap-1">
@@ -270,7 +288,25 @@ export function DashboardHeader() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="hidden shrink-0 items-center gap-1 lg:flex">
+        <Button
+          variant="ghost"
+          className="rounded-full font-medium text-muted-foreground hover:text-foreground"
+          onClick={() => navigate("/production")}
+        >
+          {t("header.listOfAssets")}
+        </Button>
+        <Button
+          variant="outline"
+          className="rounded-full border-primary/20 px-5 font-medium text-foreground shadow-erp-sm hover:bg-accent/60"
+          onClick={() => navigate("/production")}
+        >
+          {t("header.addAsset")}
+        </Button>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1">
+        <ThemeToggle />
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="relative h-9 w-9">
@@ -285,20 +321,23 @@ export function DashboardHeader() {
           </PopoverTrigger>
           <PopoverContent className="w-80 p-0" align="end">
             <div className="p-3 border-b flex justify-between items-center">
-              <h3 className="font-semibold text-sm">Notifications {unreadCount > 0 && `(${unreadCount})`}</h3>
+              <h3 className="font-semibold text-sm">
+                {t("header.notifications")}
+                {unreadCount > 0 && ` (${unreadCount})`}
+              </h3>
               {unreadCount > 0 && (
                 <button 
                   onClick={handleMarkAllAsRead}
                   className="text-xs text-primary hover:underline font-medium"
                 >
-                  Mark all read
+                  {t("header.markAllRead")}
                 </button>
               )}
             </div>
             <div className="max-h-[300px] overflow-y-auto">
               {notifications.length === 0 ? (
                 <div className="p-8 text-center text-sm text-muted-foreground">
-                  No notifications yet.
+                  {t("header.noNotifications")}
                 </div>
               ) : (
                 notifications.map((n) => {
@@ -334,16 +373,23 @@ export function DashboardHeader() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 h-9 p-1 pl-2 hover:bg-secondary">
-              <div className="hidden md:flex flex-col items-end mr-1 text-right">
+            <Button variant="ghost" className="flex h-10 items-center gap-2 rounded-full p-1 pl-2 hover:bg-secondary/80">
+              <div className="hidden text-right md:mr-1 md:flex md:flex-col">
                 <span className="text-xs font-semibold leading-none">{user?.name || settings.displayName}</span>
                 <span className="text-[10px] text-muted-foreground">{user?.role || settings.role}</span>
               </div>
-              <Avatar className="h-7 w-7 border shadow-sm">
-                <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-bold">
-                  {getInitials(user?.name || settings.displayName)}
-                </AvatarFallback>
-              </Avatar>
+              <span className="relative inline-flex">
+                <Avatar className="h-9 w-9 border border-border/60 shadow-erp-sm">
+                  <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
+                    {getInitials(user?.name || settings.displayName)}
+                  </AvatarFallback>
+                </Avatar>
+                <span
+                  className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[hsl(152,69%,45%)] ring-2 ring-background"
+                  title={t("header.online")}
+                  aria-hidden
+                />
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end">
@@ -356,7 +402,7 @@ export function DashboardHeader() {
             {user?.platformRole === "super_admin" ? (
               <>
                 <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground pt-2">
-                  Company context (API)
+                  {t("header.companyContextApi")}
                 </DropdownMenuLabel>
                 <div className="px-2 pb-2">
                   <TenantContextSelect variant="menu" />
@@ -366,16 +412,16 @@ export function DashboardHeader() {
             <DropdownMenuSeparator />
             <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/profile")}>
               <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
+              <span>{t("header.profile")}</span>
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/settings")}>
               <SettingsIcon className="mr-2 h-4 w-4" />
-              <span>Settings</span>
+              <span>{t("header.settings")}</span>
             </DropdownMenuItem>
             {user?.platformRole === "super_admin" ? (
               <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/platform")}>
                 <Shield className="mr-2 h-4 w-4" />
-                <span>Platform admin</span>
+                <span>{t("header.platformAdmin")}</span>
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuSeparator />
@@ -384,7 +430,7 @@ export function DashboardHeader() {
               onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Log out</span>
+              <span>{t("header.logOut")}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

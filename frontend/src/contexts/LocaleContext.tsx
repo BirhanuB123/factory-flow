@@ -21,25 +21,41 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     const sync = () => setLangState(readUiLang());
-    window.addEventListener("erp-settings-updated", sync);
-    window.addEventListener("storage", (e) => {
+    const onStorage = (e: StorageEvent) => {
       if (e.key === SETTINGS_KEY) sync();
-    });
-    return () => window.removeEventListener("erp-settings-updated", sync);
+    };
+    window.addEventListener("erp-settings-updated", sync);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("erp-settings-updated", sync);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
-  const t = React.useCallback((key: string) => tKey(lang, key), [lang]);
+  React.useEffect(() => {
+    const code = lang === "en" ? "en" : lang === "am" ? "am" : "om";
+    document.documentElement.lang = code;
+    document.documentElement.setAttribute("data-ui-lang", code);
+  }, [lang]);
+
+  const t = React.useCallback(
+    (key: string, vars?: Record<string, string | number>) => tKey(lang, key, vars),
+    [lang]
+  );
 
   const value = React.useMemo(() => ({ lang, t }), [lang, t]);
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 
-type LocaleCtx = { lang: UiLang; t: (key: string) => string };
+type LocaleCtx = {
+  lang: UiLang;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+};
 
 const LocaleContext = React.createContext<LocaleCtx>({
   lang: "en",
-  t: (k) => tKey("en", k),
+  t: (k, v) => tKey("en", k, v),
 });
 
 export function useLocale() {

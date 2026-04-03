@@ -79,6 +79,12 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "1.25rem",
+        "2xl": "1.375rem",
+      },
+      boxShadow: {
+        erp: "0 4px 24px -4px rgba(15, 23, 42, 0.07), 0 2px 8px -2px rgba(15, 23, 42, 0.04)",
+        "erp-sm": "0 2px 12px -2px rgba(15, 23, 42, 0.06)",
       },
       keyframes: {
         "accordion-down": {

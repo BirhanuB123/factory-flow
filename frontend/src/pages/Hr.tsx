@@ -13,7 +13,6 @@ import {
   Calendar,
   DollarSign,
   Clock,
-  UserCog,
   Download,
   FileText,
   Play,
@@ -41,7 +40,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  ModuleDashboardLayout,
   StickyModuleTabs,
   moduleTabsListClassName,
   moduleTabsTriggerClassName,
@@ -68,6 +66,7 @@ import {
 } from "@/components/ui/select";
 import { HrMetrics } from "@/components/HrMetrics";
 import { useCurrency } from "@/hooks/use-currency";
+import { useLocale } from "@/contexts/LocaleContext";
 
 type EmploymentStatus = "Active" | "On Leave" | "Offboarded";
 
@@ -119,6 +118,7 @@ const API_BASE =
   (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api").replace(/\/$/, "") + "/hr";
 
 export default function Hr() {
+  const { t } = useLocale();
   const { format } = useCurrency();
   const { token, user, isLoading: authLoading } = useAuth();
   const [q, setQ] = useState("");
@@ -672,25 +672,22 @@ export default function Hr() {
     : 94; // fallback mockup value
 
   return (
-    <ModuleDashboardLayout
-      title="Talent Operations"
-      description="Ethiopia-aligned payroll: pension 7%/11%, PAYE, overtime, payslips & government CSV exports."
-      icon={UserCog}
-      healthStats={[
-        { label: "Headcount", value: String(employees.length) },
-        { label: "Active", value: String(activeCount), accent: "text-success" },
-        { label: "Attendance", value: `${attendanceRateVal}%`, accent: "text-primary" },
-      ]}
-      actions={
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+    <>
+      <div className="space-y-8 pb-8 animate-in fade-in duration-500">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.hr.title")}</h1>
+            <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.hr.subtitle")}</p>
+          </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="h-12 rounded-2xl bg-primary px-8 font-black uppercase italic text-xs tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all gap-2">
+              <Button className="h-10 shrink-0 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
                 <Plus className="h-4 w-4" />
-                Induct Personnel
+                Induct personnel
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-xl bg-card/95 backdrop-blur-2xl border-white/10 shadow-3xl">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-primary to-purple-500" />
+            <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-erp sm:max-w-xl">
+              <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-blue-500 via-primary to-purple-500" />
               <DialogHeader className="space-y-4">
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
                   <Users className="h-6 w-6 text-primary" />
@@ -950,12 +947,38 @@ export default function Hr() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-        </Dialog>
-      }
-    >
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="sm:max-w-xl bg-card/95 backdrop-blur-2xl border-white/10 shadow-3xl">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-primary to-blue-500" />
+          </Dialog>
+        </div>
+
+        <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Headcount</p>
+            <p className="text-sm font-semibold text-foreground">{employees.length}</p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
+            <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{activeCount}</p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Attendance</p>
+            <p className="text-sm font-semibold text-primary">{attendanceRateVal}%</p>
+          </div>
+          <div className="h-8 w-px bg-border/70" />
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Leave queue</p>
+            <p
+              className={`text-sm font-semibold ${pendingLeaveCount > 0 ? "text-amber-600" : "text-muted-foreground"}`}
+            >
+              {pendingLeaveCount} pending
+            </p>
+          </div>
+        </div>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-erp sm:max-w-xl">
+            <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-emerald-500 via-primary to-blue-500" />
               <DialogHeader className="space-y-4">
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
                   <Edit2 className="h-6 w-6 text-primary" />
@@ -1135,20 +1158,20 @@ export default function Hr() {
         </StickyModuleTabs>
 
         <TabsContent value="employees">
-          <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden group">
-            <CardHeader className="pb-4 border-b border-border/60 bg-muted/10 space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <Card className="group overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+            <CardHeader className="space-y-4 border-b border-border/50 bg-muted/20 pb-4">
+              <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
                 <div className="space-y-1">
-                  <h3 className="text-xl font-black tracking-tighter italic">ACTIVE DIRECTORY</h3>
-                  <p className="text-[10px] font-bold uppercase text-muted-foreground/60 tracking-widest">Authorized personnel database</p>
+                  <h3 className="text-lg font-bold tracking-tight text-[#1a2744]">Personnel register</h3>
+                  <p className="text-sm text-muted-foreground">Search by name, role, department, or status</p>
                 </div>
                 <div className="relative w-full md:w-96 group/search">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within/search:text-primary transition-colors" />
                   <Input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    placeholder="SCAN LEDGER FOR NAME, ROLE, DEPT..."
-                    className="h-12 pl-11 rounded-2xl bg-background/50 border-border/60 focus-visible:ring-primary/20 font-bold italic text-xs tracking-wider placeholder:opacity-30"
+                    placeholder="Search name, role, department…"
+                    className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-11 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
                   />
                 </div>
               </div>
@@ -1790,7 +1813,7 @@ export default function Hr() {
         </TabsContent>
 
         <TabsContent value="payroll">
-          <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
+          <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
             <CardHeader className="pb-4 border-b border-border/60 bg-muted/10 space-y-4">
               <div className="space-y-1">
                 <h3 className="text-xl font-black tracking-tighter italic uppercase text-purple-500">Ethiopia payroll</h3>
@@ -2288,6 +2311,7 @@ export default function Hr() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </ModuleDashboardLayout>
+      </div>
+    </>
   );
 }

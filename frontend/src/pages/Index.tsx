@@ -1,18 +1,16 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { KpiCards } from "@/components/KpiCards";
-import { ProductionJobsTable } from "@/components/ProductionJobsTable";
-import { QuickActions } from "@/components/QuickActions";
 import { DashboardCharts } from "@/components/DashboardCharts";
-import { MachineStatus } from "@/components/MachineStatus";
+import { DashboardFeedsCalendar } from "@/components/DashboardFeedsCalendar";
 import { useAuth } from "@/contexts/AuthContext";
 import { productionApi, manufacturingApi } from "@/lib/api";
 import type { TenantModuleFlags } from "@/lib/api";
-import { useSettings } from "@/hooks/use-settings";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, Ban, CalendarClock, CheckCircle2, Sparkles, Zap } from "lucide-react";
+import { AlertTriangle, Ban, CalendarClock, CheckCircle2, Zap } from "lucide-react";
 import { PERMS } from "@/lib/permissions";
+import { useLocale } from "@/contexts/LocaleContext";
 
 function subscriptionBadgeVariant(
   status?: string
@@ -21,14 +19,6 @@ function subscriptionBadgeVariant(
   if (status === "trial") return "secondary";
   if (status === "suspended" || status === "archived") return "destructive";
   return "outline";
-}
-
-function subscriptionStatusLabel(status?: string): string {
-  if (status === "active") return "Active";
-  if (status === "trial") return "Trial";
-  if (status === "suspended") return "Suspended";
-  if (status === "archived") return "Archived";
-  return "Unknown";
 }
 
 function dashboardMfgEnabled(
@@ -40,8 +30,16 @@ function dashboardMfgEnabled(
 }
 
 const Index = () => {
+  const { t } = useLocale();
   const { user, can } = useAuth();
-  const { settings } = useSettings();
+
+  function subscriptionStatusLabel(status?: string): string {
+    if (status === "active") return t("sub.active");
+    if (status === "trial") return t("sub.trial");
+    if (status === "suspended") return t("sub.suspended");
+    if (status === "archived") return t("sub.archived");
+    return t("sub.unknown");
+  }
   const mfgDash = dashboardMfgEnabled(user) && can(PERMS.DASHBOARD_MFG);
   const showOpsDashboard = can(PERMS.DASHBOARD_MFG) || can(PERMS.DASHBOARD_INVENTORY);
 
@@ -62,9 +60,6 @@ const Index = () => {
     [downtime]
   );
   const tenantSubscription = user?.tenantSubscription;
-  const userName = user?.name || settings.displayName || "Operator";
-  const hours = new Date().getHours();
-  const greeting = hours < 12 ? "Good Morning" : hours < 18 ? "Good Afternoon" : "Good Evening";
   const trialDate = tenantSubscription?.trialEndDate ? new Date(tenantSubscription.trialEndDate) : null;
   const trialDaysLeft =
     trialDate != null
@@ -74,46 +69,43 @@ const Index = () => {
   const isSuspendedOrArchived =
     tenantSubscription?.status === "suspended" || tenantSubscription?.status === "archived";
   const moduleFlags = user?.tenantModuleFlags as Partial<TenantModuleFlags> | undefined;
-  const disabledModules = [
-    { key: "manufacturing", label: "Manufacturing & production" },
-    { key: "inventory", label: "Inventory & stock" },
-    { key: "sales", label: "Sales & orders" },
-    { key: "procurement", label: "Procurement & POs" },
-    { key: "finance", label: "Finance & AP/AR" },
-    { key: "hr", label: "HR & payroll" },
-  ].filter((m) => moduleFlags?.[m.key as keyof TenantModuleFlags] === false);
+  const disabledModules = (
+    [
+      { key: "manufacturing" as const, labelKey: "dashboard.moduleMfg" as const },
+      { key: "inventory" as const, labelKey: "dashboard.moduleInv" as const },
+      { key: "sales" as const, labelKey: "dashboard.moduleSales" as const },
+      { key: "procurement" as const, labelKey: "dashboard.moduleProc" as const },
+      { key: "finance" as const, labelKey: "dashboard.moduleFin" as const },
+      { key: "hr" as const, labelKey: "dashboard.moduleHr" as const },
+    ] as const
+  ).filter((m) => moduleFlags?.[m.key as keyof TenantModuleFlags] === false);
 
   return (
-    <div className="space-y-8 pb-8 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-1 bg-primary rounded-full" />
-            <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">
-              {greeting}, {userName.split(' ')[0]}
-            </h1>
-            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-          </div>
-          <p className="text-sm font-medium text-muted-foreground max-w-md">
-            Your factory is humming. Here's what's happening on the floor right now.
-          </p>
+    <div className="space-y-6 pb-8 animate-in fade-in duration-500">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("dashboard.title")}</h1>
+          <p className="mt-1 text-sm font-medium text-muted-foreground">{t("dashboard.subtitle")}</p>
         </div>
-        
-        <div className="hidden lg:flex items-center gap-6 px-6 py-3 bg-secondary/50 rounded-2xl backdrop-blur-sm border border-border/50">
+        <div className="hidden items-center gap-6 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">System Health</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("dashboard.systemHealth")}
+            </p>
             <p
-              className={`text-sm font-mono font-bold ${
-                !mfgDash ? "text-muted-foreground" : hasOpenDowntime ? "text-amber-500" : "text-success"
+              className={`text-sm font-semibold ${
+                !mfgDash ? "text-muted-foreground" : hasOpenDowntime ? "text-amber-600" : "text-[hsl(152,69%,36%)]"
               }`}
             >
-              {!mfgDash ? "—" : hasOpenDowntime ? "CHECK ASSETS" : "OPERATIONAL"}
+              {!mfgDash ? "—" : hasOpenDowntime ? t("dashboard.checkAssets") : t("dashboard.operational")}
             </p>
           </div>
-          <div className="h-8 w-px bg-border" />
+          <div className="h-8 w-px bg-border/70" />
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">OEE proxy (30d)</p>
-            <p className="text-sm font-mono font-bold">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("dashboard.oeeProxy")}
+            </p>
+            <p className="text-sm font-semibold text-foreground">
               {!mfgDash || kpis == null ? "—" : `${kpis.oeeProxyPct}%`}
             </p>
           </div>
@@ -121,7 +113,7 @@ const Index = () => {
       </div>
 
       {tenantSubscription && user?.platformRole !== "super_admin" && (
-        <Card className="rounded-2xl border-primary/25 bg-gradient-to-br from-primary/[0.10] via-primary/[0.04] to-transparent shadow-lg shadow-primary/10">
+        <Card className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card to-card shadow-erp">
           <CardContent className="pt-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-2">
@@ -130,14 +122,16 @@ const Index = () => {
                     <Zap className="h-4 w-4" />
                   </div>
                   <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-                    Subscription status
+                    {t("dashboard.subscriptionStatus")}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={subscriptionBadgeVariant(tenantSubscription.status)} className="px-2.5 py-1">
                     {subscriptionStatusLabel(tenantSubscription.status)}
                   </Badge>
-                  <span className="text-sm font-semibold">{tenantSubscription.displayName || "Current tenant"}</span>
+                  <span className="text-sm font-semibold">
+                    {tenantSubscription.displayName || t("dashboard.currentTenant")}
+                  </span>
                 </div>
                 {isSuspendedOrArchived && tenantSubscription.statusReason ? (
                   <p className="text-xs text-destructive inline-flex items-center gap-1.5">
@@ -149,14 +143,14 @@ const Index = () => {
 
               <div className="grid gap-2 text-xs">
                 <div className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/60 px-3 py-2">
-                  <span className="text-muted-foreground">Plan</span>
+                  <span className="text-muted-foreground">{t("dashboard.plan")}</span>
                   <span className="font-semibold uppercase tracking-wide text-foreground">
                     {tenantSubscription.plan || "starter"}
                   </span>
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/60 px-3 py-2">
                   <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">Trial ends</span>
+                  <span className="text-muted-foreground">{t("dashboard.trialEnds")}</span>
                   <span className="font-semibold text-foreground">
                     {trialDate ? trialDate.toLocaleDateString() : "—"}
                   </span>
@@ -169,12 +163,14 @@ const Index = () => {
                   )}
                   {tenantSubscription.status === "trial" && trialDaysLeft != null ? (
                     <span>
-                      {isTrialExpired ? "Trial expired" : `${Math.max(0, trialDaysLeft)} day(s) left in trial`}
+                      {isTrialExpired
+                        ? t("dashboard.trialExpired")
+                        : t("dashboard.trialDaysLeft", { n: Math.max(0, trialDaysLeft) })}
                     </span>
                   ) : tenantSubscription.status === "active" ? (
-                    <span>Subscription is in good standing</span>
+                    <span>{t("dashboard.subscriptionGood")}</span>
                   ) : (
-                    <span>Review subscription details in Settings</span>
+                    <span>{t("dashboard.reviewSettings")}</span>
                   )}
                 </div>
               </div>
@@ -183,19 +179,19 @@ const Index = () => {
         </Card>
       )}
       {user?.platformRole !== "super_admin" && (
-        <Card className="rounded-2xl border-border/70 bg-background/70">
+        <Card className="rounded-2xl border border-border/60 bg-card shadow-erp-sm">
           <CardContent className="pt-5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-                Module access
+                {t("dashboard.moduleAccess")}
               </span>
               {disabledModules.length === 0 ? (
                 <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
-                  All enabled
+                  {t("dashboard.allEnabled")}
                 </Badge>
               ) : (
                 <Badge variant="destructive" className="text-[10px] uppercase tracking-wider">
-                  {disabledModules.length} disabled by tenant policy
+                  {disabledModules.length} {t("dashboard.disabledPolicy")}
                 </Badge>
               )}
             </div>
@@ -203,7 +199,7 @@ const Index = () => {
               <div className="mt-3 flex flex-wrap gap-2">
                 {disabledModules.map((mod) => (
                   <Badge key={mod.key} variant="outline" className="text-[10px] uppercase tracking-wider">
-                    {mod.label}
+                    {t(mod.labelKey)}
                   </Badge>
                 ))}
               </div>
@@ -213,20 +209,11 @@ const Index = () => {
       )}
 
       {showOpsDashboard ? (
-        <>
+        <div className="space-y-6">
           <KpiCards />
-
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-2 space-y-6">
-              <DashboardCharts />
-              {can(PERMS.DASHBOARD_MFG) ? <ProductionJobsTable /> : null}
-            </div>
-            <div className="space-y-6">
-              <QuickActions />
-              {can(PERMS.DASHBOARD_MFG) ? <MachineStatus /> : null}
-            </div>
-          </div>
-        </>
+          <DashboardCharts />
+          <DashboardFeedsCalendar />
+        </div>
       ) : null}
     </div>
   );

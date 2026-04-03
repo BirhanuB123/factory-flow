@@ -60,10 +60,13 @@ export function InventoryMetrics() {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {stats.map((stat, idx) => (
-        <Card key={idx} className="border-none shadow-lg bg-card/40 backdrop-blur-xl overflow-hidden group hover:bg-card/60 transition-all duration-300">
-          <CardContent className="p-6 relative">
+        <Card
+          key={idx}
+          className="group overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+        >
+          <CardContent className="relative p-6">
             <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
             
             <div className="flex justify-between items-start mb-4">

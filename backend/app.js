@@ -137,6 +137,7 @@ const {
   exportAP,
   postEmailDigest,
 } = require('./controllers/reportsExportController');
+const { getReportsSummary } = require('./controllers/reportsAnalyticsController');
 const { list: listSavedViews, create: createSavedView, remove: removeSavedView } = require('./controllers/savedViewsController');
 const { listPending, approve: approveRequest, reject: rejectRequest } = require('./controllers/approvalController');
 const { listAuditLogs } = require('./controllers/auditLogsController');
@@ -442,6 +443,7 @@ app.post(
   authorize('Admin', 'finance_head'),
   postEmailDigest
 );
+app.get('/api/reports/summary', authorizePerm(P.DASHBOARD_VIEW), getReportsSummary);
 
 app.get(
   '/api/approvals/pending',

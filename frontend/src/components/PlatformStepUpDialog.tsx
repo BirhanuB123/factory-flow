@@ -53,7 +53,7 @@ export function PlatformStepUpDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !submitting && onOpenChange(v)}>
-      <DialogContent className="sm:max-w-md rounded-[2.5rem] border-none shadow-2xl bg-card/90 backdrop-blur-2xl px-8 pt-10 pb-8 overflow-hidden">
+      <DialogContent className="overflow-hidden rounded-2xl border border-border/60 bg-card px-8 pb-8 pt-10 shadow-erp sm:max-w-md">
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
         <DialogHeader className="space-y-4">
           <DialogTitle className="flex flex-col items-center gap-4 text-center sm:items-start sm:text-left">
@@ -61,7 +61,7 @@ export function PlatformStepUpDialog({
               <ShieldCheck className="h-8 w-8 stroke-[2.5]" />
             </div>
             <div className="space-y-1">
-              <span className="text-2xl font-black tracking-tight uppercase italic block">{title}</span>
+              <span className="block text-lg font-bold tracking-tight text-[#1a2744]">{title}</span>
               <DialogDescription className="text-sm font-medium leading-relaxed">
                 {description}
               </DialogDescription>

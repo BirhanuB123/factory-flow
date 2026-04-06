@@ -58,6 +58,8 @@ async function postProductionCompletionWithoutTxn(job, bom, jobQty) {
       referenceType: 'ProductionJob',
       referenceId: job._id,
       note: `Job ${job.jobId}`,
+      lotNumber: job.outputLotNumber || '',
+      expirationDate: job.outputExpirationDate || null,
     });
     done.push({ productId: bom.outputProduct, delta: jobQty });
   } catch (e) {
@@ -133,6 +135,8 @@ async function postProductionCompletion(job) {
       referenceType: 'ProductionJob',
       referenceId: job._id,
       note: `Job ${job.jobId}`,
+      lotNumber: job.outputLotNumber || '',
+      expirationDate: job.outputExpirationDate || null,
     });
     await session.commitTransaction();
     posted = true;

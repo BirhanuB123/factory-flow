@@ -1,0 +1,43 @@
+  console.log
+    [dotenv@17.3.1] injecting env (10) from .env -- tip: ⚙️  override existing env vars with { override: true }
+
+      at _log (node_modules/dotenv/lib/main.js:139:11)
+
+(node:10824) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:10824) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:10824) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+FAIL tests/integration/batchSerialTracking.integration.test.js (9.253 s)
+  Batch and Serial Tracking Integration
+    Manual Movements Validation
+      √ Should fail to receipt batch-tracked item without lotNumber (379 ms)
+      √ Should succeed to receipt batch-tracked item with lotNumber (180 ms)
+      √ Should fail to issue batch-tracked item without lotNumber (69 ms)
+      √ Should fail to receipt serial-tracked item without serialNumber (101 ms)
+      √ Should succeed to receipt serial-tracked item with serialNumber (141 ms)
+      √ Should allow movement for non-tracked items without identifiers (143 ms)
+    PO Receipt Integration
+      × Should require tracking identifiers when receiving PO lines (137 ms)
+
+  ● Batch and Serial Tracking Integration › PO Receipt Integration › Should require tracking identifiers when receiving PO lines
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 400
+    Received: 500
+
+    [0m [90m 216 |[39m         })[33m;[39m
+     [90m 217 |[39m
+    [31m[1m>[22m[39m[90m 218 |[39m       expect(res[33m.[39mstatus)[33m.[39mtoBe([35m400[39m)[33m;[39m
+     [90m     |[39m                          [31m[1m^[22m[39m
+     [90m 219 |[39m       expect(res[33m.[39mbody[33m.[39mmessage)[33m.[39mtoMatch([35m/Lot or Batch number is required/i[39m)[33m;[39m
+     [90m 220 |[39m
+     [90m 221 |[39m       [90m// Try receiving with lotNumber[39m[0m
+
+      at Object.toBe (tests/integration/batchSerialTracking.integration.test.js:218:26)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 6 passed, 7 total
+Snapshots:   0 total
+Time:        9.419 s
+Ran all test suites matching tests/integration/batchSerialTracking.integration.test.js.

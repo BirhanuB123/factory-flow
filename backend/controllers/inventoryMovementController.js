@@ -26,13 +26,29 @@ exports.getMovements = asyncHandler(async (req, res) => {
  * receipt/issue: quantity is positive magnitude; adjustment: quantity is signed delta
  */
 exports.createMovement = asyncHandler(async (req, res) => {
-  const { productId, kind, quantity, note, lotNumber, batchNumber } = req.body;
+  const { productId, kind, quantity, note, lotNumber, batchNumber, serialNumber, expirationDate } = req.body;
+  const Product = require('../models/Product');
 
   if (!productId || !kind || quantity === undefined || quantity === null) {
     return res.status(400).json({
       success: false,
       message: 'productId, kind, and quantity are required',
     });
+  }
+
+  const productDoc = await Product.findOne(byTenant(req, { _id: productId }));
+  if (!productDoc) {
+    return res.status(404).json({ success: false, message: 'Product not found' });
+  }
+
+  if (productDoc.trackingMethod === 'batch' && !lotNumber && !batchNumber) {
+    return res.status(400).json({ success: false, message: 'Lot or Batch number is required for this product' });
+  }
+  if (productDoc.trackingMethod === 'serial' && !serialNumber) {
+    return res.status(400).json({ success: false, message: 'Serial number is required for this product' });
+  }
+  if (productDoc.trackingMethod === 'serial' && Math.abs(Number(quantity)) !== 1) {
+    return res.status(400).json({ success: false, message: 'Serial tracked items must be moved one at a time (quantity 1)' });
   }
   if (!VALID_KINDS.includes(kind)) {
     return res.status(400).json({
@@ -75,6 +91,8 @@ exports.createMovement = asyncHandler(async (req, res) => {
       note: note || `Manual ${kind}`,
       lotNumber: lotNumber || '',
       batchNumber: batchNumber || '',
+      serialNumber: serialNumber || '',
+      expirationDate: expirationDate || null,
     });
     const populated = await StockMovement.findOne(byTenant(req, { _id: movement._id })).populate(
       'product',

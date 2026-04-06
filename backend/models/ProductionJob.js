@@ -47,6 +47,8 @@ const MaterialTxnSchema = new mongoose.Schema(
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
     quantity: { type: Number, required: true, min: 0.000001 },
     txnType: { type: String, enum: ['issue', 'return'], required: true },
+    lotNumber: { type: String, default: '' },
+    serialNumber: { type: String, default: '' },
     operationIndex: { type: Number, default: null },
     note: { type: String, default: '' },
     movementId: { type: mongoose.Schema.Types.ObjectId, ref: 'StockMovement', default: null },
@@ -113,6 +115,8 @@ const ProductionJobSchema = new mongoose.Schema({
     default: false,
   },
   materialTransactions: [MaterialTxnSchema],
+  outputLotNumber: { type: String, default: '' },
+  outputExpirationDate: { type: Date, default: null },
   costing: {
     plannedLaborCost: { type: Number, default: 0 },
     plannedMachineCost: { type: Number, default: 0 },

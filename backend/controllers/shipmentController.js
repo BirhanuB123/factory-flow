@@ -39,6 +39,8 @@ async function applyShipmentInventoryWithSession(tenantId, shipmentDoc, orderDoc
       referenceType: 'Shipment',
       referenceId: shipmentDoc._id,
       note: `Shipment ${num} line ${idx}`,
+      lotNumber: ln.lotNumber || undefined,
+      serialNumber: ln.serialNumber || undefined,
     });
   }
 }
@@ -60,6 +62,8 @@ async function applyShipmentInventoryWithoutTxn(tenantId, shipmentDoc, orderDoc)
         referenceType: 'Shipment',
         referenceId: shipmentDoc._id,
         note: `Shipment ${num} line ${idx}`,
+        lotNumber: ln.lotNumber || undefined,
+        serialNumber: ln.serialNumber || undefined,
       });
       done.push({ productId, q });
     }
@@ -191,6 +195,8 @@ exports.createShipment = asyncHandler(async (req, res) => {
     lines: lines.map((l) => ({
       lineIndex: Number(l.lineIndex),
       quantity: Number(l.quantity),
+      lotNumber: l.lotNumber || '',
+      serialNumber: l.serialNumber || '',
     })),
     status: 'draft',
     carrier: carrier || '',

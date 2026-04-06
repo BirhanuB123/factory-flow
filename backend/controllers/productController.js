@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const LotBalance = require('../models/LotBalance');
 const asyncHandler = require('../middleware/asyncHandler');
 const { applyMovement } = require('../services/stockService');
 const audit = require('../services/auditService');
@@ -116,4 +117,11 @@ exports.deleteProduct = asyncHandler(async (req, res, next) => {
     summary: { sku: product.sku },
   });
   res.status(200).json({ success: true, data: {} });
+});
+
+exports.getProductLots = asyncHandler(async (req, res) => {
+  const lots = await LotBalance.find(
+    byTenant(req, { product: req.params.id, quantity: { $ne: 0 } })
+  ).sort({ expirationDate: 1, lotNumber: 1 });
+  res.status(200).json({ success: true, data: lots });
 });

@@ -46,6 +46,8 @@ const StockMovementSchema = new mongoose.Schema({
   note: { type: String, default: '' },
   lotNumber: { type: String, default: '' },
   batchNumber: { type: String, default: '' },
+  serialNumber: { type: String, default: '' },
+  expirationDate: { type: Date, default: null },
   /** Snapshot of on-hand after this movement */
   balanceAfter: {
     type: Number,

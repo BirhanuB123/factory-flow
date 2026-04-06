@@ -192,6 +192,10 @@ export const inventoryApi = {
     const response = await api.delete(`/products/${id}`);
     return response.data;
   },
+  getLots: async (id: string) => {
+    const response = await api.get(`/products/${id}/lots`);
+    return response.data.data;
+  },
 };
 
 export const bomApi = {
@@ -296,14 +300,28 @@ export const productionApi = {
   },
   issueMaterial: async (
     jobId: string,
-    body: { productId: string; quantity: number; operationIndex?: number; note?: string }
+    body: {
+      productId: string;
+      quantity: number;
+      operationIndex?: number;
+      note?: string;
+      lotNumber?: string;
+      serialNumber?: string;
+    }
   ) => {
     const response = await api.post(`/production/${jobId}/materials/issue`, body);
     return response.data.data;
   },
   returnMaterial: async (
     jobId: string,
-    body: { productId: string; quantity: number; operationIndex?: number; note?: string }
+    body: {
+      productId: string;
+      quantity: number;
+      operationIndex?: number;
+      note?: string;
+      lotNumber?: string;
+      serialNumber?: string;
+    }
   ) => {
     const response = await api.post(`/production/${jobId}/materials/return`, body);
     return response.data.data;
@@ -534,7 +552,14 @@ export const purchaseOrdersApi = {
   },
   receive: async (
     id: string,
-    receipts: { lineIndex: number; quantity: number; lotNumber?: string; batchNumber?: string }[]
+    receipts: {
+      lineIndex: number;
+      quantity: number;
+      lotNumber?: string;
+      batchNumber?: string;
+      serialNumber?: string;
+      expirationDate?: string | null;
+    }[]
   ) => {
     const response = await api.post(`/purchase-orders/${id}/receive`, { receipts });
     return response.data.data;
@@ -652,6 +677,10 @@ export const inventoryMovementsApi = {
     kind: 'receipt' | 'issue' | 'adjustment';
     quantity: number;
     note?: string;
+    lotNumber?: string;
+    batchNumber?: string;
+    serialNumber?: string;
+    expirationDate?: string | null;
   }) => {
     const response = await api.post('/inventory/movements', body);
     return response.data.data;
@@ -784,7 +813,7 @@ export const shipmentsApi = {
   },
   create: async (body: {
     orderId: string;
-    lines: Array<{ lineIndex: number; quantity: number }>;
+    lines: Array<{ lineIndex: number; quantity: number; lotNumber?: string; serialNumber?: string }>;
     carrier?: string;
     trackingNumber?: string;
   }) => {

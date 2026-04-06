@@ -39,6 +39,8 @@ const StockReservationSchema = new mongoose.Schema({
     type: Number,
     default: null,
   },
+  lotNumber: { type: String, default: '' },
+  serialNumber: { type: String, default: '' },
   note: { type: String, default: '' },
   createdAt: {
     type: Date,

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { productionApi, bomApi, downloadReportCsv } from "@/lib/api";
+import { productionApi, bomApi, inventoryApi, downloadReportCsv } from "@/lib/api";
 import { SavedViewsBar } from "@/components/SavedViewsBar";
 import { toast } from "sonner";
 import { useLocale } from "@/contexts/LocaleContext";
@@ -139,6 +139,13 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
     notes: "",
   });
 
+  const [issueProductId, setIssueProductId] = useState("");
+  const [issueQty, setIssueQty] = useState(1);
+  const [issueLot, setIssueLot] = useState("");
+  const [issueSerial, setIssueSerial] = useState("");
+  const [outputLot, setOutputLot] = useState("");
+  const [outputExpiry, setOutputExpiry] = useState("");
+
   const { data: allJobs = [], isLoading } = useQuery({
     queryKey: ["productions"],
     queryFn: productionApi.getAll,
@@ -147,6 +154,11 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
   const { data: boms = [] } = useQuery({
     queryKey: ['boms'],
     queryFn: bomApi.getAll,
+  });
+
+  const { data: products = [] } = useQuery({
+    queryKey: ['inventory'],
+    queryFn: inventoryApi.getAll,
   });
 
   useEffect(() => {
@@ -321,6 +333,23 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
     },
     onError: (e: Error | { message?: string }) =>
       toast.error((e as Error).message || "Action failed"),
+  });
+
+  const issueMaterialMut = useMutation({
+    mutationFn: (data: { jobId: string; productId: string; quantity: number; lotNumber?: string; serialNumber?: string }) =>
+      productionApi.issueMaterial(data.jobId, data),
+    onSuccess: async (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["productions"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      toast.success("Material issued to job");
+      await refreshJob(vars.jobId);
+      setIssueProductId("");
+      setIssueQty(1);
+      setIssueLot("");
+      setIssueSerial("");
+    },
+    onError: (e: { response?: { data?: { message?: string } } }) =>
+      toast.error(e?.response?.data?.message || "Issue failed"),
   });
 
   const travelerBase =
@@ -946,6 +975,179 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                     />
                   </div>
                 </div>
+
+                <div className="space-y-4 pt-4 border-t border-border/40 mt-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
+                       <Package className="h-3.5 w-3.5" />
+                       Shop floor — materials
+                    </p>
+                  </div>
+                  
+                  {/* Issued Transactions List */}
+                  {((selectedJob as any).materialTransactions?.length || 0) > 0 ? (
+                    <div className="rounded-xl border border-border/40 overflow-hidden bg-muted/10">
+                      <table className="w-full text-[11px]">
+                        <thead className="bg-muted/50 border-b">
+                          <tr>
+                            <th className="text-left p-2 font-bold uppercase tracking-tighter opacity-70">Material SKU</th>
+                            <th className="text-right p-2 font-bold uppercase tracking-tighter opacity-70">Qty</th>
+                            <th className="text-left p-2 font-bold uppercase tracking-tighter opacity-70">Lot/Serial Tracking</th>
+                            <th className="text-right p-2 font-bold uppercase tracking-tighter opacity-70">Time</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {((selectedJob as any).materialTransactions || []).map((tx: any, txi: number) => {
+                            const pObj = products.find((p: any) => p._id === (tx.product?._id || tx.product));
+                            return (
+                              <tr key={txi} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                                <td className="p-2">
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-primary">{pObj?.sku || "Resource"}</span>
+                                    <span className="text-[9px] opacity-60 truncate max-w-[150px]">{pObj?.name || ""}</span>
+                                  </div>
+                                </td>
+                                <td className="p-2 text-right font-mono font-bold">{tx.quantity}</td>
+                                <td className="p-2">
+                                  <div className="flex flex-wrap gap-1">
+                                    {tx.lotNumber && (
+                                      <Badge variant="outline" className="text-[9px] h-4 px-1 lowercase font-mono">lot:{tx.lotNumber}</Badge>
+                                    )}
+                                    {tx.serialNumber && (
+                                      <Badge variant="secondary" className="text-[9px] h-4 px-1 lowercase font-mono">sn:{tx.serialNumber}</Badge>
+                                    )}
+                                    {!tx.lotNumber && !tx.serialNumber && (
+                                      <span className="text-[10px] text-muted-foreground opacity-50">Bulk (untracked)</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="p-2 text-right text-muted-foreground whitespace-nowrap opacity-70">
+                                  {new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-border/60 p-6 text-center">
+                      <Package className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground">No materials issued to this job yet.</p>
+                    </div>
+                  )}
+
+                  {/* Issuance Form */}
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      <p className="text-[10px] font-black uppercase text-primary tracking-widest">Issue Resource from Stock</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold ml-1">Select SKUs</Label>
+                        <Select value={issueProductId} onValueChange={v => {
+                          setIssueProductId(v);
+                          setIssueLot("");
+                          setIssueSerial("");
+                        }}>
+                          <SelectTrigger className="h-9 rounded-lg bg-card border-border/60">
+                            <SelectValue placeholder="Resource to issue..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60 overflow-y-auto">
+                            {products.length === 0 && <SelectItem value="loading" disabled>Loading resources...</SelectItem>}
+                            {products.map((p: any) => (
+                              <SelectItem key={p._id} value={p._id}>
+                                <div className="flex flex-col items-start gap-0">
+                                  <span className="text-xs font-bold">{p.sku}</span>
+                                  <span className="text-[9px] opacity-60">{p.name}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold ml-1">Issuance Quantity</Label>
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            type="number" 
+                            className="h-9 rounded-lg bg-card border-border/60 font-mono" 
+                            value={issueQty} 
+                            onChange={(e) => setIssueQty(parseFloat(e.target.value) || 0)} 
+                          />
+                          <span className="text-[10px] font-bold opacity-50">units</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {issueProductId && (() => {
+                      const pObj = products.find((p: any) => p._id === issueProductId);
+                      if (!pObj) return null;
+                      
+                      const showBatch = pObj.trackingMethod === 'batch';
+                      const showSerial = pObj.trackingMethod === 'serial';
+
+                      if (!showBatch && !showSerial) return null;
+
+                      return (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/40 p-3 rounded-lg border border-primary/10 animate-in fade-in slide-in-from-top-2">
+                          {showBatch && (
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] font-bold ml-1">Identify Lot / Batch</Label>
+                              <Input 
+                                className="h-9 rounded-lg font-mono text-xs uppercase" 
+                                placeholder="BATCH-ID" 
+                                value={issueLot} 
+                                onChange={(e) => setIssueLot(e.target.value)} 
+                              />
+                            </div>
+                          )}
+                          {showSerial && (
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] font-bold ml-1">Identify Individual Serial</Label>
+                              <Input 
+                                className="h-9 rounded-lg font-mono text-xs uppercase" 
+                                placeholder="SERIAL-ID" 
+                                value={issueSerial} 
+                                onChange={(e) => setIssueSerial(e.target.value)} 
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    <Button 
+                      className="w-full h-10 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2 shadow-sm"
+                      disabled={!issueProductId || issueQty <= 0 || issueMaterialMut.isPending}
+                      onClick={() => {
+                        const pObj = products.find((p: any) => p._id === issueProductId);
+                        if (pObj?.trackingMethod === 'batch' && !issueLot) {
+                          toast.error("Lot/Batch number is required for this resource");
+                          return;
+                        }
+                        if (pObj?.trackingMethod === 'serial' && !issueSerial) {
+                          toast.error("Serial number is required for this resource");
+                          return;
+                        }
+
+                        issueMaterialMut.mutate({
+                          jobId: selectedJob._id,
+                          productId: issueProductId,
+                          quantity: issueQty,
+                          lotNumber: issueLot,
+                          serialNumber: issueSerial,
+                        });
+                      }}
+                    >
+                      {issueMaterialMut.isPending ? "Posting to ledger..." : (
+                        <><Play className="h-3 w-3" /> Execute Material Issue</>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 py-4">
@@ -1149,27 +1351,73 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
             <DialogTitle className="font-bold text-[#1a2744]">Update job status</DialogTitle>
             <DialogDescription>{updateStatusJob?.jobId}</DialogDescription>
           </DialogHeader>
-          <div className="py-2">
-            <Label className="text-sm">Status</Label>
-            <Select
-              value={updateStatusJob?.status ?? ""}
-              onValueChange={(value) => {
+          <div className="py-2 space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-bold ml-1">New Status</Label>
+              <Select
+                value={updateStatusJob?.status ?? ""}
+                onValueChange={(value) => {
+                  if (!updateStatusJob) return;
+                  setUpdateStatusJob({ ...updateStatusJob, status: value as JobStatus });
+                }}
+              >
+                <SelectTrigger className="h-10 rounded-xl border-border/60 bg-muted/20">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(["Scheduled", "In Progress", "On Hold", "Completed", "Cancelled"] as const).map((s) => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {updateStatusJob?.status === "Completed" && (
+              <div className="space-y-4 p-3 rounded-xl bg-primary/5 border border-primary/10 animate-in zoom-in-95 duration-200">
+                 <div className="flex items-center gap-2 mb-1">
+                   <div className="h-1 w-3 rounded-full bg-primary" />
+                   <p className="text-[9px] font-black uppercase text-primary tracking-widest">Output Inventory Tracking</p>
+                 </div>
+                 
+                 <div className="space-y-1.5">
+                   <Label className="text-[10px] font-bold ml-1">Output Lot/Batch #</Label>
+                   <Input 
+                     className="h-9 rounded-lg bg-card font-mono text-xs uppercase" 
+                     placeholder="B-2024-XXXX" 
+                     value={outputLot} 
+                     onChange={(e) => setOutputLot(e.target.value)} 
+                   />
+                 </div>
+
+                 <div className="space-y-1.5">
+                   <Label className="text-[10px] font-bold ml-1">Expiration Date (optional)</Label>
+                   <Input 
+                     type="date"
+                     className="h-9 rounded-lg bg-card" 
+                     value={outputExpiry} 
+                     onChange={(e) => setOutputExpiry(e.target.value)} 
+                   />
+                 </div>
+              </div>
+            )}
+
+            <Button 
+              className="w-full h-10 rounded-xl font-bold uppercase text-[10px] tracking-wider"
+              onClick={() => {
                 if (!updateStatusJob) return;
                 updateJobMutation.mutate({
                   id: updateStatusJob._id,
-                  data: { status: value },
+                  data: { 
+                    status: updateStatusJob.status,
+                    outputLotNumber: updateStatusJob.status === 'Completed' ? outputLot : undefined,
+                    outputExpirationDate: updateStatusJob.status === 'Completed' ? (outputExpiry || undefined) : undefined
+                  },
                 });
               }}
+              disabled={updateJobMutation.isPending}
             >
-              <SelectTrigger className="mt-2 rounded-full border-border/60 bg-muted/40">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                {(["Scheduled", "In Progress", "On Hold", "Completed", "Cancelled"] as const).map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {updateJobMutation.isPending ? "Updating..." : "Confirm & Save Status"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

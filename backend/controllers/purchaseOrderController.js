@@ -258,53 +258,59 @@ exports.receivePurchaseOrder = asyncHandler(async (req, res) => {
 
   const unitCosts = computeLineInventoryUnitCosts(po);
 
-  for (const r of receipts) {
-    const idx = Number(r.lineIndex);
-    const q = Number(r.quantity);
-    if (Number.isNaN(idx) || idx < 0 || idx >= po.lines.length) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid lineIndex ${r.lineIndex}`,
+  try {
+    for (const r of receipts) {
+      const idx = Number(r.lineIndex);
+      const q = Number(r.quantity);
+      if (Number.isNaN(idx) || idx < 0 || idx >= po.lines.length) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid lineIndex ${r.lineIndex}`,
+        });
+      }
+      if (q <= 0) continue;
+      const line = po.lines[idx];
+      const remaining = line.quantityOrdered - line.quantityReceived;
+      const take = Math.min(q, remaining);
+      if (take <= 0) continue;
+
+      await applyMovement(null, {
+        tenantId: req.tenantId,
+        productId: line.product,
+        delta: take,
+        movementType: 'receipt',
+        referenceType: 'PurchaseOrder',
+        referenceId: po._id,
+        note: `${po.poNumber} line ${idx + 1}${r.lotNumber ? ` lot ${r.lotNumber}` : ''}`,
+        lotNumber: r.lotNumber || '',
+        batchNumber: r.batchNumber || '',
+        serialNumber: r.serialNumber || '',
+        expirationDate: r.expirationDate || null,
       });
-    }
-    if (q <= 0) continue;
-    const line = po.lines[idx];
-    const remaining = line.quantityOrdered - line.quantityReceived;
-    const take = Math.min(q, remaining);
-    if (take <= 0) continue;
 
-    await applyMovement(null, {
-      tenantId: req.tenantId,
-      productId: line.product,
-      delta: take,
-      movementType: 'receipt',
-      referenceType: 'PurchaseOrder',
-      referenceId: po._id,
-      note: `${po.poNumber} line ${idx + 1}${r.lotNumber ? ` lot ${r.lotNumber}` : ''}`,
-      lotNumber: r.lotNumber || '',
-      batchNumber: r.batchNumber || '',
-    });
-
-    line.quantityReceived += take;
-    const effectiveUnit =
-      unitCosts[idx] && unitCosts[idx].inventoryUnitCost > 0
-        ? unitCosts[idx].inventoryUnitCost
-        : Number(line.unitCost) || 0;
-    const prod = await Product.findOne(byTenant(req, { _id: line.product }));
-    if (prod && effectiveUnit > 0) {
-      if (prod.costingMethod === 'average') {
-        await applyReceiptToAverageCost(line.product, take, effectiveUnit, req.tenantId);
-      } else {
+      line.quantityReceived += take;
+      const effectiveUnit =
+        unitCosts[idx] && unitCosts[idx].inventoryUnitCost > 0
+          ? unitCosts[idx].inventoryUnitCost
+          : Number(line.unitCost) || 0;
+      const prod = await Product.findOne(byTenant(req, { _id: line.product }));
+      if (prod && effectiveUnit > 0) {
+        if (prod.costingMethod === 'average') {
+          await applyReceiptToAverageCost(line.product, take, effectiveUnit, req.tenantId);
+        } else {
+          await Product.findOneAndUpdate(byTenant(req, { _id: line.product }), {
+            unitCost: effectiveUnit,
+            lastReceived: new Date(),
+          });
+        }
+      } else if (prod) {
         await Product.findOneAndUpdate(byTenant(req, { _id: line.product }), {
-          unitCost: effectiveUnit,
           lastReceived: new Date(),
         });
       }
-    } else if (prod) {
-      await Product.findOneAndUpdate(byTenant(req, { _id: line.product }), {
-        lastReceived: new Date(),
-      });
     }
+  } catch (e) {
+    return res.status(400).json({ success: false, message: e.message || 'Receipt failed' });
   }
 
   const allDone = po.lines.every(

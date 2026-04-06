@@ -98,6 +98,8 @@ export default function PurchaseOrders() {
   const [receiveQty, setReceiveQty] = useState<Record<number, number>>({});
   const [receiveLot, setReceiveLot] = useState<Record<number, string>>({});
   const [receiveBatch, setReceiveBatch] = useState<Record<number, string>>({});
+  const [receiveSerial, setReceiveSerial] = useState<Record<number, string>>({});
+  const [receiveExpiry, setReceiveExpiry] = useState<Record<number, string>>({});
   const [sourcingOpen, setSourcingOpen] = useState(false);
   const [supplyType, setSupplyType] = useState<"local" | "import">("local");
   const [importFreight, setImportFreight] = useState(0);
@@ -137,6 +139,8 @@ export default function PurchaseOrders() {
       setReceiveQty(m);
       setReceiveLot({});
       setReceiveBatch({});
+      setReceiveSerial({});
+      setReceiveExpiry({});
     }
   }, [selected?._id, selected?.status]);
 
@@ -306,6 +310,8 @@ export default function PurchaseOrders() {
     setReceiveQty(m);
     setReceiveLot({});
     setReceiveBatch({});
+    setReceiveSerial({});
+    setReceiveExpiry({});
     setSelected(po);
   }
 
@@ -689,39 +695,91 @@ export default function PurchaseOrders() {
                     const rem = l.quantityOrdered - l.quantityReceived;
                     if (rem <= 0) return null;
                     const inv = selected.lineInventoryCosts?.[i];
+                    // Find full product details for tracking method
+                    const pFull = products.find((p: any) => p._id === l.product?._id);
+                    const showBatch = pFull?.trackingMethod === 'batch';
+                    const showSerial = pFull?.trackingMethod === 'serial';
+                    const showExpiry = pFull?.hasExpiry;
+
                     return (
-                      <div key={i} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end border-b pb-2">
-                        <div className="sm:col-span-1">
-                          <span className="text-xs font-mono block truncate">{l.product?.sku}</span>
-                          {inv && inv.inventoryUnitCost > 0 && (
-                            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-mono">
-                              {format(inv.inventoryUnitCost)}/u ETB
-                            </span>
+                      <div key={i} className="flex flex-col gap-3 border-b pb-4 mb-2">
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-mono font-bold block truncate">{l.product?.sku}</span>
+                            <span className="text-[10px] text-muted-foreground">{l.product?.name}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] font-bold">Remaining: {rem}</span>
+                            {inv && inv.inventoryUnitCost > 0 && (
+                              <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-mono">
+                                {format(inv.inventoryUnitCost)}/u ETB
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
+                          <div className="space-y-1">
+                            <Label className="text-[10px] font-bold">Receive Qty</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={rem}
+                              className="h-9"
+                              value={receiveQty[i] ?? 0}
+                              onChange={(e) =>
+                                setReceiveQty((p) => ({ ...p, [i]: Math.min(rem, Math.max(0, parseInt(e.target.value, 10) || 0)) }))
+                              }
+                            />
+                          </div>
+
+                          {showBatch && (
+                            <>
+                              <div className="space-y-1">
+                                <Label className="text-[10px] font-bold">Lot #</Label>
+                                <Input
+                                  className="h-9 text-xs font-mono"
+                                  placeholder="LOT-123"
+                                  value={receiveLot[i] ?? ""}
+                                  onChange={(e) => setReceiveLot((p) => ({ ...p, [i]: e.target.value }))}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[10px] font-bold">Batch</Label>
+                                <Input
+                                  className="h-9 text-xs font-mono"
+                                  placeholder="BAT-XYZ"
+                                  value={receiveBatch[i] ?? ""}
+                                  onChange={(e) => setReceiveBatch((p) => ({ ...p, [i]: e.target.value }))}
+                                />
+                              </div>
+                            </>
+                          )}
+
+                          {showSerial && (
+                            <div className="space-y-1 col-span-2">
+                              <Label className="text-[10px] font-bold">Serial Number</Label>
+                              <Input
+                                className="h-9 text-xs font-mono"
+                                placeholder="SN-1000"
+                                value={receiveSerial[i] ?? ""}
+                                onChange={(e) => setReceiveSerial((p) => ({ ...p, [i]: e.target.value }))}
+                              />
+                            </div>
+                          )}
+
+                          {showExpiry && (
+                            <div className="space-y-1">
+                              <Label className="text-[10px] font-bold">Expires</Label>
+                              <Input
+                                type="date"
+                                className="h-9 text-xs"
+                                value={receiveExpiry[i] ?? ""}
+                                onChange={(e) => setReceiveExpiry((p) => ({ ...p, [i]: e.target.value }))}
+                              />
+                            </div>
                           )}
                         </div>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={rem}
-                          placeholder="Qty"
-                          className="h-9"
-                          value={receiveQty[i] ?? 0}
-                          onChange={(e) =>
-                            setReceiveQty((p) => ({ ...p, [i]: Math.min(rem, Math.max(0, parseInt(e.target.value, 10) || 0)) }))
-                          }
-                        />
-                        <Input
-                          className="h-9 text-xs font-mono"
-                          placeholder="Lot #"
-                          value={receiveLot[i] ?? ""}
-                          onChange={(e) => setReceiveLot((p) => ({ ...p, [i]: e.target.value }))}
-                        />
-                        <Input
-                          className="h-9 text-xs font-mono"
-                          placeholder="Batch"
-                          value={receiveBatch[i] ?? ""}
-                          onChange={(e) => setReceiveBatch((p) => ({ ...p, [i]: e.target.value }))}
-                        />
                       </div>
                     );
                   })}
@@ -730,18 +788,39 @@ export default function PurchaseOrders() {
                     disabled={receiveMut.isPending}
                     onClick={() => {
                       const receipts = selected.lines
-                        .map((_, i) => ({
-                          lineIndex: i,
-                          quantity: receiveQty[i] || 0,
-                          lotNumber: receiveLot[i]?.trim() || undefined,
-                          batchNumber: receiveBatch[i]?.trim() || undefined,
-                        }))
+                        .map((l, i) => {
+                          const pFull = products.find((p: any) => p._id === l.product?._id);
+                          const qty = receiveQty[i] || 0;
+                          
+                          if (qty > 0) {
+                            if (pFull?.trackingMethod === 'batch' && !receiveLot[i] && !receiveBatch[i]) {
+                              throw new Error(`Lot/Batch required for ${l.product.sku}`);
+                            }
+                            if (pFull?.trackingMethod === 'serial' && !receiveSerial[i]) {
+                              throw new Error(`Serial Number required for ${l.product.sku}`);
+                            }
+                          }
+
+                          return {
+                            lineIndex: i,
+                            quantity: qty,
+                            lotNumber: receiveLot[i]?.trim() || undefined,
+                            batchNumber: receiveBatch[i]?.trim() || undefined,
+                            serialNumber: receiveSerial[i]?.trim() || undefined,
+                            expirationDate: receiveExpiry[i]?.trim() || null,
+                          };
+                        })
                         .filter((r) => r.quantity > 0);
+
                       if (receipts.length === 0) {
                         toast.error("Enter at least one quantity");
                         return;
                       }
-                      receiveMut.mutate({ id: selected._id, receipts });
+                      try {
+                        receiveMut.mutate({ id: selected._id, receipts });
+                      } catch (err: any) {
+                        toast.error(err.message);
+                      }
                     }}
                   >
                     <CheckCircle className="h-4 w-4 mr-2" /> Post receipt

@@ -55,6 +55,15 @@ const ProductSchema = new mongoose.Schema({
   },
   supplier: String,
   location: String,
+  trackingMethod: {
+    type: String,
+    enum: ['none', 'batch', 'serial'],
+    default: 'none',
+  },
+  hasExpiry: {
+    type: Boolean,
+    default: false,
+  },
   lastReceived: Date,
   createdAt: {
     type: Date,
@@ -62,10 +71,9 @@ const ProductSchema = new mongoose.Schema({
   }
 });
 
-ProductSchema.pre('validate', function normalizeProductKeys(next) {
+ProductSchema.pre('validate', function normalizeProductKeys() {
   if (typeof this.sku === 'string') this.sku = this.sku.trim().toUpperCase();
   if (typeof this.barcode === 'string') this.barcode = this.barcode.trim();
-  next();
 });
 
 ProductSchema.index({ tenantId: 1, sku: 1 }, { unique: true });

@@ -4,7 +4,8 @@ const ShipmentLineSchema = new mongoose.Schema(
   {
     lineIndex: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 0.0001 },
-    lotNumber: { type: String, default: '' },
+    lotNumber: { type: String, default: "" },
+    serialNumber: { type: String, default: "" },
   },
   { _id: false }
 );

@@ -412,7 +412,7 @@ exports.recordOperationQuality = asyncHandler(async (req, res) => {
 exports.issueJobMaterial = asyncHandler(async (req, res) => {
   const job = await ProductionJob.findOne(byTenant(req, { _id: req.params.id }));
   if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
-  const productId = req.body.productId;
+  const { productId, lotNumber, serialNumber } = req.body;
   const quantity = Number(req.body.quantity);
   if (!productId || !Number.isFinite(quantity) || quantity <= 0) {
     return res.status(400).json({ success: false, message: 'productId and quantity > 0 required' });
@@ -425,12 +425,16 @@ exports.issueJobMaterial = asyncHandler(async (req, res) => {
     referenceType: 'ProductionJob',
     referenceId: job._id,
     note: req.body.note || `Issue to job ${job.jobId}`,
+    lotNumber: lotNumber || '',
+    serialNumber: serialNumber || '',
   });
   job.materialTransactions = job.materialTransactions || [];
   job.materialTransactions.push({
     product: productId,
     quantity,
     txnType: 'issue',
+    lotNumber: lotNumber || '',
+    serialNumber: serialNumber || '',
     operationIndex: req.body.operationIndex != null ? Number(req.body.operationIndex) : null,
     note: String(req.body.note || ''),
     movementId: mv?._id || null,
@@ -443,7 +447,7 @@ exports.issueJobMaterial = asyncHandler(async (req, res) => {
 exports.returnJobMaterial = asyncHandler(async (req, res) => {
   const job = await ProductionJob.findOne(byTenant(req, { _id: req.params.id }));
   if (!job) return res.status(404).json({ success: false, message: 'Job not found' });
-  const productId = req.body.productId;
+  const { productId, lotNumber, serialNumber } = req.body;
   const quantity = Number(req.body.quantity);
   if (!productId || !Number.isFinite(quantity) || quantity <= 0) {
     return res.status(400).json({ success: false, message: 'productId and quantity > 0 required' });
@@ -456,12 +460,16 @@ exports.returnJobMaterial = asyncHandler(async (req, res) => {
     referenceType: 'ProductionJob',
     referenceId: job._id,
     note: req.body.note || `Return from job ${job.jobId}`,
+    lotNumber: lotNumber || '',
+    serialNumber: serialNumber || '',
   });
   job.materialTransactions = job.materialTransactions || [];
   job.materialTransactions.push({
     product: productId,
     quantity,
     txnType: 'return',
+    lotNumber: lotNumber || '',
+    serialNumber: serialNumber || '',
     operationIndex: req.body.operationIndex != null ? Number(req.body.operationIndex) : null,
     note: String(req.body.note || ''),
     movementId: mv?._id || null,

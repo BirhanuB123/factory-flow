@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { shipmentsApi, ordersApi } from "@/lib/api";
+import { shipmentsApi, ordersApi, inventoryApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,8 @@ export default function Shipments() {
   const [orderId, setOrderId] = useState("");
   const [lineIdx, setLineIdx] = useState("0");
   const [lineQty, setLineQty] = useState("1");
+  const [lineLot, setLineLot] = useState("");
+  const [lineSerial, setLineSerial] = useState("");
   const [shipOpen, setShipOpen] = useState<string | null>(null);
   const [carrier, setCarrier] = useState("");
   const [tracking, setTracking] = useState("");
@@ -81,17 +83,39 @@ export default function Shipments() {
     (o) => o._id === orderId,
   );
 
+  const { data: products = [] } = useQuery({
+    queryKey: ["inventory"],
+    queryFn: inventoryApi.getAll,
+    enabled: !!orderId,
+  });
+
+  const selectedLineProduct = (() => {
+    if (!selectedOrder) return null;
+    const item = selectedOrder.items[parseInt(lineIdx, 10)] as any;
+    if (!item) return null;
+    return products.find((p: any) => p._id === (item.product?._id || item.product));
+  })();
+
   const createMut = useMutation({
     mutationFn: () =>
       shipmentsApi.create({
         orderId,
-        lines: [{ lineIndex: parseInt(lineIdx, 10) || 0, quantity: parseFloat(lineQty) || 1 }],
+        lines: [
+          {
+            lineIndex: parseInt(lineIdx, 10) || 0,
+            quantity: parseFloat(lineQty) || 1,
+            lotNumber: lineLot || undefined,
+            serialNumber: lineSerial || undefined,
+          },
+        ],
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["shipments"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
       toast.success("Shipment draft created");
       setCreateOpen(false);
+      setLineLot("");
+      setLineSerial("");
     },
     onError: (e: { response?: { data?: { message?: string } } }) =>
       toast.error(e?.response?.data?.message || "Failed"),
@@ -209,6 +233,32 @@ export default function Shipments() {
               />
             </div>
           </div>
+          {selectedLineProduct && (selectedLineProduct.trackingMethod === 'batch' || selectedLineProduct.trackingMethod === 'serial') && (
+            <div className="grid grid-cols-2 gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10 animate-in fade-in slide-in-from-top-1">
+              {selectedLineProduct.trackingMethod === 'batch' && (
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-bold">Lot Number</Label>
+                  <Input
+                    className="h-9 rounded-lg border-border/60 font-mono text-xs uppercase"
+                    placeholder="BATCH-ID"
+                    value={lineLot}
+                    onChange={(e) => setLineLot(e.target.value)}
+                  />
+                </div>
+              )}
+              {selectedLineProduct.trackingMethod === 'serial' && (
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-bold">Serial Number</Label>
+                  <Input
+                    className="h-9 rounded-lg border-border/60 font-mono text-xs uppercase"
+                    placeholder="SERIAL-ID"
+                    value={lineSerial}
+                    onChange={(e) => setLineSerial(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button
@@ -340,7 +390,17 @@ export default function Shipments() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs">
-                          {s.lines?.map((l) => `L${l.lineIndex}×${l.quantity}`).join(", ") || "—"}
+                          {s.lines?.map((l: any, li: number) => (
+                            <div key={li} className="flex flex-col gap-0.5">
+                              <span>L{l.lineIndex}×{l.quantity}</span>
+                              {(l.lotNumber || l.serialNumber) && (
+                                <div className="flex gap-1">
+                                  {l.lotNumber && <Badge variant="outline" className="text-[8px] h-3 px-1">lot:{l.lotNumber}</Badge>}
+                                  {l.serialNumber && <Badge variant="secondary" className="text-[8px] h-3 px-1">sn:{l.serialNumber}</Badge>}
+                                </div>
+                              )}
+                            </div>
+                          )) || "—"}
                         </TableCell>
                         <TableCell className="max-w-[200px] truncate text-xs">
                           {s.carrier || "—"} {s.trackingNumber ? `· ${s.trackingNumber}` : ""}

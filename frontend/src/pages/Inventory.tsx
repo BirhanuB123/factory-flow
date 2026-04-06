@@ -65,7 +65,19 @@ interface InventoryItem {
   unitCost: number;
   supplier: string;
   location: string;
+  trackingMethod: 'none' | 'batch' | 'serial';
+  hasExpiry: boolean;
   lastReceived?: string;
+}
+
+interface LotBalance {
+  _id: string;
+  lotNumber: string;
+  serialNumber: string;
+  quantity: number;
+  expirationDate?: string;
+  location?: string;
+  updatedAt: string;
 }
 
 const defaultForm: Partial<InventoryItem> = {
@@ -80,6 +92,8 @@ const defaultForm: Partial<InventoryItem> = {
   unitCost: 0,
   supplier: "",
   location: "",
+  trackingMethod: "none",
+  hasExpiry: false,
 };
 
 const categories = ["All", "Raw Metal", "Tooling", "Hardware", "Consumables", "Finished Good"];
@@ -115,6 +129,10 @@ export default function Inventory({
   const [movKind, setMovKind] = useState<"receipt" | "issue" | "adjustment">("receipt");
   const [movQty, setMovQty] = useState(1);
   const [movNote, setMovNote] = useState("");
+  const [movLotNumber, setMovLotNumber] = useState("");
+  const [movBatchNumber, setMovBatchNumber] = useState("");
+  const [movSerialNumber, setMovSerialNumber] = useState("");
+  const [movExpirationDate, setMovExpirationDate] = useState("");
 
   useEffect(() => {
     if (embedded) return;
@@ -207,6 +225,10 @@ export default function Inventory({
         setMovProductId("");
         setMovQty(1);
         setMovNote("");
+        setMovLotNumber("");
+        setMovBatchNumber("");
+        setMovSerialNumber("");
+        setMovExpirationDate("");
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
@@ -217,10 +239,20 @@ export default function Inventory({
       setMovProductId("");
       setMovQty(1);
       setMovNote("");
+      setMovLotNumber("");
+      setMovBatchNumber("");
+      setMovSerialNumber("");
+      setMovExpirationDate("");
     },
     onError: (err: { response?: { data?: { message?: string } } }) => {
       toast.error(err?.response?.data?.message || "Movement failed");
     },
+  });
+
+  const { data: lotBalances = [], isLoading: lotsLoading } = useQuery({
+    queryKey: ["inventory-lots", selectedItem?._id],
+    queryFn: () => inventoryApi.getLots(selectedItem!._id),
+    enabled: !!selectedItem && (selectedItem.trackingMethod !== 'none'),
   });
 
   const deleteMutation = useMutation({
@@ -250,6 +282,8 @@ export default function Inventory({
         unitCost: editingItem.unitCost ?? 0,
         supplier: editingItem.supplier ?? "",
         location: editingItem.location ?? "",
+        trackingMethod: editingItem.trackingMethod ?? "none",
+        hasExpiry: editingItem.hasExpiry ?? false,
       });
     } else {
       setFormValues({ ...defaultForm });
@@ -884,6 +918,53 @@ export default function Inventory({
                     </p>
                   </div>
                 </div>
+
+                {selectedItem.trackingMethod !== 'none' && (
+                  <div className="col-span-2 md:col-span-3 border-t border-white/5 pt-6 mt-2">
+                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4">Live Balance by Lot/Serial</p>
+                    <div className="rounded-xl border border-white/5 overflow-hidden">
+                      <Table className="bg-white/2">
+                        <TableHeader className="bg-white/5">
+                          <TableRow className="border-white/5 hover:bg-transparent">
+                            <TableHead className="h-9 text-[9px] font-black uppercase text-muted-foreground">Identifier</TableHead>
+                            <TableHead className="h-9 text-right text-[9px] font-black uppercase text-muted-foreground">Qty</TableHead>
+                            <TableHead className="h-9 text-right text-[9px] font-black uppercase text-muted-foreground uppercase">Expires</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {lotsLoading ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="h-12 text-center text-[10px] text-muted-foreground">Synchronizing lot ledger...</TableCell>
+                            </TableRow>
+                          ) : lotBalances.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="h-12 text-center text-[10px] text-muted-foreground">No active lots in terminal</TableCell>
+                            </TableRow>
+                          ) : (
+                            lotBalances.map((lb: LotBalance) => (
+                              <TableRow key={lb._id} className="border-white/5 group/lot">
+                                <TableCell className="py-2">
+                                  <div className="flex flex-col">
+                                    <span className="text-[11px] font-bold text-foreground">
+                                      {lb.serialNumber ? `SN: ${lb.serialNumber}` : (lb.lotNumber || 'Default Lot')}
+                                    </span>
+                                    {lb.location && <span className="text-[9px] text-muted-foreground uppercase font-medium">{lb.location}</span>}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-2 text-right">
+                                  <span className="text-[11px] font-black text-emerald-500 italic">{lb.quantity}</span>
+                                </TableCell>
+                                <TableCell className="py-2 text-right text-[10px] font-medium text-muted-foreground">
+                                  {lb.expirationDate ? new Date(lb.expirationDate).toLocaleDateString() : '—'}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -996,6 +1077,39 @@ export default function Inventory({
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4 border-t border-white/5 pt-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Tracking Protocol</Label>
+                  <Select
+                    value={(formValues.trackingMethod as string) ?? "none"}
+                    onValueChange={(v) => setFormValues((p) => ({ ...p, trackingMethod: v }))}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold uppercase italic text-[11px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card/95 backdrop-blur-xl border-white/10">
+                      <SelectItem value="none" className="font-bold uppercase text-[10px]">None (Bulk)</SelectItem>
+                      <SelectItem value="batch" className="font-bold uppercase text-[10px]">Batch / Lot</SelectItem>
+                      <SelectItem value="serial" className="font-bold uppercase text-[10px]">Individual (Serial)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 flex flex-col justify-end pb-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="hasExpiry"
+                      className="h-4 w-4 rounded border-white/10 bg-white/5 accent-primary"
+                      checked={(formValues.hasExpiry as boolean) ?? false}
+                      onChange={(e) => setFormValues((p) => ({ ...p, hasExpiry: e.target.checked }))}
+                    />
+                    <Label htmlFor="hasExpiry" className="text-[10px] font-black uppercase text-muted-foreground tracking-widest cursor-pointer">
+                      Enforce Expiration Tracking
+                    </Label>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Current Count</Label>
@@ -1075,6 +1189,8 @@ export default function Inventory({
                     unit: formValues.unit,
                     supplier: formValues.supplier || undefined,
                     location: formValues.location || undefined,
+                    trackingMethod: formValues.trackingMethod,
+                    hasExpiry: !!formValues.hasExpiry,
                   };
                   if (editingItem) {
                     updateMutation.mutate({ id: editingItem._id, data: payload });
@@ -1151,6 +1267,70 @@ export default function Inventory({
               <Label>Note (optional)</Label>
               <Input value={movNote} onChange={(e) => setMovNote(e.target.value)} placeholder="PO #, reason…" />
             </div>
+
+            {(() => {
+              const p = inventoryData.find((i: InventoryItem) => i._id === movProductId);
+              if (!p) return null;
+              
+              const isReceipt = movKind === 'receipt';
+              const showBatch = p.trackingMethod === 'batch';
+              const showSerial = p.trackingMethod === 'serial';
+              const showExpiry = p.hasExpiry && isReceipt;
+
+              if (!showBatch && !showSerial && !showExpiry) return null;
+
+              return (
+                <div className="grid gap-4 pt-2 border-t border-border/40 mt-2">
+                  <p className="text-[10px] font-black uppercase text-primary tracking-widest">Tracking Requirements</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {showBatch && (
+                      <>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] font-bold">Lot Number</Label>
+                          <Input 
+                            value={movLotNumber} 
+                            onChange={(e) => setMovLotNumber(e.target.value)} 
+                            placeholder="LOT-123"
+                            className="h-9 rounded-lg"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] font-bold">Batch Number</Label>
+                          <Input 
+                            value={movBatchNumber} 
+                            onChange={(e) => setMovBatchNumber(e.target.value)} 
+                            placeholder="BAT-XYZ"
+                            className="h-9 rounded-lg"
+                          />
+                        </div>
+                      </>
+                    )}
+                    {showSerial && (
+                      <div className="space-y-1.5 col-span-2">
+                        <Label className="text-[10px] font-bold">Serial Number</Label>
+                        <Input 
+                          value={movSerialNumber} 
+                          onChange={(e) => setMovSerialNumber(e.target.value)} 
+                          placeholder="SN-1000"
+                          className="h-9 rounded-lg"
+                        />
+                      </div>
+                    )}
+                    {showExpiry && (
+                      <div className="space-y-1.5 col-span-2">
+                        <Label className="text-[10px] font-bold">Expiration Date</Label>
+                        <Input 
+                          type="date"
+                          value={movExpirationDate} 
+                          onChange={(e) => setMovExpirationDate(e.target.value)} 
+                          className="h-9 rounded-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setMovDialogOpen(false)}>
@@ -1163,6 +1343,16 @@ export default function Inventory({
                   toast.error("Select a product");
                   return;
                 }
+                const p = inventoryData.find((i: InventoryItem) => i._id === movProductId);
+                if (p?.trackingMethod === 'batch' && !movLotNumber && !movBatchNumber) {
+                  toast.error("Lot or Batch number is required for this product");
+                  return;
+                }
+                if (p?.trackingMethod === 'serial' && !movSerialNumber) {
+                  toast.error("Serial number is required for this product");
+                  return;
+                }
+
                 const q =
                   movKind === "adjustment"
                     ? movQty
@@ -1176,7 +1366,11 @@ export default function Inventory({
                   kind: movKind,
                   quantity: q,
                   note: movNote || undefined,
-                });
+                  lotNumber: movLotNumber,
+                  batchNumber: movBatchNumber,
+                  serialNumber: movSerialNumber,
+                  expirationDate: movExpirationDate || null,
+                } as any);
               }}
             >
               Post to ledger

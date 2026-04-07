@@ -30,8 +30,15 @@ export default function Login() {
 
     setIsLoading(true);
 
+    const apiBase = getApiBaseUrl();
+    if (import.meta.env.PROD && /localhost|127\.0\.0\.1/.test(apiBase)) {
+      toast.error(t('auth.errorApiNotConfigured'));
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await fetch(`${getApiBaseUrl()}/auth/login`, {
+      const response = await fetch(`${apiBase}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,18 +50,27 @@ export default function Login() {
         }),
       });
 
-      const data = await response.json();
+      const raw = await response.text();
+      let data: Record<string, unknown> = {};
+      if (raw) {
+        try {
+          data = JSON.parse(raw) as Record<string, unknown>;
+        } catch {
+          toast.error(t('auth.errorBadApiResponse'));
+          return;
+        }
+      }
 
       if (response.ok) {
         toast.success(t('auth.successLogin'));
-        login(data as Record<string, unknown>, data.token);
+        login(data, data.token as string);
         if ((data as { mustChangePassword?: boolean }).mustChangePassword) {
           navigate('/account/change-password', { replace: true });
         } else {
           navigate(from, { replace: true });
         }
       } else {
-        toast.error(data.message || t('auth.errorInvalid'));
+        toast.error((data.message as string) || t('auth.errorInvalid'));
       }
     } catch (error) {
       console.error('Login error:', error);

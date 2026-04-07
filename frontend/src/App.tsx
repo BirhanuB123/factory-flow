@@ -55,16 +55,33 @@ const queryClient = new QueryClient({
 const SIDEBAR_WIDTH_STORAGE_KEY = "ff:sidebarWidthPx";
 const SIDEBAR_MIN_PX = 220;
 const SIDEBAR_MAX_PX = 520;
+/** Reserve at least this width for header + main so ERP stays usable on small laptops. */
+const MAIN_CONTENT_MIN_PX = 480;
+const SIDEBAR_RESIZE_HANDLE_PX = 8;
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
 }
 
+function maxSidebarPxForViewport(viewportWidth: number) {
+  const cap = viewportWidth - MAIN_CONTENT_MIN_PX - SIDEBAR_RESIZE_HANDLE_PX;
+  return clamp(Math.min(SIDEBAR_MAX_PX, cap), SIDEBAR_MIN_PX, SIDEBAR_MAX_PX);
+}
+
+function defaultSidebarWidthForViewport(viewportWidth: number) {
+  if (viewportWidth < 1024) return 260;
+  if (viewportWidth < 1280) return 280;
+  if (viewportWidth < 1536) return 300;
+  return 320;
+}
+
 function SidebarResizeHandle({
   valuePx,
+  maxPx,
   onChange,
 }: {
   valuePx: number;
+  maxPx: number;
   onChange: (nextPx: number) => void;
 }) {
   const isMobile = useIsMobile();
@@ -78,7 +95,7 @@ function SidebarResizeHandle({
       aria-orientation="vertical"
       aria-label="Resize sidebar"
       aria-valuemin={SIDEBAR_MIN_PX}
-      aria-valuemax={SIDEBAR_MAX_PX}
+      aria-valuemax={Math.round(maxPx)}
       aria-valuenow={Math.round(valuePx)}
       tabIndex={0}
       className={[
@@ -97,7 +114,7 @@ function SidebarResizeHandle({
       }}
       onPointerMove={(e) => {
         if (!draggingRef.current) return;
-        const next = clamp(e.clientX, SIDEBAR_MIN_PX, SIDEBAR_MAX_PX);
+        const next = clamp(e.clientX, SIDEBAR_MIN_PX, maxPx);
         onChange(next);
       }}
       onPointerUp={(e) => {
@@ -120,10 +137,10 @@ function SidebarResizeHandle({
         const step = e.shiftKey ? 24 : 12;
         if (e.key === "ArrowLeft") {
           e.preventDefault();
-          onChange(clamp(valuePx - step, SIDEBAR_MIN_PX, SIDEBAR_MAX_PX));
+          onChange(clamp(valuePx - step, SIDEBAR_MIN_PX, maxPx));
         } else if (e.key === "ArrowRight") {
           e.preventDefault();
-          onChange(clamp(valuePx + step, SIDEBAR_MIN_PX, SIDEBAR_MAX_PX));
+          onChange(clamp(valuePx + step, SIDEBAR_MIN_PX, maxPx));
         }
       }}
     >
@@ -148,12 +165,35 @@ function SidebarResizeHandle({
 }
 
 const Layout = () => {
+  const [viewportWidth, setViewportWidth] = React.useState(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1280,
+  );
+
+  const maxSidebarPx = maxSidebarPxForViewport(viewportWidth);
+
   const [sidebarWidthPx, setSidebarWidthPx] = React.useState(() => {
+    const vw = typeof window !== "undefined" ? window.innerWidth : 1280;
+    const cap = maxSidebarPxForViewport(vw);
     const raw = localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
     const parsed = raw ? Number(raw) : NaN;
-    if (Number.isFinite(parsed)) return clamp(parsed, SIDEBAR_MIN_PX, SIDEBAR_MAX_PX);
-    return 320;
+    if (Number.isFinite(parsed)) return clamp(parsed, SIDEBAR_MIN_PX, cap);
+    return clamp(defaultSidebarWidthForViewport(vw), SIDEBAR_MIN_PX, cap);
   });
+
+  React.useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    onResize();
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    setSidebarWidthPx((w) => clamp(w, SIDEBAR_MIN_PX, maxSidebarPx));
+  }, [maxSidebarPx]);
 
   React.useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(Math.round(sidebarWidthPx)));
@@ -167,14 +207,14 @@ const Layout = () => {
         } as React.CSSProperties
       }
     >
-      <div className="min-h-screen flex w-full">
+      <div className="flex min-h-svh w-full min-w-0">
         <AppSidebar />
-        <SidebarResizeHandle valuePx={sidebarWidthPx} onChange={setSidebarWidthPx} />
-        <div className="flex-1 flex flex-col min-w-0">
+        <SidebarResizeHandle maxPx={maxSidebarPx} valuePx={sidebarWidthPx} onChange={setSidebarWidthPx} />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <DashboardHeader />
           <OfflineQueueBanner />
           <AnnouncementBanner />
-          <main className="flex-1 p-4 lg:p-6 overflow-auto bg-background min-h-0">
+          <main className="min-h-0 min-w-0 flex-1 overflow-auto bg-background p-3 sm:p-4 lg:p-6">
             <Outlet />
           </main>
         </div>

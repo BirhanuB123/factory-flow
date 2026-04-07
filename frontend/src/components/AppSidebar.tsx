@@ -117,15 +117,17 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 pb-2">
         <div className="flex items-center gap-3">
           <div
-            className="grid shrink-0 grid-cols-2 gap-0.5 rounded-lg p-1"
+            className="flex shrink-0 items-center justify-center rounded-lg bg-primary/10 overflow-hidden"
             aria-hidden
             style={{ width: collapsed ? 36 : 40, height: collapsed ? 36 : 40 }}
           >
-            <span className="h-[15px] w-[15px] rounded-[3px] bg-[hsl(221,83%,53%)]" />
-            <span className="h-[15px] w-[15px] rounded-[3px] bg-[hsl(152,69%,42%)]" />
-            <span className="h-[15px] w-[15px] rounded-[3px] bg-[hsl(32,95%,52%)]" />
-            <span className="h-[15px] w-[15px] rounded-[3px] bg-[hsl(262,83%,58%)]" />
+            <img 
+              src="/favicon.png" 
+              alt="Integra Logo" 
+              className="h-full w-full object-contain"
+            />
           </div>
+
           {!collapsed && (
             <div className="flex min-w-0 flex-col">
               <span className="text-lg font-bold tracking-tight text-sidebar-foreground">Integra</span>

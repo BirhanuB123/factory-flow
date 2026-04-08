@@ -689,12 +689,12 @@ export default function PlatformAdmin() {
                   <div className="shrink-0">
                     <Dialog open={createOpen} onOpenChange={setCreateOpen}>
                       <DialogTrigger asChild>
-                        <Button className="h-16 px-8 rounded-2xl bg-foreground text-background hover:bg-foreground/90 font-bold text-base shadow-xl active:scale-95 hover:scale-[1.02] transition-all group">
+                        <Button type="button" className="h-16 px-8 rounded-2xl bg-foreground text-background hover:bg-foreground/90 font-bold text-base shadow-xl active:scale-95 hover:scale-[1.02] transition-all group">
                           <Plus className="h-5 w-5 mr-3 stroke-[3]" />
                           Create Company
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="relative rounded-2xl border border-border/60 bg-card px-8 py-10 shadow-erp sm:max-w-lg">
+                      <DialogContent className="rounded-2xl border border-border/60 bg-card px-8 py-10 shadow-erp sm:max-w-lg max-h-[90vh] overflow-y-auto">
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 to-emerald-500" />
                         <DialogHeader className="space-y-2 text-center sm:text-left">
                           <div className="flex items-center gap-3">
@@ -712,7 +712,7 @@ export default function PlatformAdmin() {
                             <div className="space-y-2">
                               <Label className="text-xs font-bold text-muted-foreground/60 ml-1">Domain Key (Slug)</Label>
                               <Input
-                                placeholder="ACME-GLOBAL"
+                                placeholder="TEST COMPANY"
                                 value={newKey}
                                 onChange={(e) => setNewKey(e.target.value)}
                                 className="h-10 rounded-xl bg-secondary/30 border-border/10 font-bold text-sm px-4 focus:bg-background transition-all uppercase tracking-wider"
@@ -755,10 +755,11 @@ export default function PlatformAdmin() {
                         </div>
                         <DialogFooter className="pt-4">
                           <div className="flex flex-col sm:flex-row gap-3 w-full">
-                            <Button variant="ghost" className="h-11 rounded-xl font-bold text-sm flex-1" onClick={() => setCreateOpen(false)}>
+                            <Button type="button" variant="ghost" className="h-11 rounded-xl font-bold text-sm flex-1" onClick={() => setCreateOpen(false)}>
                               Cancel
                             </Button>
                             <Button
+                              type="button"
                               className="h-11 rounded-xl bg-primary shadow-lg font-bold text-sm flex-1"
                               disabled={createMut.isPending || !newKey.trim() || !newLegal.trim()}
                               onClick={() =>

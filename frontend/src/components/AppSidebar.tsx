@@ -121,9 +121,9 @@ export function AppSidebar() {
             aria-hidden
             style={{ width: collapsed ? 36 : 40, height: collapsed ? 36 : 40 }}
           >
-            <img 
-              src="/favicon.png" 
-              alt="Integra Logo" 
+            <img
+              src="/favicon.png"
+              alt="Integra Logo"
               className="h-full w-full object-contain"
             />
           </div>

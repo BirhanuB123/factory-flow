@@ -512,7 +512,11 @@ app.get('/api/hr/payroll/payslip/:id/html', getPayslipHtml);
 app.post('/api/hr/payroll/preview', previewPayroll);
 app.get('/api/hr/payroll/prepare', preparePayroll);
 app.post('/api/hr/payroll/run', runPayrollMonth);
-app.patch('/api/hr/payroll/record/:id', updatePayrollRecord);
+app.patch(
+  '/api/hr/payroll/record/:id',
+  authorizePerm(P.HR_FULL, P.FINANCE_WRITE),
+  updatePayrollRecord
+);
 app.get('/api/hr/payroll/status/:month', getPayrollMonthStatus);
 app.post(
   '/api/hr/payroll/:month/post-to-finance',

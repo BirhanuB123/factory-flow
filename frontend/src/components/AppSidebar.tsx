@@ -42,8 +42,8 @@ const allNavItems = [
   { titleKey: "nav.production", url: "/production", icon: Factory, permissions: [PERMS.DASHBOARD_MFG] },
   { titleKey: "nav.jobs", url: "/production-jobs", icon: Wrench, permissions: [PERMS.DASHBOARD_MFG] },
   { titleKey: "nav.boms", url: "/boms", icon: FileStack, permissions: [PERMS.DASHBOARD_MFG] },
-  { titleKey: "nav.orders", url: "/orders", icon: ShoppingCart },
-  { titleKey: "nav.clients", url: "/clients", icon: Users },
+  { titleKey: "nav.orders", url: "/orders", icon: ShoppingCart, roles: ["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"] as const },
+  { titleKey: "nav.clients", url: "/clients", icon: Users, roles: ["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"] as const },
   { titleKey: "nav.inventory", url: "/inventory", icon: Package, permissions: [PERMS.DASHBOARD_INVENTORY] },
   { titleKey: "nav.purchasing", url: "/purchase-orders", icon: Truck, permissions: [PERMS.PO_VIEW] },
   {

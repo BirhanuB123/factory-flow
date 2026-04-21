@@ -137,6 +137,7 @@ export default function Hr() {
     departmentId: "",
     positionId: "",
     managerId: "",
+    salary: 0,
   });
   const [departments, setDepartments] = useState<HrDepartmentRow[]>([]);
   const [positions, setPositions] = useState<HrPositionRow[]>([]);
@@ -535,6 +536,7 @@ export default function Hr() {
         departmentId: newEmployee.departmentId || undefined,
         positionId: newEmployee.positionId || undefined,
         manager: newEmployee.managerId || undefined,
+        salary: Number(newEmployee.salary) || 0,
       };
       if (user?.role === "Admin") {
         payload.accessRole = newEmployee.accessRole;
@@ -568,6 +570,7 @@ export default function Hr() {
           departmentId: "",
           positionId: "",
           managerId: "",
+          salary: 0,
         });
       } else {
         const data = await response.json().catch(() => ({}));
@@ -745,13 +748,23 @@ export default function Hr() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Department Partition</Label>
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Basic Monthly Salary (ETB)</Label>
                     <Input
-                      value={newEmployee.department}
-                      onChange={(e) => setNewEmployee({ ...newEmployee, department: e.target.value })}
-                      className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
+                      type="number"
+                      value={newEmployee.salary}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, salary: parseFloat(e.target.value) || 0 })}
+                      className="h-11 rounded-xl bg-white/5 border-white/10 font-mono font-bold"
+                      placeholder="0"
                     />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Department Partition</Label>
+                  <Input
+                    value={newEmployee.department}
+                    onChange={(e) => setNewEmployee({ ...newEmployee, department: e.target.value })}
+                    className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
+                  />
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
@@ -1982,7 +1995,6 @@ export default function Hr() {
                     <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">PAYE</TableHead>
                     <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Net</TableHead>
                     <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Paid</TableHead>
                     <TableHead className="pr-6 h-12 text-right text-[10px] font-black uppercase text-muted-foreground tracking-widest">Payslip</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -2024,33 +2036,6 @@ export default function Hr() {
                           >
                             {p.paymentStatus}
                           </Badge>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          {p.paymentStatus !== "Paid" ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-[10px] uppercase font-bold"
-                              disabled={payrollMonthLocked}
-                              title={payrollMonthLocked ? "Month closed — Admin only" : undefined}
-                              onClick={async () => {
-                                try {
-                                  await hrPayrollApi.updateRecord(p._id, {
-                                    paymentStatus: "Paid",
-                                    paymentDate: new Date().toISOString(),
-                                  });
-                                  toast({ title: "Marked paid" });
-                                  fetchPayroll(payrollMonth);
-                                } catch {
-                                  toast({ title: "Update failed", variant: "destructive" });
-                                }
-                              }}
-                            >
-                              Mark paid
-                            </Button>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground">—</span>
-                          )}
                         </TableCell>
                         <TableCell className="pr-6 py-4 text-right">
                           <Button

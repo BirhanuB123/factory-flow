@@ -16,6 +16,7 @@ import {
   Building2,
   FileText,
   BookMarked,
+  Banknote,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { financeExtendedApi, ordersApi } from "@/lib/api";
@@ -47,6 +48,7 @@ import {
 } from "@/components/ui/select";
 import { FinanceMetrics } from "@/components/FinanceMetrics";
 import { FinanceApTab } from "@/components/finance/FinanceApTab";
+import { FinancePayrollTab } from "@/components/finance/FinancePayrollTab";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocale } from "@/contexts/LocaleContext";
 import { downloadReportCsv, ethiopiaTaxApi, shipmentsApi } from "@/lib/api";
@@ -847,6 +849,10 @@ export default function Finance() {
                 <Building2 className="h-4 w-4 shrink-0" />
                 AP & vendors
               </TabsTrigger>
+              <TabsTrigger value="payroll" className={moduleTabsTriggerClassName()}>
+                <Banknote className="h-4 w-4 shrink-0" />
+                Payroll
+              </TabsTrigger>
             </TabsList>
             <div className="relative w-full sm:max-w-xs group shrink-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -948,6 +954,9 @@ export default function Finance() {
         </TabsContent>
         <TabsContent value="ap" className="mt-0 focus-visible:outline-none">
           <FinanceApTab symbol={symbol} canWrite={canWriteFinance} />
+        </TabsContent>
+        <TabsContent value="payroll" className="mt-0 focus-visible:outline-none">
+          <FinancePayrollTab />
         </TabsContent>
       </Tabs>
       </div>

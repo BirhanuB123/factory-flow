@@ -55,7 +55,6 @@ const queryClient = new QueryClient({
 const SIDEBAR_WIDTH_STORAGE_KEY = "ff:sidebarWidthPx";
 const SIDEBAR_MIN_PX = 220;
 const SIDEBAR_MAX_PX = 520;
-/** Reserve at least this width for header + main so ERP stays usable on small laptops. */
 const MAIN_CONTENT_MIN_PX = 480;
 const SIDEBAR_RESIZE_HANDLE_PX = 8;
 
@@ -232,68 +231,70 @@ const App = () => {
         <BrowserRouter>
           <AuthProvider>
             <LocaleProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/invite" element={<InviteAccept />} />
-              <Route element={<ProtectedRoute />}>
-                <Route element={<MustChangePasswordGate />}>
-                  <Route element={<Layout />}>
-                  <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_VIEW]} />}>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/reports" element={<Reports />} />
-                  </Route>
-                  <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_MFG]} />}>
-                  <Route element={<TenantModuleRoute moduleKey="manufacturing" moduleLabel="Manufacturing & production" />}>
-                    <Route path="/production" element={<Production />} />
-                    <Route path="/production-jobs" element={<ProductionJobs />} />
-                    <Route path="/boms" element={<Boms />} />
-                  </Route>
-                  </Route>
-                  <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
-                    <Route path="/orders" element={<Orders />} />
-                    <Route path="/clients" element={<Clients />} />
-                  </Route>
-                  <Route element={<TenantModuleRoute moduleKey="inventory" moduleLabel="Inventory & stock" />}>
-                    <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_INVENTORY]} />}>
-                      <Route path="/inventory" element={<Inventory />} />
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/invite" element={<InviteAccept />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<MustChangePasswordGate />}>
+                    <Route element={<Layout />}>
+                      <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_VIEW]} />}>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/reports" element={<Reports />} />
+                      </Route>
+                      <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_MFG]} />}>
+                        <Route element={<TenantModuleRoute moduleKey="manufacturing" moduleLabel="Manufacturing & production" />}>
+                          <Route path="/production" element={<Production />} />
+                          <Route path="/production-jobs" element={<ProductionJobs />} />
+                          <Route path="/boms" element={<Boms />} />
+                        </Route>
+                      </Route>
+                      <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
+                        <Route element={<ProtectedRoute allowedRoles={["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"]} />}>
+                          <Route path="/orders" element={<Orders />} />
+                          <Route path="/clients" element={<Clients />} />
+                        </Route>
+                      </Route>
+                      <Route element={<TenantModuleRoute moduleKey="inventory" moduleLabel="Inventory & stock" />}>
+                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_INVENTORY]} />}>
+                          <Route path="/inventory" element={<Inventory />} />
+                        </Route>
+                      </Route>
+                      <Route element={<TenantModuleRoute moduleKey="procurement" moduleLabel="Procurement & POs" />}>
+                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.PO_VIEW]} />}>
+                          <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                        </Route>
+                      </Route>
+                      <Route element={<TenantModuleRoute moduleKey="hr" moduleLabel="HR & payroll" />}>
+                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.HR_FULL]} />}>
+                          <Route path="/hr" element={<Hr />} />
+                        </Route>
+                        <Route element={<ProtectedRoute allowedRoles={['employee']} />}>
+                          <Route path="/my-hr" element={<EmployeeHr />} />
+                        </Route>
+                      </Route>
+                      <Route element={<TenantModuleRoute moduleKey="finance" moduleLabel="Finance & AP/AR" />}>
+                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.FINANCE_READ]} />}>
+                          <Route path="/finance" element={<Finance />} />
+                        </Route>
+                      </Route>
+                      <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
+                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.SHIPMENTS_VIEW]} />}>
+                          <Route path="/shipments" element={<Shipments />} />
+                        </Route>
+                      </Route>
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/account/change-password" element={<ChangePassword />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/sme-bundle" element={<SmeBundle />} />
+                      <Route element={<SuperAdminRoute />}>
+                        <Route path="/platform" element={<PlatformAdmin />} />
+                        <Route path="/platform/tenants/:tenantId" element={<PlatformTenantDetail />} />
+                      </Route>
+                      <Route path="*" element={<NotFound />} />
                     </Route>
-                  </Route>
-                  <Route element={<TenantModuleRoute moduleKey="procurement" moduleLabel="Procurement & POs" />}>
-                    <Route element={<ProtectedRoute requiredPermissions={[PERMS.PO_VIEW]} />}>
-                      <Route path="/purchase-orders" element={<PurchaseOrders />} />
-                    </Route>
-                  </Route>
-                  <Route element={<TenantModuleRoute moduleKey="hr" moduleLabel="HR & payroll" />}>
-                    <Route element={<ProtectedRoute requiredPermissions={[PERMS.HR_FULL]} />}>
-                      <Route path="/hr" element={<Hr />} />
-                    </Route>
-                    <Route element={<ProtectedRoute allowedRoles={['employee']} />}>
-                      <Route path="/my-hr" element={<EmployeeHr />} />
-                    </Route>
-                  </Route>
-                  <Route element={<TenantModuleRoute moduleKey="finance" moduleLabel="Finance & AP/AR" />}>
-                  <Route element={<ProtectedRoute requiredPermissions={[PERMS.FINANCE_READ]} />}>
-                    <Route path="/finance" element={<Finance />} />
-                  </Route>
-                  </Route>
-                  <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
-                  <Route element={<ProtectedRoute requiredPermissions={[PERMS.SHIPMENTS_VIEW]} />}>
-                    <Route path="/shipments" element={<Shipments />} />
-                  </Route>
-                  </Route>
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/account/change-password" element={<ChangePassword />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/sme-bundle" element={<SmeBundle />} />
-                  <Route element={<SuperAdminRoute />}>
-                    <Route path="/platform" element={<PlatformAdmin />} />
-                    <Route path="/platform/tenants/:tenantId" element={<PlatformTenantDetail />} />
-                  </Route>
-                  <Route path="*" element={<NotFound />} />
                   </Route>
                 </Route>
-              </Route>
-            </Routes>
+              </Routes>
             </LocaleProvider>
           </AuthProvider>
         </BrowserRouter>

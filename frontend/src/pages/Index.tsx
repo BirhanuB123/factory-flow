@@ -3,14 +3,18 @@ import { useQuery } from "@tanstack/react-query";
 import { KpiCards } from "@/components/KpiCards";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { DashboardFeedsCalendar } from "@/components/DashboardFeedsCalendar";
+import { FinanceDashboardSummary } from "@/components/dashboards/FinanceDashboardSummary";
+import { HrDashboardSummary } from "@/components/dashboards/HrDashboardSummary";
+import { EmployeeDashboardSummary } from "@/components/dashboards/EmployeeDashboardSummary";
 import { useAuth } from "@/contexts/AuthContext";
 import { productionApi, manufacturingApi } from "@/lib/api";
 import type { TenantModuleFlags } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, Ban, CalendarClock, CheckCircle2, Zap } from "lucide-react";
+import { AlertTriangle, Ban, CalendarClock, CheckCircle2, Zap, LayoutGrid, Users, DollarSign, Activity } from "lucide-react";
 import { PERMS } from "@/lib/permissions";
 import { useLocale } from "@/contexts/LocaleContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function subscriptionBadgeVariant(
   status?: string
@@ -208,7 +212,50 @@ const Index = () => {
         </Card>
       )}
 
-      {showOpsDashboard ? (
+      {user?.platformRole === "super_admin" || user?.role === "Admin" ? (
+        <Tabs defaultValue="operations" className="space-y-6">
+          <TabsList className="bg-transparent p-0 border-b border-border/50 rounded-none w-full justify-start h-auto flex-wrap">
+            <TabsTrigger
+              value="operations"
+              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+            >
+              <Activity className="mr-2 h-4 w-4" />
+              Operations
+            </TabsTrigger>
+            <TabsTrigger
+              value="finance"
+              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+            >
+              <DollarSign className="mr-2 h-4 w-4" />
+              Finance
+            </TabsTrigger>
+            <TabsTrigger
+              value="hr"
+              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+            >
+              <Users className="mr-2 h-4 w-4" />
+              Human Resources
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="operations" className="mt-0 space-y-6 focus-visible:outline-none">
+            <KpiCards />
+            <DashboardCharts />
+            <DashboardFeedsCalendar />
+          </TabsContent>
+          <TabsContent value="finance" className="mt-0 space-y-6 focus-visible:outline-none">
+            <FinanceDashboardSummary />
+          </TabsContent>
+          <TabsContent value="hr" className="mt-0 space-y-6 focus-visible:outline-none">
+            <HrDashboardSummary />
+          </TabsContent>
+        </Tabs>
+      ) : user?.role === "finance_head" || user?.role === "finance_viewer" ? (
+        <FinanceDashboardSummary />
+      ) : user?.role === "hr_head" ? (
+        <HrDashboardSummary />
+      ) : user?.role === "employee" ? (
+        <EmployeeDashboardSummary />
+      ) : showOpsDashboard ? (
         <div className="space-y-6">
           <KpiCards />
           <DashboardCharts />

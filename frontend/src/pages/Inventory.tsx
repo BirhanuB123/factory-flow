@@ -43,7 +43,9 @@ import {
 import { InventoryMetrics } from "@/components/InventoryMetrics";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocale } from "@/contexts/LocaleContext";
-
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InventoryAgingTab } from "@/components/inventory/InventoryAgingTab";
+import { Clock } from "lucide-react";
 type StockLevel = "In Stock" | "Low Stock" | "Out of Stock";
 
 const stockBadgeVariant: Record<StockLevel, "success" | "warning" | "destructive"> = {
@@ -739,101 +741,126 @@ export default function Inventory({
           </Card>
         )}
 
-        {inventoryFiltersCard}
-        {inventoryRegisterCard}
+        <Tabs defaultValue="register" className="space-y-6">
+          <TabsList className="w-full sm:w-auto flex flex-col sm:flex-row sm:items-center sm:justify-start gap-2 bg-transparent p-0 border-b border-border/50 rounded-none mb-6">
+            <TabsTrigger
+              value="register"
+              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+            >
+              <Package className="mr-2 h-4 w-4" />
+              Stock Register
+            </TabsTrigger>
+            <TabsTrigger
+              value="aging"
+              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+            >
+              <Clock className="mr-2 h-4 w-4" />
+              Inventory Aging
+            </TabsTrigger>
+          </TabsList>
 
-        {!embedded && (
-          <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
-            <CardHeader className="flex flex-col gap-4 border-b border-border/50 bg-muted/20 pb-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <History className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">Stock movements</CardTitle>
-                </div>
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  Receipts, issues, production completions, and adjustments
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Select
-                  value={movFilterProductId || "__all__"}
-                  onValueChange={(v) => setMovFilterProductId(v === "__all__" ? "" : v)}
-                >
-                  <SelectTrigger className="h-10 w-full rounded-full border-border/60 bg-muted/40 sm:w-[220px]">
-                    <SelectValue placeholder="All SKUs" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">All products</SelectItem>
-                    {inventoryData.map((p: InventoryItem) => (
-                      <SelectItem key={p._id} value={p._id}>
-                        {p.sku} — {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  className="h-10 rounded-full px-5 font-semibold shadow-sm"
-                  disabled={!canPostInventory}
-                  title={!canPostInventory ? "Warehouse / Admin only (inventory:post)" : undefined}
-                  onClick={() => canPostInventory && setMovDialogOpen(true)}
-                >
-                  <Plus className="mr-1 h-4 w-4" /> Record movement
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="max-h-[360px] overflow-x-auto overflow-y-auto">
-                <Table>
-                  <TableHeader className="sticky top-0 z-10 bg-muted/25">
-                    <TableRow className="border-border/40">
-                      <TableHead className="pl-6 text-xs font-bold text-foreground">When</TableHead>
-                      <TableHead className="text-xs font-bold text-foreground">SKU</TableHead>
-                      <TableHead className="text-xs font-bold text-foreground">Type</TableHead>
-                      <TableHead className="text-right text-xs font-bold text-foreground">Δ Qty</TableHead>
-                      <TableHead className="pr-6 text-right text-xs font-bold text-foreground">Balance</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {movementsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
-                          Loading movements…
-                        </TableCell>
-                      </TableRow>
-                    ) : movements.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
-                          No movements yet. Receipts, issues, production completions, and adjustments appear here.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      movements.map((m) => (
-                        <TableRow key={m._id} className="border-border/40">
-                          <TableCell className="whitespace-nowrap pl-6 text-xs text-muted-foreground">
-                            {new Date(m.createdAt).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs font-semibold">{m.product?.sku ?? "—"}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="rounded-md text-[10px] font-semibold uppercase">
-                              {m.movementType.replace(/_/g, " ")}
-                            </Badge>
-                          </TableCell>
-                          <TableCell
-                            className={`text-right font-mono text-sm font-semibold ${m.delta >= 0 ? "text-emerald-600" : "text-rose-600"}`}
-                          >
-                            {m.delta >= 0 ? "+" : ""}
-                            {m.delta}
-                          </TableCell>
-                          <TableCell className="pr-6 text-right font-mono text-sm">{m.balanceAfter}</TableCell>
+          <TabsContent value="register" className="mt-0 space-y-6 focus-visible:outline-none">
+            {inventoryFiltersCard}
+            {inventoryRegisterCard}
+
+            {!embedded && (
+              <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+                <CardHeader className="flex flex-col gap-4 border-b border-border/50 bg-muted/20 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <History className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">Stock movements</CardTitle>
+                    </div>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      Receipts, issues, production completions, and adjustments
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select
+                      value={movFilterProductId || "__all__"}
+                      onValueChange={(v) => setMovFilterProductId(v === "__all__" ? "" : v)}
+                    >
+                      <SelectTrigger className="h-10 w-full rounded-full border-border/60 bg-muted/40 sm:w-[220px]">
+                        <SelectValue placeholder="All SKUs" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All products</SelectItem>
+                        {inventoryData.map((p: InventoryItem) => (
+                          <SelectItem key={p._id} value={p._id}>
+                            {p.sku} — {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      className="h-10 rounded-full px-5 font-semibold shadow-sm"
+                      disabled={!canPostInventory}
+                      title={!canPostInventory ? "Warehouse / Admin only (inventory:post)" : undefined}
+                      onClick={() => canPostInventory && setMovDialogOpen(true)}
+                    >
+                      <Plus className="mr-1 h-4 w-4" /> Record movement
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="max-h-[360px] overflow-x-auto overflow-y-auto">
+                    <Table>
+                      <TableHeader className="sticky top-0 z-10 bg-muted/25">
+                        <TableRow className="border-border/40">
+                          <TableHead className="pl-6 text-xs font-bold text-foreground">When</TableHead>
+                          <TableHead className="text-xs font-bold text-foreground">SKU</TableHead>
+                          <TableHead className="text-xs font-bold text-foreground">Type</TableHead>
+                          <TableHead className="text-right text-xs font-bold text-foreground">Δ Qty</TableHead>
+                          <TableHead className="pr-6 text-right text-xs font-bold text-foreground">Balance</TableHead>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                      </TableHeader>
+                      <TableBody>
+                        {movementsLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                              Loading movements…
+                            </TableCell>
+                          </TableRow>
+                        ) : movements.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                              No movements yet. Receipts, issues, production completions, and adjustments appear here.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          movements.map((m) => (
+                            <TableRow key={m._id} className="border-border/40">
+                              <TableCell className="whitespace-nowrap pl-6 text-xs text-muted-foreground">
+                                {new Date(m.createdAt).toLocaleString()}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs font-semibold">{m.product?.sku ?? "—"}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="rounded-md text-[10px] font-semibold uppercase">
+                                  {m.movementType.replace(/_/g, " ")}
+                                </Badge>
+                              </TableCell>
+                              <TableCell
+                                className={`text-right font-mono text-sm font-semibold ${m.delta >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                              >
+                                {m.delta >= 0 ? "+" : ""}
+                                {m.delta}
+                              </TableCell>
+                              <TableCell className="pr-6 text-right font-mono text-sm">{m.balanceAfter}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="aging" className="mt-0 focus-visible:outline-none">
+            <InventoryAgingTab />
+          </TabsContent>
+        </Tabs>
       </div>
 
       <Dialog open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>

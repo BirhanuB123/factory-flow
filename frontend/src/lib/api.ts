@@ -196,6 +196,10 @@ export const inventoryApi = {
     const response = await api.get(`/products/${id}/lots`);
     return response.data.data;
   },
+  getAging: async () => {
+    const response = await api.get('/inventory/aging');
+    return response.data.data;
+  },
 };
 
 export const bomApi = {

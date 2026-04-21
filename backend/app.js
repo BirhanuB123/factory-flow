@@ -128,7 +128,7 @@ const {
   shipShipment,
   getDeliveryNoteHtml,
 } = require('./controllers/shipmentController');
-const { getValuation } = require('./controllers/inventoryValuationController');
+const { getValuation, getInventoryAging } = require('./controllers/inventoryValuationController');
 const {
   exportOrders,
   exportInventory,
@@ -306,6 +306,11 @@ app.get(
   '/api/inventory/valuation',
   authorize('Admin', 'finance_head', 'finance_viewer', 'warehouse_head', 'purchasing_head'),
   getValuation
+);
+app.get(
+  '/api/inventory/aging',
+  authorize('Admin', 'finance_head', 'finance_viewer', 'warehouse_head', 'purchasing_head'),
+  getInventoryAging
 );
 app.get('/api/inventory/alerts', getLowStockAlerts);
 app.get('/api/inventory/reservations', getReservations);

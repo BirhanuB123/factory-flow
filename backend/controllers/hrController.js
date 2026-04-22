@@ -847,7 +847,7 @@ const getPayroll = asyncHandler(async (req, res) => {
   const payroll = await Payroll.find(q)
     .populate('employee', 'name role employeeId department tinNumber')
     .sort({ month: -1, createdAt: -1 });
-  res.json(payroll);
+  res.json({ success: true, data: payroll });
 });
 
 // @desc    Create payroll record

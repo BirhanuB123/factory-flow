@@ -1276,8 +1276,10 @@ export const hrAttendanceCorrectionApi = {
 
 export const hrPayrollApi = {
   list: async (month?: string) => {
-    const r = await api.get('/hr/payroll', { params: month ? { month } : {} });
-    return r.data as HrPayrollRow[];
+    const r = await api.get<{ success: boolean; data: HrPayrollRow[] }>('/hr/payroll', {
+      params: month ? { month } : {},
+    });
+    return r.data.data;
   },
   monthStatus: async (month: string) => {
     const r = await api.get<PayrollMonthStatus>(`/hr/payroll/status/${encodeURIComponent(month)}`);

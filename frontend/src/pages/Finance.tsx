@@ -8,7 +8,6 @@ import {
   Search,
   TrendingUp,
   TrendingDown,
-  Loader2,
   ArrowRightLeft,
   Clock,
   FileInput,
@@ -18,6 +17,7 @@ import {
   BookMarked,
   Banknote,
 } from "lucide-react";
+import { LoadingLogo } from "@/components/ui/LoadingLogo";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { financeExtendedApi, ordersApi } from "@/lib/api";
 import { toast as sonnerToast } from "sonner";
@@ -125,7 +125,7 @@ function FinanceLedgerTable({
               <TableRow>
                 <TableCell colSpan={onOpenTaxInvoice ? 8 : 7} className="h-48 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary opacity-50" />
+                    <LoadingLogo size={32} className="text-primary opacity-50" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                       Syncing ledger…
                     </span>

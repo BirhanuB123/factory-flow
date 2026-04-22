@@ -8,7 +8,6 @@ import {
   Plus,
   Search,
   Users,
-  Loader2,
   Edit2,
   Calendar,
   DollarSign,
@@ -21,6 +20,7 @@ import {
   Check,
   X,
 } from "lucide-react";
+import { LoadingLogo } from "@/components/ui/LoadingLogo";
 import {
   hrPayrollApi,
   hrLeaveApi,
@@ -1205,7 +1205,7 @@ export default function Hr() {
                   {loading ? (
                     <TableRow className="hover:bg-transparent border-border/50">
                       <TableCell colSpan={6} className="h-32 text-center">
-                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary/40" />
+                        <LoadingLogo size={32} className="mx-auto text-primary/40" />
                         <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Syncing Ledger...</p>
                       </TableCell>
                     </TableRow>
@@ -1293,7 +1293,7 @@ export default function Hr() {
                   {attCorrectionLoading ? (
                     <TableRow>
                       <TableCell colSpan={5} className="h-24 text-center">
-                        <Loader2 className="h-6 w-6 animate-spin mx-auto text-sky-500/50" />
+                        <LoadingLogo size={24} className="mx-auto text-sky-500/50" />
                       </TableCell>
                     </TableRow>
                   ) : attendanceCorrections.length === 0 ? (
@@ -1389,7 +1389,7 @@ export default function Hr() {
                   {attLoading ? (
                     <TableRow className="hover:bg-transparent border-white/5">
                       <TableCell colSpan={7} className="h-32 text-center">
-                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-amber-500/40" />
+                        <LoadingLogo size={32} className="mx-auto text-amber-500/40" />
                         <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Scanning Biometrics...</p>
                       </TableCell>
                     </TableRow>
@@ -1558,7 +1558,7 @@ export default function Hr() {
                     disabled={leaveActionLoading}
                     onClick={handleCreateLeave}
                   >
-                    {leaveActionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    {leaveActionLoading ? <LoadingLogo size={16} className="mr-2" /> : null}
                     Request leave
                   </Button>
                 </div>
@@ -1578,7 +1578,7 @@ export default function Hr() {
                     {leaveLoading ? (
                       <TableRow>
                         <TableCell colSpan={6} className="h-24 text-center">
-                          <Loader2 className="h-6 w-6 animate-spin mx-auto text-sky-500/60" />
+                          <LoadingLogo size={24} className="mx-auto text-sky-500/60" />
                         </TableCell>
                       </TableRow>
                     ) : leaves.length === 0 ? (
@@ -1908,7 +1908,7 @@ export default function Hr() {
                     }
                   }}
                 >
-                  {payrollActionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+                  {payrollActionLoading ? <LoadingLogo size={16} /> : <BookOpen className="h-4 w-4" />}
                   Post to finance
                 </Button>
                 <Button
@@ -2002,7 +2002,7 @@ export default function Hr() {
                   {payLoading ? (
                     <TableRow className="hover:bg-transparent border-border/50">
                       <TableCell colSpan={8} className="h-32 text-center">
-                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-500/40" />
+                        <LoadingLogo size={32} className="mx-auto text-purple-500/40" />
                         <p className="text-[10px] font-black uppercase tracking-widest mt-4 opacity-40">Loading…</p>
                       </TableCell>
                     </TableRow>
@@ -2075,7 +2075,7 @@ export default function Hr() {
           </DialogHeader>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" size="sm" disabled={prepareLoading} onClick={() => loadPayrollPrepare()}>
-              {prepareLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {prepareLoading ? <LoadingLogo size={16} /> : null}
               Reload staff
             </Button>
           </div>
@@ -2290,7 +2290,7 @@ export default function Hr() {
                 }
               }}
             >
-              {payRunLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {payRunLoading ? <LoadingLogo size={16} className="mr-2" /> : null}
               Calculate &amp; save
             </Button>
           </DialogFooter>

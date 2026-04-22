@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth, Role } from '../contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { LoadingLogo } from './ui/LoadingLogo';
 
 interface ProtectedRouteProps {
   allowedRoles?: Role[];
@@ -20,8 +20,8 @@ export const ProtectedRoute = ({
 
   if (isLoading) {
     return (
-      <div className="h-screen w-full flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="h-screen w-full flex items-center justify-center bg-background/50 backdrop-blur-sm">
+        <LoadingLogo size={48} className="text-primary" />
       </div>
     );
   }

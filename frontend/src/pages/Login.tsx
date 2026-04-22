@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Building2, Loader2, Shield } from 'lucide-react';
+import { Building2, Shield } from 'lucide-react';
+import { LoadingLogo } from '@/components/ui/LoadingLogo';
 
 import { getApiBaseUrl } from '@/lib/apiBase';
 
@@ -201,7 +202,7 @@ export default function Login() {
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                    <LoadingLogo size={20} />
                     {t("auth.signingIn")}
                   </span>
                 ) : (

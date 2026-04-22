@@ -147,7 +147,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  /** Must validate token with API — stale localStorage alone caused 401 spam on every route */
+
   useEffect(() => {
     let cancelled = false;
 
@@ -235,6 +235,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem(ERP_ACT_AS_TENANT_KEY);
     setActAsTenantIdState(null);
   };
+
+  // -- INACTIVITY TIMEOUT --
+  // Sessions expire after 30 minutes of idle time.
+  useEffect(() => {
+    if (!token) return;
+
+    const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+    let timeoutId: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        logout();
+        alert("Your session has expired due to 30 minutes of inactivity. Please log in again.");
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    // Initial timer
+    resetTimer();
+
+    // Listen for activity
+    const activityEvents = ["mousedown", "mousemove", "keydown", "scroll", "touchstart", "click"];
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [token, logout]);
 
   return (
     <AuthContext.Provider

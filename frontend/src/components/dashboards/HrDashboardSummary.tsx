@@ -9,39 +9,48 @@ export function HrDashboardSummary() {
   const { token } = useAuth();
   const [employees, setEmployees] = useState<any[]>([]);
   const [attendance, setAttendance] = useState<any[]>([]);
-  const [leaves, setLeaves] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    if (!token) return;
+    let mounted = true;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     
-    const headers = { Authorization: `Bearer ${token}` };
-
-    fetch(`${API_BASE}/employees`, { headers })
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setEmployees(data);
-        else if (data?.data && Array.isArray(data.data)) setEmployees(data.data);
-        else setEmployees([]);
-      })
-      .catch(() => setEmployees([]));
-
-    fetch(`${API_BASE}/attendance`, { headers })
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setAttendance(data);
-        else if (data?.data && Array.isArray(data.data)) setAttendance(data.data);
-        else setAttendance([]);
-      })
-      .catch(() => setAttendance([]));
-
-    fetch(`${API_BASE}/leaves`, { headers })
-      .then(res => res.json())
-      .then(data => {
-        const arr = data?.data || data;
-        setLeaves(Array.isArray(arr) ? arr : []);
-      })
-      .catch(() => setLeaves([]));
+    async function fetchData() {
+      const headers = { Authorization: `Bearer ${token}` };
       
+      try {
+        setLoading(true);
+        // We fetch these in parallel for efficiency
+        const [empRes, attRes] = await Promise.all([
+          fetch(`${API_BASE}/employees`, { headers }),
+          fetch(`${API_BASE}/attendance`, { headers })
+        ]);
+
+        if (mounted) {
+          if (empRes.ok) {
+            const empData = await empRes.json();
+            const list = Array.isArray(empData) ? empData : (empData?.data && Array.isArray(empData.data) ? empData.data : []);
+            setEmployees(list);
+          }
+          
+          if (attRes.ok) {
+            const attData = await attRes.json();
+            const list = Array.isArray(attData) ? attData : (attData?.data && Array.isArray(attData.data) ? attData.data : []);
+            setAttendance(list);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching HR summary data:", error);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    fetchData();
+    return () => { mounted = false; };
   }, [token]);
 
   const employeesList = Array.isArray(employees) ? employees : [];
@@ -50,11 +59,24 @@ export function HrDashboardSummary() {
   const activeEmployees = employeesList.filter(e => e?.status === "Active").length;
   const onLeaveEmployees = employeesList.filter(e => e?.status === "On Leave").length;
   const totalEmployees = employeesList.length;
-  const totalPayroll = useMemo(() => employeesList.reduce((acc, e) => acc + (e?.salary || 0), 0), [employeesList]);
+  const totalPayroll = useMemo(() => {
+    return employeesList.reduce((acc, e) => {
+      const salary = Number(e?.salary);
+      return acc + (isNaN(salary) ? 0 : salary);
+    }, 0);
+  }, [employeesList]);
   
   const attendanceRate = attendanceList.length > 0 
     ? Math.round((attendanceList.filter(a => a?.status === "Present").length / attendanceList.length) * 100)
     : 0;
+
+  if (loading && totalEmployees === 0) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

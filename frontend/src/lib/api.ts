@@ -1514,6 +1514,12 @@ export const platformApi = {
     );
     return response.data;
   },
+  deleteTenant: async (tenantId: string) => {
+    const response = await api.delete<{ success: boolean; message: string }>(
+      `/platform/tenants/${tenantId}`
+    );
+    return response.data;
+  },
   getGlobalAnnouncement: async () => {
     const response = await api.get<{
       success: boolean;

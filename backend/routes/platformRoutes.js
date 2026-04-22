@@ -13,6 +13,7 @@ const {
   exportPlatformAuditLogsCsv,
   getGlobalAnnouncement,
   updateGlobalAnnouncement,
+  deleteTenant,
 } = require('../controllers/platformController');
 
 const router = express.Router();
@@ -24,6 +25,7 @@ router.patch('/announcement', updateGlobalAnnouncement);
 // PUT alias: some proxies / older deployments only allow GET/POST/PUT.
 router.put('/announcement', updateGlobalAnnouncement);
 router.get('/tenants/:id', getTenantDetail);
+router.delete('/tenants/:id', deleteTenant);
 router.patch('/tenants/:id/status', updateTenantStatus);
 router.patch('/tenants/:id/trial', extendTenantTrial);
 router.patch('/tenants/:id', patchTenant);

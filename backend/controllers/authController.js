@@ -84,7 +84,8 @@ const getMe = asyncHandler(async (req, res) => {
         });
       }
     }
-    const tenantSubscription = await buildTenantSubscription(user.tenantId);
+    const effectiveTenantId = req.tenantId || user.tenantId;
+    const tenantSubscription = await buildTenantSubscription(effectiveTenantId);
     res.json({
       _id: user._id,
       employeeId: user.employeeId,
@@ -92,7 +93,7 @@ const getMe = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       department: user.department,
-      tenantId: user.tenantId,
+      tenantId: effectiveTenantId,
       platformRole: user.platformRole || 'none',
       mustChangePassword: !!user.mustChangePassword,
       permissions: rolePermissions(user.role),

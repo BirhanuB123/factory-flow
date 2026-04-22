@@ -682,6 +682,27 @@ export default function Hr() {
             <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.hr.title")}</h1>
             <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.hr.subtitle")}</p>
           </div>
+          <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Headcount</p>
+              <p className="text-sm font-semibold text-foreground">{employees.length}</p>
+            </div>
+            <div className="h-8 w-px bg-border/70" />
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
+              <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{activeCount}</p>
+            </div>
+            <div className="h-8 w-px bg-border/70" />
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Attendance</p>
+              <p className="text-sm font-semibold text-warning">{attendanceRateVal}%</p>
+            </div>
+            <div className="h-8 w-px bg-border/70" />
+            <div className="text-right">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Payroll</p>
+              <p className="text-sm font-semibold text-primary">{format(totalPayroll)}</p>
+            </div>
+          </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="h-10 shrink-0 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">

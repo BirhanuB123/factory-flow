@@ -386,6 +386,22 @@ export default function PlatformAdmin() {
     },
   });
 
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => platformApi.deleteTenant(id),
+    onSuccess: (data) => {
+      toast.success(data.message || "Company deleted permanently");
+      qc.invalidateQueries({ queryKey: ["platform-tenants"] });
+      qc.invalidateQueries({ queryKey: ["platform-metrics"] });
+      qc.invalidateQueries({ queryKey: ["platform-audit"] });
+    },
+    onError: (e: unknown) => {
+      const msg =
+        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Deletion failed";
+      toast.error(msg);
+    },
+  });
+
   const metrics = metricsQ.data?.data;
   const byStatus = metrics?.tenants.byStatus ?? {};
   const activeTenantCount =
@@ -906,16 +922,43 @@ export default function PlatformAdmin() {
                                 </div>
                               </TableCell>
                               <TableCell className="text-right px-6">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
-                                  asChild
-                                >
-                                  <Link to={`/platform/tenants/${t._id}`}>
-                                    <ArrowRight className="h-4 w-4" />
-                                  </Link>
-                                </Button>
+                                <div className="flex items-center justify-end gap-2">
+                                  {t.status === "archived" && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-9 w-9 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-all"
+                                      onClick={() =>
+                                        requestStepUp(
+                                          async () => {
+                                            await deleteMut.mutateAsync(t._id);
+                                          },
+                                          {
+                                            title: "Permanently Delete Company",
+                                            description: `All data for "${t.displayName || t.key}" will be wiped. This cannot be undone.`,
+                                          }
+                                        )
+                                      }
+                                      disabled={deleteMut.isPending}
+                                    >
+                                      {deleteMut.isPending ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="h-4 w-4 text-destructive/70" />
+                                      )}
+                                    </Button>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
+                                    asChild
+                                  >
+                                    <Link to={`/platform/tenants/${t._id}`}>
+                                      <ArrowRight className="h-4 w-4" />
+                                    </Link>
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))

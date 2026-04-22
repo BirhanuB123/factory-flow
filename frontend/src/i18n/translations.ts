@@ -48,7 +48,7 @@ const STRINGS = pack({
     om: "Kuusaa warshaa",
   },
   "nav.purchasing": {
-    en: "Purchasing",
+    en: "Procurement",
     am: "ግዢ",
     om: "Bitachuu",
   },

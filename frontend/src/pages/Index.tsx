@@ -6,6 +6,7 @@ import { DashboardFeedsCalendar } from "@/components/DashboardFeedsCalendar";
 import { FinanceDashboardSummary } from "@/components/dashboards/FinanceDashboardSummary";
 import { HrDashboardSummary } from "@/components/dashboards/HrDashboardSummary";
 import { EmployeeDashboardSummary } from "@/components/dashboards/EmployeeDashboardSummary";
+import { ProcurementDashboardSummary } from "@/components/dashboards/ProcurementDashboardSummary";
 import { useAuth } from "@/contexts/AuthContext";
 import { productionApi, manufacturingApi } from "@/lib/api";
 import type { TenantModuleFlags } from "@/lib/api";
@@ -236,6 +237,13 @@ const Index = () => {
               <Users className="mr-2 h-4 w-4" />
               Human Resources
             </TabsTrigger>
+            <TabsTrigger
+              value="procurement"
+              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+            >
+              <Truck className="mr-2 h-4 w-4" />
+              Procurement
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="operations" className="mt-0 space-y-6 focus-visible:outline-none">
             <KpiCards />
@@ -248,11 +256,16 @@ const Index = () => {
           <TabsContent value="hr" className="mt-0 space-y-6 focus-visible:outline-none">
             <HrDashboardSummary />
           </TabsContent>
+          <TabsContent value="procurement" className="mt-0 space-y-6 focus-visible:outline-none">
+            <ProcurementDashboardSummary />
+          </TabsContent>
         </Tabs>
       ) : user?.role === "finance_head" || user?.role === "finance_viewer" ? (
         <FinanceDashboardSummary />
       ) : user?.role === "hr_head" ? (
         <HrDashboardSummary />
+      ) : user?.role === "purchasing_head" || user?.role === "warehouse_head" ? (
+        <ProcurementDashboardSummary />
       ) : user?.role === "employee" ? (
         <EmployeeDashboardSummary />
       ) : showOpsDashboard ? (

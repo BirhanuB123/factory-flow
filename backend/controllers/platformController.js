@@ -920,3 +920,106 @@ exports.getPlatformMetrics = asyncHandler(async (_req, res) => {
     },
   });
 });
+
+/**
+ * @desc    Permanently delete a tenant and its associated data
+ * @route   DELETE /api/platform/tenants/:id
+ * @access  Super Admin (Implicit via route prefix/middleware)
+ */
+exports.deleteTenant = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid tenant id' });
+  }
+
+  const tenant = await Tenant.findById(id);
+  if (!tenant) {
+    return res.status(404).json({ success: false, message: 'Tenant not found' });
+  }
+
+  // Safety: Require archiving before deletion to prevent accidents
+  if (tenant.status !== 'archived' && req.query.force !== 'true') {
+    return res.status(400).json({
+      success: false,
+      message: 'Only archived companies can be deleted. Please archive the company first.',
+    });
+  }
+
+  const tenantObjectId = tenant._id;
+  const tenantIdStr = String(tenant._id);
+
+  // Define models to clean up (those that have tenantId field)
+  const modelsToClean = [
+    Employee,
+    Product,
+    Order,
+    Invoice,
+    Client,
+    PurchaseOrder,
+    require('../models/BOM'),
+    require('../models/ProductionJob'),
+    require('../models/Shipment'),
+    require('../models/StockMovement'),
+    require('../models/StockReservation'),
+    require('../models/Vendor'),
+    require('../models/VendorBill'),
+    require('../models/VendorPayment'),
+    require('../models/Expense'),
+    require('../models/Payroll'),
+    require('../models/LeaveRequest'),
+    require('../models/Attendance'),
+    require('../models/Department'),
+    require('../models/Position'),
+    require('../models/WorkCenter'),
+    require('../models/QualityInspection'),
+    require('../models/Asset'),
+    require('../models/PmSchedule'),
+    require('../models/NonConformance'),
+    require('../models/DowntimeEvent'),
+    require('../models/LotBalance'),
+    require('../models/SavedView'),
+    require('../models/Notification'),
+    require('../models/AuditLog'),
+    require('../models/TaxSettings'),
+    require('../models/JournalEntry'),
+    require('../models/CogsEntry'),
+    require('../models/WithholdingCertificate'),
+    require('../models/ApprovalRequest'),
+    require('../models/AttendanceCorrectionRequest'),
+    require('../models/PayrollMonthClose'),
+    require('../models/PayrollPosting'),
+    require('../models/WebhookEvent'),
+  ];
+
+  // Perform deletion across all related collections
+  const deletionPromises = modelsToClean.map(async (Model) => {
+    try {
+      return await Model.deleteMany({ tenantId: tenantObjectId });
+    } catch (err) {
+      console.error(`Failed to clean up model for tenant ${tenantIdStr}:`, err);
+      return { error: err.message };
+    }
+  });
+
+  await Promise.all(deletionPromises);
+
+  // Finally delete the tenant record itself
+  await tenant.deleteOne();
+
+  await logPlatformAction(req, {
+    action: 'tenant.delete',
+    resourceType: 'Tenant',
+    resourceId: tenantIdStr,
+    details: {
+      key: tenant.key,
+      displayName: tenant.displayName,
+      legalName: tenant.legalName,
+      wasStatus: tenant.status,
+    },
+  });
+
+  res.json({
+    success: true,
+    message: `Company "${tenant.displayName}" and all associated data have been permanently deleted.`,
+  });
+});

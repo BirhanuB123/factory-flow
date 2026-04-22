@@ -120,7 +120,7 @@ export default function PlatformTenantDetail() {
   const highlightUserId = searchParams.get("user");
   const userRowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
   const qc = useQueryClient();
-  const { setActAsTenantId } = useAuth();
+  const { user, setActAsTenantId, actAsTenantId, refreshPermissions } = useAuth();
 
   const [adminOpen, setAdminOpen] = useState(false);
 
@@ -180,6 +180,11 @@ export default function PlatformTenantDetail() {
       qc.invalidateQueries({ queryKey: ["platform-tenant", tenantId] });
       qc.invalidateQueries({ queryKey: ["platform-tenants"] });
       qc.invalidateQueries({ queryKey: ["platform-audit"] });
+
+      // If we are currently acting as this tenant, refresh permissions to update flags/sidebar
+      if (actAsTenantId === tenantId || (!actAsTenantId && user?.tenantId === tenantId)) {
+        refreshPermissions();
+      }
     },
     onError: (e: unknown) => {
       const msg =

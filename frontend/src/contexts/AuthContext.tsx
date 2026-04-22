@@ -215,6 +215,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setActAsTenantIdState(stored && isLikelyMongoObjectId(stored) ? stored : null);
   }, [user]);
 
+  // Trigger refresh when actAsTenantId changes (for super admins switching context)
+  useEffect(() => {
+    if (token && user?.platformRole === "super_admin") {
+      refreshPermissions();
+    }
+  }, [actAsTenantId, token, refreshPermissions, user?.platformRole]);
+
   const login = (apiUserPayload: Record<string, unknown>, t: string) => {
     const u = userFromApiPayload(apiUserPayload);
     setUser(u);

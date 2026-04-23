@@ -178,6 +178,8 @@ const announcementRoutes = require('./routes/announcementRoutes');
 const platformRoutes = require('./routes/platformRoutes');
 const billingWebhookRoutes = require('./routes/billingWebhookRoutes');
 const billingRoutes = require('./routes/billingRoutes');
+const posRoutes = require('./routes/posRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 const { protect, authorize, authorizePerm, P, requireSuperAdmin } = require('./middleware/authMiddleware');
 const { withTenant } = require('./middleware/tenantMiddleware');
 const { requireTenantModule } = require('./utils/tenantModules');
@@ -212,7 +214,8 @@ app.use(
   express.json({
     limit: process.env.JSON_BODY_LIMIT || '200kb',
     verify: (req, _res, buf) => {
-      if (String(req.originalUrl || '').startsWith('/api/billing/webhook/')) {
+      const url = String(req.originalUrl || '');
+      if (url.startsWith('/api/billing/webhook/') || url.startsWith('/api/payments/webhook')) {
         req.rawBody = buf;
       }
     },
@@ -241,6 +244,7 @@ if (process.env.NODE_ENV !== 'test') {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/billing/webhook', billingWebhookRoutes);
+app.use('/api/payments', paymentRoutes);
 
 app.get('/api/production/traveler/:token.html', getTravelerHtml);
 
@@ -274,9 +278,11 @@ app.use('/api/purchase-orders', requireTenantModule('procurement'));
 app.use('/api/finance', requireTenantModule('finance'));
 app.use('/api/hr', requireTenantModule('hr'));
 app.use('/api/employee', requireTenantModule('hr'));
+app.use('/api/pos', requireTenantModule('sales'));
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/billing', billingRoutes);
 
+app.use('/api/pos', posRoutes);
 app.use('/api/finance', financeAccess);
 app.use('/api/hr', authorize('Admin', 'hr_head', 'finance_head'));
 

@@ -97,11 +97,36 @@ const STRINGS = pack({
     am: "አሻራ",
     om: "Daandii",
   },
+  "nav.pos": {
+    en: "POS",
+    am: "POS",
+    om: "POS",
+  },
   "nav.erpSubtitle": {
     en: "ERP System",
     am: "የኢንተግራ ስርዓት",
     om: "Sirna Integra",
   },
+
+  // —— POS ——
+  "pos.openSession": { en: "Open Session", am: "ሴሽን ክፈት", om: "Session bani" },
+  "pos.closeSession": { en: "Close Session", am: "ሴሽን ዝጋ", om: "Session cufi" },
+  "pos.openingBalance": { en: "Opening Balance", am: "የመጀመሪያ ቀሪ ሂሳብ", om: "Maallaqa jalqabaa" },
+  "pos.actualClosing": { en: "Actual Closing Balance", am: "ትክክለኛ መዝጊያ ሂሳብ", om: "Maallaqa dhumaa" },
+  "pos.difference": { en: "Difference", am: "ልዩነት", om: "Garaagarummaa" },
+  "pos.cart": { en: "Cart", am: "ጋሪ", om: "Kaartii" },
+  "pos.total": { en: "Total", am: "ጠቅላላ", om: "Waliigala" },
+  "pos.pay": { en: "Pay", am: "ክፈል", om: "Kaffali" },
+  "pos.checkout": { en: "Checkout", am: "ክፍያ", om: "Kaffaltii" },
+  "pos.cash": { en: "Cash", am: "ጥሬ ገንዘብ", om: "Maallaqa harkaa" },
+  "pos.card": { en: "Card", am: "ካርድ", om: "Kaardii" },
+  "pos.mobile": { en: "Mobile Money", am: "ሞባይል ባንኪንግ", om: "Baankii moobaayilaa" },
+  "pos.change": { en: "Change", am: "መልስ", om: "Deebii" },
+  "pos.tendered": { en: "Amount Tendered", am: "የተቀበሉት ገንዘብ", om: "Maallaqa fudhatame" },
+  "pos.receipt": { en: "Receipt", am: "ደረሰኝ", om: "Nagahee" },
+  "pos.print": { en: "Print", am: "አትም", om: "Maxxansi" },
+  "pos.newSale": { en: "New Sale", am: "አዲስ ሽያጭ", om: "Gurgurtaa haaraa" },
+  "pos.noActiveSession": { en: "No active POS session found.", am: "ምንም የነቃ የPOS ሴሽን አልተገኘም።", om: "Session POS hojjetu hin argamne." },
 
   // —— Common ——
   "common.loading": { en: "Loading…", am: "በመጫን ላይ…", om: "Fe'uuf jira…" },

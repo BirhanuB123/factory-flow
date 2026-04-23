@@ -267,4 +267,5 @@ module.exports = {
   initializeChapaCheckout,
   verifyChapaPayment,
   chapaWebhook,
+  markTenantPaidByTxRef,
 };

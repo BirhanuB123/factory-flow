@@ -193,8 +193,16 @@ export function DashboardHeader() {
     navigate("/login");
   };
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const getInitials = (name?: string | null) => {
+    if (!name || typeof name !== 'string') return "??";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 0 || !parts[0]) return "??";
+    
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    
+    const first = parts[0][0] || "";
+    const last = parts[parts.length - 1][0] || "";
+    return (first + last).toUpperCase();
   };
 
   const getNotificationIcon = (type: string) => {
@@ -208,7 +216,7 @@ export function DashboardHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex min-h-[4.25rem] min-w-0 shrink-0 items-center gap-2 border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur-md lg:gap-4 lg:px-5">
+    <header className="sticky top-0 z-50 flex min-h-[4.25rem] min-w-0 shrink-0 items-center gap-2 border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur-md lg:gap-4 lg:px-5">
       <SidebarTrigger className="shrink-0 text-muted-foreground" />
       <div className="relative flex min-w-0 flex-1 justify-center">
         <div className="relative w-full max-w-2xl">
@@ -381,7 +389,7 @@ export function DashboardHeader() {
               <span className="relative inline-flex">
                 <Avatar className="h-9 w-9 border border-border/60 shadow-erp-sm">
                   <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
-                    {getInitials(user?.name || settings.displayName)}
+                    {getInitials(user?.name || settings.displayName || "User")}
                   </AvatarFallback>
                 </Avatar>
                 <span

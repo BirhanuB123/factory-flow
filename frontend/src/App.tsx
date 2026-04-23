@@ -35,6 +35,7 @@ import SmeBundle from "./pages/SmeBundle.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import PlatformAdmin from "./pages/PlatformAdmin.tsx";
 import PlatformTenantDetail from "./pages/PlatformTenantDetail.tsx";
+import Pos from "./pages/Pos.tsx";
 import { SuperAdminRoute } from "./components/SuperAdminRoute";
 import { MustChangePasswordGate } from "./components/MustChangePasswordGate";
 import { TenantModuleRoute } from "./components/TenantModuleRoute";
@@ -251,6 +252,7 @@ const App = () => {
                       <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
                         <Route element={<ProtectedRoute allowedRoles={["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"]} />}>
                           <Route path="/orders" element={<Orders />} />
+                          <Route path="/pos" element={<Pos />} />
                           <Route path="/clients" element={<Clients />} />
                         </Route>
                       </Route>

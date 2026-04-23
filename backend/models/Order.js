@@ -65,6 +65,24 @@ const OrderSchema = new mongoose.Schema({
     enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
   },
+  source: {
+    type: String,
+    enum: ['erp', 'pos'],
+    default: 'erp'
+  },
+  posSession: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PosSession',
+    default: null
+  },
+  paymentDetails: {
+    method: { type: String, enum: ['cash', 'card', 'mobile', 'chapa', 'other'], default: 'cash' },
+    amountTendered: { type: Number, default: 0 },
+    change: { type: Number, default: 0 },
+    txRef: { type: String, default: null },
+    chapaId: { type: String, default: null },
+    paymentStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' }
+  },
   orderDate: {
     type: Date,
     default: Date.now

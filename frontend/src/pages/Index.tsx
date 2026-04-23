@@ -12,7 +12,7 @@ import { productionApi, manufacturingApi } from "@/lib/api";
 import type { TenantModuleFlags } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, Ban, CalendarClock, CheckCircle2, Zap, LayoutGrid, Users, DollarSign, Activity } from "lucide-react";
+import { AlertTriangle, Ban, CalendarClock, CheckCircle2, Zap, LayoutGrid, Users, DollarSign, Activity, Truck } from "lucide-react";
 import { PERMS } from "@/lib/permissions";
 import { useLocale } from "@/contexts/LocaleContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

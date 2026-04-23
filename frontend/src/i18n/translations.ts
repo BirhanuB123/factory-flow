@@ -482,7 +482,7 @@ export function tKey(lang: UiLang, key: string, vars?: Record<string, string | n
   }
   if (vars) {
     for (const [vk, vv] of Object.entries(vars)) {
-      s = s.replaceAll(`{${vk}}`, String(vv));
+      s = s.split(`{${vk}}`).join(String(vv));
     }
   }
   return s;

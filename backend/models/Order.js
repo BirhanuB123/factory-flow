@@ -10,7 +10,7 @@ const OrderSchema = new mongoose.Schema({
   client: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',
-    required: [true, 'Please add a client']
+    required: false
   },
   items: [
     {

@@ -71,7 +71,7 @@ const MATRIX = {
     P.HR_FULL,
     P.PO_VIEW,
   ],
-  employee: [P.DASHBOARD_VIEW, P.PO_VIEW],
+  employee: [P.DASHBOARD_VIEW],
 };
 
 function rolePermissions(role) {

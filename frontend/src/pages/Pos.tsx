@@ -328,7 +328,7 @@ export default function Pos() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)] flex-col md:flex-row bg-background">
+    <div className="flex h-[calc(100vh-64px)] flex-col md:flex-row bg-background no-print">
       {/* Product List Section */}
       <div className="flex-1 p-4 flex flex-col gap-4 overflow-hidden border-r">
         <div className="flex items-center gap-4">
@@ -704,8 +704,8 @@ export default function Pos() {
         </DialogContent>
       </Dialog>
 
-      {/* Hidden Receipt Area */}
-      <div className="sr-only print:block print:relative print:sr-auto">
+      {/* Receipt Area (Hidden from screen, visible in print via PosReceipt's internal styles) */}
+      <div className="hidden print:block">
         {completedOrder && (
           <PosReceipt ref={receiptRef} order={completedOrder} products={products} />
         )}

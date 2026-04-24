@@ -705,7 +705,7 @@ export default function Pos() {
       </Dialog>
 
       {/* Hidden Receipt Area */}
-      <div className="hidden">
+      <div className="sr-only print:block print:relative print:sr-auto">
         {completedOrder && (
           <PosReceipt ref={receiptRef} order={completedOrder} products={products} />
         )}

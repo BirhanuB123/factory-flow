@@ -42,9 +42,15 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>(
       <div ref={ref} className="p-4 bg-white text-black font-mono text-sm w-[80mm] mx-auto print:m-0 print:w-full">
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            body * { visibility: hidden; }
-            .print-area, .print-area * { visibility: visible; }
-            .print-area { position: absolute; left: 0; top: 0; width: 100%; }
+            body * { visibility: hidden !important; }
+            .print-area, .print-area * { visibility: visible !important; }
+            .print-area { 
+              position: absolute !important; 
+              left: 0 !important; 
+              top: 0 !important; 
+              width: 100% !important; 
+              background: white !important;
+            }
             @page { margin: 0; size: 80mm auto; }
           }
         `}} />

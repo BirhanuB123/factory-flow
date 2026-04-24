@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocale } from "@/contexts/LocaleContext";
 import { useAuth } from "@/contexts/AuthContext";
 import api from "@/lib/api";
+import { PosReceipt } from "@/components/pos/PosReceipt";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +30,14 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { User as UserIcon, Tag } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
 interface Product {
@@ -54,19 +62,71 @@ export default function Pos() {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [selectedClient, setSelectedClient] = useState<string>("walk-in");
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showOpenSession, setShowOpenSession] = useState(false);
+  const [showCloseSession, setShowCloseSession] = useState(false);
   const [openingBalance, setOpeningBalance] = useState(0);
+  const [actualClosingBalance, setActualClosingBalance] = useState<string>("");
+  const [closeNote, setCloseNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "mobile" | "chapa">("cash");
   const [amountTendered, setAmountTendered] = useState<string>("");
   const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [completedOrder, setCompletedOrder] = useState<any>(null);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchActiveSession();
     fetchProducts();
+    fetchClients();
     checkPaymentCallback();
+
+    // Barcode scanner listener
+    let buffer = "";
+    let lastKeyTime = Date.now();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const currentTime = Date.now();
+      
+      // If time between keys is > 50ms, it's probably a human
+      if (currentTime - lastKeyTime > 50) {
+        buffer = "";
+      }
+
+      lastKeyTime = currentTime;
+
+      if (e.key === "Enter") {
+        if (buffer.length > 2) {
+          handleBarcode(buffer);
+          buffer = "";
+        }
+      } else if (e.key.length === 1) {
+        buffer += e.key;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  const handleBarcode = async (code: string) => {
+    try {
+      const res = await api.get(`/pos/products?search=${code}`);
+      if (res.data.success && res.data.data.length > 0) {
+        const product = res.data.data.find((p: any) => p.barcode === code || p.sku === code);
+        if (product) {
+          addToCart(product);
+          toast.success(`Added ${product.name}`);
+        }
+      }
+    } catch (error) {
+      console.error("Barcode search failed", error);
+    }
+  };
 
   const checkPaymentCallback = async () => {
     const txRef = searchParams.get("tx_ref");
@@ -118,6 +178,17 @@ export default function Pos() {
     }
   };
 
+  const fetchClients = async () => {
+    try {
+      const res = await api.get("/clients");
+      if (res.data.success) {
+        setClients(res.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch clients", error);
+    }
+  };
+
   const handleOpenSession = async () => {
     try {
       const res = await api.post("/pos/session/open", { openingBalance });
@@ -128,6 +199,23 @@ export default function Pos() {
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to open session");
+    }
+  };
+
+  const handleCloseSession = async () => {
+    try {
+      const res = await api.post("/pos/session/close", { 
+        actualClosingBalance: Number(actualClosingBalance),
+        note: closeNote
+      });
+      if (res.data.success) {
+        setSession(null);
+        setShowCloseSession(false);
+        setShowOpenSession(true);
+        toast.success("POS Session closed");
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to close session");
     }
   };
 
@@ -170,7 +258,9 @@ export default function Pos() {
     setCart((prev) => prev.filter((item) => item._id !== id));
   };
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const discountAmount = (subtotal * discountPercent) / 100;
+  const total = subtotal - discountAmount;
   const change = Number(amountTendered) > total ? Number(amountTendered) - total : 0;
 
   const handleCheckout = async () => {
@@ -184,6 +274,8 @@ export default function Pos() {
           price: item.price
         })),
         totalAmount: total,
+        clientId: selectedClient === "walk-in" ? null : selectedClient,
+        discountPercent: discountPercent,
         paymentDetails: {
           method: paymentMethod,
           amountTendered: Number(amountTendered) || total,
@@ -198,10 +290,13 @@ export default function Pos() {
           return;
         }
 
-        toast.success("Sale completed successfully");
+        setCompletedOrder(res.data.data);
+        setShowSuccessDialog(true);
         setCart([]);
         setShowCheckout(false);
         setAmountTendered("");
+        setDiscountPercent(0);
+        setSelectedClient("walk-in");
         fetchProducts(search);
         fetchActiveSession();
       }
@@ -210,6 +305,10 @@ export default function Pos() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   if (!session && !showOpenSession) {
@@ -243,6 +342,14 @@ export default function Pos() {
               autoFocus
             />
           </div>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="h-11 w-11 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => setShowCloseSession(true)}
+          >
+            <Store className="h-5 w-5" />
+          </Button>
           <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl">
             <History className="h-5 w-5" />
           </Button>
@@ -335,13 +442,57 @@ export default function Pos() {
 
         <Separator />
 
-        <div className="space-y-4">
-          <div className="flex justify-between text-lg font-bold">
+        <div className="space-y-4 bg-card p-3 rounded-xl border shadow-sm">
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+              <UserIcon className="h-3 w-3" /> Customer
+            </label>
+            <Select value={selectedClient} onValueChange={setSelectedClient}>
+              <SelectTrigger className="h-9 rounded-lg">
+                <SelectValue placeholder="Select Customer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="walk-in">Walk-in Customer</SelectItem>
+                {clients.map(c => (
+                  <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+              <Tag className="h-3 w-3" /> Discount (%)
+            </label>
+            <Input 
+              type="number" 
+              className="h-9 rounded-lg" 
+              value={discountPercent} 
+              onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+              placeholder="0"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {discountPercent > 0 && (
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Subtotal</span>
+              <span>ETB {subtotal.toLocaleString()}</span>
+            </div>
+          )}
+          {discountPercent > 0 && (
+            <div className="flex justify-between text-sm text-destructive font-medium">
+              <span>Discount ({discountPercent}%)</span>
+              <span>-ETB {discountAmount.toLocaleString()}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-lg font-bold pt-1">
             <span>{t("pos.total")}</span>
             <span className="text-primary text-2xl">ETB {total.toLocaleString()}</span>
           </div>
           <Button
-            className="w-full h-14 text-xl rounded-2xl shadow-lg"
+            className="w-full h-14 text-xl rounded-2xl shadow-lg mt-2"
             disabled={cart.length === 0}
             onClick={() => setShowCheckout(true)}
           >
@@ -458,6 +609,107 @@ export default function Pos() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Close Session Dialog */}
+      <Dialog open={showCloseSession} onOpenChange={setShowCloseSession}>
+        <DialogContent className="sm:max-w-[450px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <Store className="h-6 w-6 text-destructive" />
+              {t("pos.closeSession")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-6 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-muted/50 p-4 rounded-2xl space-y-1">
+                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">{t("pos.openingBalance")}</p>
+                <p className="text-xl font-bold">ETB {session?.openingBalance?.toLocaleString()}</p>
+              </div>
+              <div className="bg-primary/5 p-4 rounded-2xl space-y-1 border border-primary/10">
+                <p className="text-[10px] uppercase font-bold text-primary tracking-wider">{t("pos.total")}</p>
+                <p className="text-xl font-bold text-primary">ETB {session?.summary?.totalSales?.toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">{t("pos.actualClosing")}</label>
+                <Input
+                  type="number"
+                  className="text-2xl h-14 text-center font-bold rounded-xl"
+                  value={actualClosingBalance}
+                  onChange={(e) => setActualClosingBalance(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+
+              {actualClosingBalance && (
+                <div className="bg-muted/30 p-4 rounded-xl flex justify-between items-center">
+                  <span className="font-medium">{t("pos.difference")}</span>
+                  <span className={`text-xl font-black ${
+                    (Number(actualClosingBalance) - ((session?.openingBalance || 0) + (session?.summary?.totalSales || 0))) === 0 
+                    ? 'text-green-600' 
+                    : 'text-destructive'
+                  }`}>
+                    ETB {(Number(actualClosingBalance) - ((session?.openingBalance || 0) + (session?.summary?.totalSales || 0))).toLocaleString()}
+                  </span>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Notes</label>
+                <Input
+                  className="rounded-xl"
+                  value={closeNote}
+                  onChange={(e) => setCloseNote(e.target.value)}
+                  placeholder="Any discrepancies?"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-3 sm:gap-0">
+            <Button variant="outline" className="h-12 rounded-xl flex-1" onClick={() => setShowCloseSession(false)}>{t("common.close")}</Button>
+            <Button variant="destructive" className="h-12 rounded-xl flex-1 font-bold" onClick={handleCloseSession}>
+              {t("pos.closeSession")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sale Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent className="sm:max-w-[400px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center">{t("pos.newSale")}</DialogTitle>
+          </DialogHeader>
+          <div className="py-6 flex flex-col items-center gap-6">
+            <div className="h-20 w-20 bg-green-100 rounded-full flex items-center justify-center">
+              <Plus className="h-10 w-10 text-green-600 rotate-45" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-bold">Sale Completed!</h3>
+              <p className="text-muted-foreground text-sm">Order #{completedOrder?._id?.slice(-8).toUpperCase()} has been processed successfully.</p>
+            </div>
+            
+            <div className="w-full space-y-3">
+              <Button className="w-full h-12 rounded-xl gap-2" onClick={handlePrint}>
+                <Printer className="h-5 w-5" />
+                {t("pos.print")} {t("pos.receipt")}
+              </Button>
+              <Button variant="outline" className="w-full h-12 rounded-xl" onClick={() => setShowSuccessDialog(false)}>
+                {t("pos.newSale")}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hidden Receipt Area */}
+      <div className="hidden">
+        {completedOrder && (
+          <PosReceipt ref={receiptRef} order={completedOrder} products={products} />
+        )}
+      </div>
     </div>
   );
 }

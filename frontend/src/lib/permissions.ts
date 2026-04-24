@@ -11,6 +11,7 @@ export const PERMS = {
   SHIPMENTS_VIEW: "shipments:view",
   SHIPMENTS_MANAGE: "shipments:manage",
   PO_VIEW: "po:view",
+  POS_VIEW: "pos:view",
 } as const;
 
 export type PermissionKey = (typeof PERMS)[keyof typeof PERMS];

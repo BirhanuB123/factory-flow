@@ -19,6 +19,7 @@ const P = {
   DASHBOARD_INVENTORY: 'dashboard:inventory:view',
   SHIPMENTS_VIEW: 'shipments:view',
   SHIPMENTS_MANAGE: 'shipments:manage',
+  POS_VIEW: 'pos:view',
 };
 
 /** role → permission keys */
@@ -35,6 +36,7 @@ const MATRIX = {
     P.PO_CANCEL,
     P.INVENTORY_POST,
     P.SHIPMENTS_VIEW,
+    P.POS_VIEW,
   ],
   warehouse_head: [
     P.DASHBOARD_VIEW,
@@ -45,6 +47,7 @@ const MATRIX = {
     P.INVENTORY_POST,
     P.SHIPMENTS_VIEW,
     P.SHIPMENTS_MANAGE,
+    P.POS_VIEW,
   ],
   finance_head: [
     P.DASHBOARD_VIEW,
@@ -54,6 +57,7 @@ const MATRIX = {
     P.FINANCE_WRITE,
     P.PO_VIEW,
     P.SHIPMENTS_VIEW,
+    P.POS_VIEW,
   ],
   /** Read-only finance / compliance (GET-only enforced in finance router). */
   finance_viewer: [
@@ -63,6 +67,7 @@ const MATRIX = {
     P.FINANCE_READ,
     P.PO_VIEW,
     P.SHIPMENTS_VIEW,
+    P.POS_VIEW,
   ],
   hr_head: [
     P.DASHBOARD_VIEW,
@@ -125,6 +130,7 @@ function getMatrixDoc() {
     { key: P.SHIPMENTS_VIEW, label: 'View shipments & delivery notes' },
     { key: P.SHIPMENTS_MANAGE, label: 'Create / update / ship deliveries' },
     { key: P.PO_VIEW, label: 'View purchase orders' },
+    { key: P.POS_VIEW, label: 'Access Point of Sale (POS)' },
   ];
   const rows = roles.map((role) => ({
     role,

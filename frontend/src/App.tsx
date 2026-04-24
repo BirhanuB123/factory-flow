@@ -250,9 +250,11 @@ const App = () => {
                         </Route>
                       </Route>
                       <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
+                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.POS_VIEW]} />}>
+                          <Route path="/pos" element={<Pos />} />
+                        </Route>
                         <Route element={<ProtectedRoute allowedRoles={["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"]} />}>
                           <Route path="/orders" element={<Orders />} />
-                          <Route path="/pos" element={<Pos />} />
                           <Route path="/clients" element={<Clients />} />
                         </Route>
                       </Route>

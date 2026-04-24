@@ -36,7 +36,7 @@ const StockMovementSchema = new mongoose.Schema({
   },
   referenceType: {
     type: String,
-    enum: ['ProductionJob', 'Product', 'Manual', 'PurchaseOrder', 'Shipment', null],
+    enum: ['ProductionJob', 'Product', 'Manual', 'PurchaseOrder', 'Shipment', 'Order', null],
     default: null,
   },
   referenceId: {

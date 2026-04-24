@@ -42,21 +42,31 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>(
       <div ref={ref} className="p-4 bg-white text-black font-mono text-sm w-[80mm] mx-auto print:m-0 print:w-full">
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            .no-print { display: none !important; }
-            .print-only { display: block !important; }
-            body { background: white !important; margin: 0 !important; padding: 0 !important; }
-            @page { margin: 0; size: 80mm auto; }
+            /* Hide EVERYTHING directly under body */
+            body > *:not(.print-container) {
+              display: none !important;
+            }
             
-            /* Ensure the receipt is at the top left during print */
-            .receipt-container {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 80mm;
-              margin: 0;
-              padding: 10px;
+            /* Show ONLY the receipt container */
+            .receipt-container, .receipt-container * {
               display: block !important;
               visibility: visible !important;
+            }
+
+            .receipt-container {
+              position: fixed !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 80mm !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: white !important;
+              z-index: 99999 !important;
+            }
+
+            @page {
+              margin: 0;
+              size: 80mm auto;
             }
           }
         `}} />

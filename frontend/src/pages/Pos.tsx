@@ -678,7 +678,7 @@ export default function Pos() {
 
       {/* Sale Success Dialog */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
-        <DialogContent className="sm:max-w-[400px] rounded-3xl">
+        <DialogContent className="sm:max-w-[400px] rounded-3xl no-print">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-center">{t("pos.newSale")}</DialogTitle>
           </DialogHeader>
@@ -705,7 +705,7 @@ export default function Pos() {
       </Dialog>
 
       {/* Receipt Area (Hidden from screen, visible in print via PosReceipt's internal styles) */}
-      <div className="hidden print:block">
+      <div className="hidden print:block print-container">
         {completedOrder && (
           <PosReceipt ref={receiptRef} order={completedOrder} products={products} />
         )}

@@ -6,6 +6,7 @@ import {
 } from "@/lib/tenantContext";
 import { getApiBaseUrl } from "@/lib/apiBase";
 import type { TenantModuleFlags } from "@/lib/api";
+import { authApi } from "@/lib/api";
 
 export type Role =
   | "employee"
@@ -79,6 +80,7 @@ interface AuthContextType {
   /** Super admin only: optional override for `x-tenant-id` (persisted in localStorage). */
   actAsTenantId: string | null;
   setActAsTenantId: (tenantId: string | null) => void;
+  updateProfile: (data: { name: string }) => Promise<{ success: boolean; message?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -145,6 +147,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem("erp_user", JSON.stringify(next));
       return next;
     });
+  }, []);
+
+  const updateProfile = useCallback(async (data: { name: string }) => {
+    try {
+      const payload = await authApi.updateProfile(data);
+      const updatedUser = userFromApiPayload(payload);
+      setUser(updatedUser);
+      localStorage.setItem("erp_user", JSON.stringify(updatedUser));
+      return { success: true };
+    } catch (error: any) {
+      console.error("Failed to update profile:", error);
+      const msg = error.response?.data?.message || error.message || "Unknown error";
+      return { success: false, message: msg };
+    }
   }, []);
 
 
@@ -290,6 +306,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         patchUser,
         actAsTenantId,
         setActAsTenantId,
+        updateProfile,
       }}
     >
       {children}

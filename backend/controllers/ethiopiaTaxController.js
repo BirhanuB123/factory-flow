@@ -2,6 +2,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const Invoice = require('../models/Invoice');
 const VendorBill = require('../models/VendorBill');
 const WithholdingCertificate = require('../models/WithholdingCertificate');
+const Tenant = require('../models/Tenant');
 const { byTenant } = require('../utils/tenantQuery');
 const { record: auditRecord } = require('../services/auditService');
 const {
@@ -87,6 +88,10 @@ exports.getTaxInvoiceHtml = asyncHandler(async (req, res) => {
     res.status(404).setHeader('Content-Type', 'text/plain');
     return res.send('Invoice not found');
   }
+  const tenant = await Tenant.findById(req.tenantId).select('documentSettings legalName').lean();
+  const ds = tenant?.documentSettings || {};
+  const primaryColor = ds.primaryColor || '#4f46e5';
+
   const settings = await getTaxSettings(req.tenantId);
   const c = inv.client;
   const cur = settings.currency || 'ETB';
@@ -109,14 +114,28 @@ exports.getTaxInvoiceHtml = asyncHandler(async (req, res) => {
   .muted{color:#555;font-size:12px}
   table{width:100%;border-collapse:collapse;margin-top:16px}
   th,td{border:1px solid #ccc;padding:8px;text-align:left}
-  th{background:#f5f5f5;font-size:11px;text-transform:uppercase}
+  th{background:#f5f5f5;font-size:11px;text-transform:uppercase;border-top:2px solid ${primaryColor}}
   .num{text-align:right;font-variant-numeric:tabular-nums}
-  .total{font-weight:700}
+  .header-table{width:100%;border:none;margin-bottom:20px}
+  .header-table td{border:none;padding:0;vertical-align:top}
+  .logo{max-height:60px;margin-bottom:10px}
+  .total{font-weight:700;color:${primaryColor}}
   @media print{.no-print{display:none}}
 </style></head><body>
   <p class="no-print"><a href="#" onclick="window.print()">Print</a></p>
-  <h1>TAX INVOICE <span class="am">/ ግብር ደረሰኝ ተቀባይነት ያለው ሂሳብ</span></h1>
-  <p class="muted">Ethiopia-oriented layout — verify rates & TIN with ERCA / current law.</p>
+  
+  <table class="header-table">
+    <tr>
+      <td>
+        ${ds.logoUrl ? `<img src="${esc(ds.logoUrl)}" class="logo" />` : `<h1>${esc(settings.companyLegalName || 'Integra ERP')}</h1>`}
+      </td>
+      <td style="text-align:right">
+        <h1 style="color:${primaryColor}">${esc(ds.invoiceHeader || 'TAX INVOICE')} <span class="am">/ ግብር ደረሰኝ</span></h1>
+        <p class="muted"># ${esc(inv.invoiceId)}</p>
+      </td>
+    </tr>
+  </table>
+
   <p><strong>${esc(settings.companyLegalName || 'Company')}</strong><br/>
   <span class="am">የግብር ከፋይ ቁጥር (TIN)</span>: ${esc(settings.companyTIN || '—')}<br/>
   ${esc(settings.companyAddress || '')}<br/>
@@ -147,6 +166,7 @@ exports.getTaxInvoiceHtml = asyncHandler(async (req, res) => {
     <tr class="total"><td>Net receivable</td><td class="num">${net.toFixed(2)} ${cur}</td></tr>
   </table>
   <p class="muted" style="margin-top:24px">${esc(settings.eInvoicingNotes || '')}</p>
+  ${ds.footerText ? `<div style="margin-top:40px;padding-top:10px;border-top:1px solid #eee;font-size:10px;color:#888">${esc(ds.footerText)}</div>` : ''}
 </body></html>`;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(html);

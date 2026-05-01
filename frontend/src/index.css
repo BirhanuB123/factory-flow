@@ -50,16 +50,16 @@
 
     --radius: 1.125rem;
 
-    /* Light sidebar (reference-style) */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
+    /* Blue-black sidebar for premium look */
+    --sidebar-background: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 221 91% 96%;
-    --sidebar-accent-foreground: 221 83% 45%;
-    --sidebar-border: 228 24% 90%;
+    --sidebar-accent: 222 47% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 47% 15%;
     --sidebar-ring: 221 83% 53%;
-    --sidebar-muted: 215 16% 46%;
+    --sidebar-muted: 217 19% 70%;
 
     --erp-blue: 221 83% 53%;
     --erp-emerald: 152 69% 42%;
@@ -106,15 +106,15 @@
     --input: 224 26% 18%;
     --ring: 217 91% 60%;
 
-    --sidebar-background: 224 44% 9%;
-    --sidebar-foreground: 210 35% 92%;
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 224 48% 8%;
-    --sidebar-accent: 224 32% 16%;
-    --sidebar-accent-foreground: 217 91% 72%;
-    --sidebar-border: 224 26% 18%;
+    --sidebar-accent: 222 47% 15%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 222 47% 12%;
     --sidebar-ring: 217 91% 60%;
-    --sidebar-muted: 215 16% 55%;
+    --sidebar-muted: 215 16% 65%;
 
     --erp-blue: 217 91% 60%;
     --erp-emerald: 152 55% 42%;

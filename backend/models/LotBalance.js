@@ -32,10 +32,11 @@ const LotBalanceSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
-  location: {
-    type: String,
-    default: '',
-    trim: true,
+  locationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Location',
+    default: null,
+    index: true,
   },
   updatedAt: {
     type: Date,
@@ -43,7 +44,7 @@ const LotBalanceSchema = new mongoose.Schema({
   },
 });
 
-// Primary index for lot-level lookup
-LotBalanceSchema.index({ tenantId: 1, product: 1, lotNumber: 1, serialNumber: 1 }, { unique: true });
+// Primary index for lot/location-level lookup
+LotBalanceSchema.index({ tenantId: 1, product: 1, lotNumber: 1, serialNumber: 1, locationId: 1 }, { unique: true });
 
 module.exports = mongoose.model('LotBalance', LotBalanceSchema);

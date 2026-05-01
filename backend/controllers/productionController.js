@@ -5,6 +5,7 @@ const Order = require('../models/Order');
 const BOM = require('../models/BOM');
 const StockMovement = require('../models/StockMovement');
 const StockReservation = require('../models/StockReservation');
+const QualityInspection = require('../models/QualityInspection');
 const asyncHandler = require('../middleware/asyncHandler');
 const { postProductionCompletion } = require('../services/productionInventoryService');
 const { applyMovement } = require('../services/stockService');
@@ -56,6 +57,16 @@ exports.getJob = asyncHandler(async (req, res, next) => {
   if (!job) {
     return res.status(404).json({ success: false, message: 'Job not found' });
   }
+  job.costSummary = computeCostSnapshot(job);
+  res.status(200).json({ success: true, data: job });
+});
+
+exports.getJobByToken = asyncHandler(async (req, res, next) => {
+  const job = await ProductionJob.findOne({ travelerToken: req.params.token }).populate('bom').lean();
+  if (!job) {
+    return res.status(404).json({ success: false, message: 'Job not found' });
+  }
+  // Optional: check tenant isolation if needed, but travelerToken is unguessable UUID.
   job.costSummary = computeCostSnapshot(job);
   res.status(200).json({ success: true, data: job });
 });
@@ -238,19 +249,42 @@ exports.updateJob = asyncHandler(async (req, res, next) => {
     body.materialsReserved = false;
   }
 
-  if (
-    nextStatus === 'Completed' &&
-    prevStatus !== 'Completed' &&
-    !job.inventoryPosted
-  ) {
-    try {
-      await postProductionCompletion(job);
-      body.inventoryPosted = true;
-    } catch (e) {
+  if (nextStatus === 'Completed' && prevStatus !== 'Completed') {
+    // Check if all operations with qualityRequired are passed
+    const pendingOps = (job.operations || []).filter(
+      (o) => o.qualityRequired && !['passed', 'waived'].includes(o.qualityStatus)
+    );
+    if (pendingOps.length > 0) {
       return res.status(400).json({
         success: false,
-        message: e.message || 'Cannot complete job: inventory posting failed',
+        message: `Quality checks pending for operations: ${pendingOps.map((o) => o.name).join(', ')}`,
       });
+    }
+
+    // Check for a 'final' inspection passed for this job
+    const finalQC = await QualityInspection.findOne(byTenant(req, {
+      productionJob: job._id,
+      inspectionType: 'final',
+      status: 'pass'
+    }));
+
+    if (!finalQC) {
+      return res.status(400).json({
+        success: false,
+        message: 'A final quality inspection (Pass) is required before completing this job.',
+      });
+    }
+
+    if (!job.inventoryPosted) {
+      try {
+        await postProductionCompletion(job);
+        body.inventoryPosted = true;
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          message: e.message || 'Cannot complete job: inventory posting failed',
+        });
+      }
     }
   }
 
@@ -612,7 +646,8 @@ exports.getTravelerHtml = asyncHandler(async (req, res) => {
     return res.send('Traveler not found');
   }
   const base = `${req.protocol}://${req.get('host')}`;
-  const selfUrl = `${base}/api/production/traveler/${req.params.token}.html`;
+  const frontendBase = process.env.FRONTEND_URL || 'http://localhost:8080';
+  const selfUrl = `${frontendBase}/kiosk/production/${req.params.token}`;
   let qrSrc = '';
   try {
     qrSrc = await QRCode.toDataURL(selfUrl, { width: 160, margin: 1 });

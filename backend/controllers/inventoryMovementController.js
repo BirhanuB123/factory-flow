@@ -4,7 +4,7 @@ const { applyMovement } = require('../services/stockService');
 const audit = require('../services/auditService');
 const { byTenant } = require('../utils/tenantQuery');
 
-const VALID_KINDS = ['receipt', 'issue', 'adjustment'];
+const VALID_KINDS = ['receipt', 'issue', 'adjustment', 'transfer'];
 
 exports.getMovements = asyncHandler(async (req, res) => {
   const { productId, limit = '100', skip = '0' } = req.query;
@@ -13,6 +13,8 @@ exports.getMovements = asyncHandler(async (req, res) => {
 
   const movements = await StockMovement.find(q)
     .populate('product', 'name sku unit')
+    .populate('location', 'name')
+    .populate('toLocation', 'name')
     .sort({ createdAt: -1 })
     .skip(Math.max(0, parseInt(skip, 10) || 0))
     .limit(Math.min(500, Math.max(1, parseInt(limit, 10) || 100)));
@@ -26,7 +28,7 @@ exports.getMovements = asyncHandler(async (req, res) => {
  * receipt/issue: quantity is positive magnitude; adjustment: quantity is signed delta
  */
 exports.createMovement = asyncHandler(async (req, res) => {
-  const { productId, kind, quantity, note, lotNumber, batchNumber, serialNumber, expirationDate } = req.body;
+  const { productId, kind, quantity, note, lotNumber, batchNumber, serialNumber, expirationDate, locationId, toLocationId } = req.body;
   const Product = require('../models/Product');
 
   if (!productId || !kind || quantity === undefined || quantity === null) {
@@ -55,6 +57,42 @@ exports.createMovement = asyncHandler(async (req, res) => {
       success: false,
       message: `kind must be one of: ${VALID_KINDS.join(', ')}`,
     });
+  }
+
+  if (kind === 'transfer') {
+    if (!locationId || !toLocationId) {
+      return res.status(400).json({ success: false, message: 'Source and destination locations are required for transfers' });
+    }
+    const q = Number(quantity);
+    if (q <= 0) return res.status(400).json({ success: false, message: 'Transfer quantity must be positive' });
+    
+    try {
+      const { applyTransfer } = require('../services/stockService');
+      const moves = await applyTransfer(null, {
+        tenantId: req.tenantId,
+        productId,
+        quantity: q,
+        fromLocationId: locationId,
+        toLocationId,
+        referenceType: 'Manual',
+        note: note || 'Manual Transfer',
+        lotNumber: lotNumber || '',
+        batchNumber: batchNumber || '',
+        serialNumber: serialNumber || '',
+        expirationDate: expirationDate || null,
+      });
+      
+      await audit.record({
+        req,
+        action: 'stock.manual_transfer',
+        entityType: 'StockMovement',
+        entityId: moves.receiptMove._id,
+        summary: { kind, quantity: q, productId: String(productId) },
+      });
+      return res.status(201).json({ success: true, data: moves.receiptMove });
+    } catch (e) {
+      return res.status(400).json({ success: false, message: e.message || 'Transfer failed' });
+    }
   }
 
   let delta;
@@ -93,17 +131,18 @@ exports.createMovement = asyncHandler(async (req, res) => {
       batchNumber: batchNumber || '',
       serialNumber: serialNumber || '',
       expirationDate: expirationDate || null,
+      locationId: locationId || null,
     });
     const populated = await StockMovement.findOne(byTenant(req, { _id: movement._id })).populate(
       'product',
       'name sku stock unit'
-    );
+    ).populate('location', 'name');
     await audit.record({
       req,
       action: 'stock.manual_movement',
       entityType: 'StockMovement',
       entityId: movement._id,
-      summary: { kind, delta, productId: String(productId) },
+      summary: { kind, delta, productId: String(productId), locationId: locationId || 'default' },
     });
     res.status(201).json({ success: true, data: populated });
   } catch (e) {

@@ -21,6 +21,7 @@ async function applyMovement(session, options) {
     batchNumber = '',
     serialNumber = '',
     expirationDate = null,
+    locationId = null,
   } = options;
 
   if (!tenantId) {
@@ -83,6 +84,7 @@ async function applyMovement(session, options) {
         batchNumber: batchNumber || '',
         serialNumber: serialNumber || '',
         expirationDate: expirationDate || null,
+        location: locationId || null,
         balanceAfter: product.stock,
       },
     ],
@@ -109,6 +111,9 @@ async function applyMovement(session, options) {
       updateObj.$set.expirationDate = expirationDate;
     }
 
+    // Always use locationId to differentiate stock across locations
+    lotFilter.locationId = locationId || null;
+
     await LotBalance.findOneAndUpdate(
       lotFilter,
       updateObj,
@@ -119,4 +124,99 @@ async function applyMovement(session, options) {
   return movement;
 }
 
-module.exports = { applyMovement };
+/**
+ * Transfer stock between two locations atomically.
+ */
+async function applyTransfer(session, options) {
+  const {
+    tenantId,
+    productId,
+    quantity,
+    fromLocationId,
+    toLocationId,
+    referenceType = 'Manual',
+    referenceId = null,
+    note = 'Transfer',
+    lotNumber = '',
+    batchNumber = '',
+    serialNumber = '',
+    expirationDate = null,
+  } = options;
+
+  if (!tenantId || !fromLocationId || !toLocationId) {
+    throw new Error('applyTransfer: tenantId, fromLocationId, and toLocationId are required');
+  }
+  
+  if (quantity <= 0) throw new Error('Transfer quantity must be positive');
+
+  // Verify stock exists in fromLocation
+  const tid = new mongoose.Types.ObjectId(tenantId);
+  const pid = new mongoose.Types.ObjectId(productId);
+  const fromLoc = new mongoose.Types.ObjectId(fromLocationId);
+  
+  const lotFilter = {
+    tenantId: tid,
+    product: pid,
+    locationId: fromLoc,
+    lotNumber: lotNumber || '',
+    serialNumber: serialNumber || '',
+  };
+
+  const fromBalance = await LotBalance.findOne(lotFilter).session(session || null);
+  if (!fromBalance || fromBalance.quantity < quantity) {
+    throw new Error(`Insufficient stock in source location for transfer. Available: ${fromBalance ? fromBalance.quantity : 0}`);
+  }
+
+  // 1. Create Issue from source
+  const issueMove = await StockMovement.create([{
+    tenantId: tid,
+    product: pid,
+    delta: -quantity,
+    movementType: 'transfer_out',
+    referenceType,
+    referenceId,
+    note,
+    lotNumber,
+    batchNumber,
+    serialNumber,
+    expirationDate,
+    location: fromLocationId,
+    toLocation: toLocationId,
+    balanceAfter: 0, // Not tracking global balance on transfer out to avoid double decrements if we don't update Product stock
+  }], session ? { session } : {});
+
+  // 2. Create Receipt into destination
+  const receiptMove = await StockMovement.create([{
+    tenantId: tid,
+    product: pid,
+    delta: quantity,
+    movementType: 'transfer_in',
+    referenceType,
+    referenceId,
+    note,
+    lotNumber,
+    batchNumber,
+    serialNumber,
+    expirationDate,
+    location: toLocationId,
+    balanceAfter: 0, 
+  }], session ? { session } : {});
+
+  // 3. Update LotBalances
+  await LotBalance.findOneAndUpdate(
+    lotFilter,
+    { $inc: { quantity: -quantity }, $set: { updatedAt: new Date() } },
+    { session }
+  );
+
+  const toLotFilter = { ...lotFilter, locationId: new mongoose.Types.ObjectId(toLocationId) };
+  await LotBalance.findOneAndUpdate(
+    toLotFilter,
+    { $inc: { quantity: quantity }, $set: { updatedAt: new Date() } },
+    { upsert: true, new: true, session }
+  );
+
+  return { issueMove: issueMove[0], receiptMove: receiptMove[0] };
+}
+
+module.exports = { applyMovement, applyTransfer };

@@ -1,6 +1,7 @@
 const asyncHandler = require('../middleware/asyncHandler');
 const PurchaseOrder = require('../models/PurchaseOrder');
 const Product = require('../models/Product');
+const Tenant = require('../models/Tenant');
 const { byTenant } = require('../utils/tenantQuery');
 const { applyMovement } = require('../services/stockService');
 const { applyReceiptToAverageCost } = require('../services/costingService');
@@ -325,4 +326,94 @@ exports.receivePurchaseOrder = asyncHandler(async (req, res) => {
     'name sku stock'
   );
   res.json({ success: true, data: attachCostPreview(populated) });
+});
+
+function esc(x) {
+  return String(x ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Printable PO. */
+exports.getPurchaseOrderHtml = asyncHandler(async (req, res) => {
+  const po = await PurchaseOrder.findOne(byTenant(req, { _id: req.params.id }))
+    .populate('vendor')
+    .populate('lines.product')
+    .populate('approvedBy', 'name')
+    .lean();
+  if (!po) {
+    res.status(404).setHeader('Content-Type', 'text/plain');
+    return res.send('Purchase Order not found');
+  }
+
+  const tenant = await Tenant.findById(req.tenantId).select('documentSettings legalName').lean();
+  const ds = tenant?.documentSettings || {};
+  const primaryColor = ds.primaryColor || '#4f46e5';
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>PO ${esc(po.poNumber)}</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:760px;margin:24px auto;padding:16px;color:#111}
+  h1{font-size:1.25rem;margin:0}
+  .muted{color:#555;font-size:12px}
+  table{width:100%;border-collapse:collapse;margin-top:16px}
+  th,td{border:1px solid #ccc;padding:8px;text-align:left}
+  th{background:#f5f5f5;font-size:11px;text-transform:uppercase;border-top:2px solid ${primaryColor}}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .header-table{width:100%;border:none;margin-bottom:20px}
+  .header-table td{border:none;padding:0;vertical-align:top}
+  .logo{max-height:60px;margin-bottom:10px}
+  .total{font-weight:700;color:${primaryColor}}
+  @media print{.no-print{display:none}}
+</style></head><body>
+  <p class="no-print"><a href="#" onclick="window.print()">Print</a></p>
+  
+  <table class="header-table">
+    <tr>
+      <td>
+        ${ds.logoUrl ? `<img src="${esc(ds.logoUrl)}" class="logo" />` : `<h1>${esc(tenant?.legalName || 'Integra ERP')}</h1>`}
+      </td>
+      <td style="text-align:right">
+        <h1 style="color:${primaryColor}">${esc(ds.poHeader || 'PURCHASE ORDER')}</h1>
+        <p class="muted"># ${esc(po.poNumber)}</p>
+      </td>
+    </tr>
+  </table>
+
+  <p><strong>To / ሻጭ</strong><br/>
+  ${esc(po.vendor?.name || po.supplierName)}<br/>
+  ${esc(po.vendor?.address || '')}<br/>
+  ${po.vendor?.email ? `Email: ${esc(po.vendor.email)}` : ''}</p>
+  <hr/>
+  <p><strong>Date:</strong> ${new Date(po.createdAt).toLocaleDateString('en-GB')}<br/>
+  <strong>Status:</strong> ${esc(po.status).toUpperCase()}<br/>
+  ${po.approvedBy ? `<strong>Approved by:</strong> ${esc(po.approvedBy.name)}` : ''}</p>
+  
+  <table>
+    <tr><th>SKU</th><th>Product</th><th class="num">Qty</th><th class="num">Unit Cost</th><th class="num">Total</th></tr>
+    ${po.lines.map(l => {
+      const sub = (l.quantityOrdered || 0) * (l.unitCost || 0);
+      return `<tr>
+        <td>${esc(l.product?.sku || '—')}</td>
+        <td>${esc(l.product?.name || 'Unknown')}</td>
+        <td class="num">${l.quantityOrdered}</td>
+        <td class="num">${Number(l.unitCost || 0).toFixed(2)}</td>
+        <td class="num">${sub.toFixed(2)}</td>
+      </tr>`;
+    }).join('')}
+  </table>
+  
+  <table style="margin-top:8px;max-width:300px;margin-left:auto">
+    <tr class="total">
+      <td>TOTAL</td>
+      <td class="num">${po.lines.reduce((sum, l) => sum + (l.quantityOrdered * l.unitCost), 0).toFixed(2)}</td>
+    </tr>
+  </table>
+
+  ${po.notes ? `<p><strong>Notes:</strong><br/>${esc(po.notes)}</p>` : ''}
+  ${ds.footerText ? `<div style="margin-top:40px;padding-top:10px;border-top:1px solid #eee;font-size:10px;color:#888">${esc(ds.footerText)}</div>` : ''}
+</body></html>`;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
 });

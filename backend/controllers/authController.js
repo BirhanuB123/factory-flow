@@ -157,10 +157,45 @@ const getPermissionsDoc = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Update current user profile
+// @route   PATCH /api/auth/me
+// @access  Private
+const updateMe = asyncHandler(async (req, res) => {
+  const user = await Employee.findById(req.user._id);
+
+  if (user) {
+    user.name = req.body.name || user.name;
+    // We don't allow updating email or role here for security;
+    // those should be done by an admin in the HR module.
+    
+    const updatedUser = await user.save();
+
+    const tenantSubscription = await buildTenantSubscription(updatedUser.tenantId);
+    res.json({
+      _id: updatedUser._id,
+      employeeId: updatedUser.employeeId,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      department: updatedUser.department,
+      tenantId: updatedUser.tenantId,
+      platformRole: updatedUser.platformRole || 'none',
+      mustChangePassword: !!updatedUser.mustChangePassword,
+      permissions: rolePermissions(updatedUser.role),
+      tenantSubscription,
+      tenantModuleFlags: tenantSubscription?.moduleFlags || undefined,
+    });
+  } else {
+    res.status(404);
+    throw new Error('User not found');
+  }
+});
+
 module.exports = {
   loginUser,
   getMe,
   completeInvite,
   changePassword,
   getPermissionsDoc,
+  updateMe,
 };

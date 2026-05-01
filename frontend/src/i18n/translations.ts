@@ -22,6 +22,11 @@ const STRINGS = pack({
     am: "ምርት",
     om: "Oomisha",
   },
+  "nav.productionKiosk": {
+    en: "Production Kiosk",
+    am: "የምርት ኪዮስክ",
+    om: "Kiosk Oomishaa",
+  },
   "nav.jobs": {
     en: "Jobs",
     am: "ስራዎች",
@@ -42,10 +47,40 @@ const STRINGS = pack({
     am: "ደንበኞች",
     om: "Maamiltoota",
   },
+  "nav.crm": {
+    en: "CRM & Quotes",
+    am: "CRM እና ግምት",
+    om: "CRM fi Quotes",
+  },
+  "nav.scheduling": {
+    en: "Scheduling",
+    am: "መርሐግብር",
+    om: "Scheduling",
+  },
+  "nav.quality": {
+    en: "Quality Control",
+    am: "የጥራት ቁጥጥር",
+    om: "To'annoo Qulqullinaa",
+  },
+  "nav.analytics": {
+    en: "Analytics & BI",
+    am: "ትንታኔ እና BI",
+    om: "Analytics fi BI",
+  },
+  "nav.documentTemplates": {
+    en: "Document Templates",
+    am: "የሰነድ ቅጦች",
+    om: "Document Templates",
+  },
   "nav.inventory": {
     en: "Inventory",
     am: "መጋዘን",
     om: "Kuusaa warshaa",
+  },
+  "nav.receivingKiosk": {
+    en: "Receiving Kiosk",
+    am: "የመቀበያ ኪዮስክ",
+    om: "Kiosk Fudhachuu",
   },
   "nav.purchasing": {
     en: "Procurement",
@@ -96,6 +131,11 @@ const STRINGS = pack({
     en: "Navigation",
     am: "አሻራ",
     om: "Daandii",
+  },
+  "nav.productsAndMaterials": {
+    en: "Products & Materials",
+    am: "ምርቶች እና ቁሳቁሶች",
+    om: "Oomishaa fi Meeshaalee",
   },
   "nav.pos": {
     en: "POS",
@@ -480,6 +520,54 @@ const STRINGS = pack({
   },
   "pages.reports.exportCsv": { en: "Export CSV", am: "CSV ላክ", om: "CSV baasi" },
   "pages.platformTenant.back": { en: "Back to platform", am: "ወደ መድረክ ተመለስ", om: "Gara platfoormii deebi'i" },
+
+  // —— CRM ——
+  "crm.title": { en: "CRM & Quotes", am: "CRM እና ግምት", om: "CRM fi Quotes" },
+  "crm.subtitle": { en: "Leads pipeline, sales quotes, and conversion tracking.", am: "የሊድ ቧንቧ መስመር፣ የሽያጭ ግምት እና የልወጣ ክትትል።", om: "Pipeline hordoffii, tilmaama gurgurtaa fi hordoffii jijjiirraa." },
+  "crm.tabLeads": { en: "Leads (Pipeline)", am: "ሊዶች (ቧንቧ)", om: "Leads (Pipeline)" },
+  "crm.tabQuotes": { en: "Quotes", am: "ግምቶች", om: "Quotes" },
+  "crm.newLead": { en: "New Lead", am: "አዲስ ሊድ", om: "Lead haaraa" },
+  "crm.newQuote": { en: "New Quote", am: "አዲስ ግምት", om: "Quote haaraa" },
+  "crm.convertClient": { en: "Convert to Client", am: "ወደ ደንበኛ ቀይር", om: "Gara Maamilaatti jijjiiri" },
+  "crm.convertOrder": { en: "Convert to Order", am: "ወደ ትዕዛዝ ቀይር", om: "Gara Ajajaatti jijjiiri" },
+  "crm.leadStatus": { en: "Lead Status", am: "የሊድ ሁኔታ", om: "Haala Lead" },
+  "crm.expectedValue": { en: "Expected Value", am: "የሚጠበቀው ዋጋ", om: "Gatii eegamu" },
+  "crm.quoteNumber": { en: "Quote #", am: "የግምት ቁጥር", om: "Lakkoofsa Quote" },
+
+  // —— Scheduling ——
+  "scheduling.title": { en: "Production Scheduling", am: "የምርት መርሐግብር", om: "Scheduling oomishaa" },
+  "scheduling.subtitle": { en: "Visualize and manage shop floor workload with Gantt view.", am: "የሥራ ቦታን የሥራ ጫና በጋንት እይታ ይመልከቱ እና ያስተዳድሩ።", om: "Workload mana hojii Gantt view tiin ilaali fi hordofi." },
+  "scheduling.workCenter": { en: "Work Center", am: "የሥራ ማዕከል", om: "Work Center" },
+  "scheduling.dayView": { en: "Day View", am: "የቀን እይታ", om: "Ilaalcha Guyyaa" },
+  "scheduling.weekView": { en: "Week View", am: "የሳምንት እይታ", om: "Ilaalcha Torbee" },
+  "scheduling.today": { en: "Today", am: "ዛሬ", om: "Har'a" },
+  "scheduling.unassigned": { en: "Unassigned", am: "ያልተመደበ", om: "Hinna ramadamne" },
+  "scheduling.saving": { en: "Saving changes...", am: "ለውጦችን በማስቀመጥ ላይ...", om: "Jijjiirama ol-kaayaa jira..." },
+
+  // —— Analytics ——
+  "analytics.title": { en: "Advanced Analytics & BI", am: "የላቀ ትንታኔ እና BI", om: "Analytics fi BI" },
+  "analytics.subtitle": { en: "Strategic insights into factory efficiency and profitability.", am: "ስለ ፋብሪካ ውጤታማነት እና ትርፋማነት ስልታዊ ግንዛቤዎች።", om: "Hubannoo waa'ee bu'aa fi effishensii warshaa." },
+  "analytics.oee": { en: "Machine OEE", am: "የማሽን OEE", om: "Machine OEE" },
+  "analytics.profitability": { en: "Product Profitability", am: "የምርት ትርፋማነት", om: "Bu'aa oomishaa" },
+  "analytics.inventoryTurnover": { en: "Inventory Velocity", am: "የመጋዘን ፍጥነት", om: "Inventory Velocity" },
+  "analytics.availability": { en: "Availability", am: "ተገኝነት", om: "Availability" },
+  "analytics.performance": { en: "Performance", am: "አፈፃፀም", om: "Performance" },
+  "analytics.quality": { en: "Quality", am: "ጥራት", om: "Quality" },
+  "analytics.revenue": { en: "Revenue", am: "ገቢ", om: "Revenue" },
+  "analytics.profit": { en: "Net Profit", am: "የተጣራ ትርፍ", om: "Bu'aa qulqulluu" },
+  "analytics.margin": { en: "Margin", am: "ትርፍ ህዳግ", om: "Margin" },
+  "analytics.turnoverRatio": { en: "Turnover Ratio", am: "የመሸጥ መጠን", om: "Turnover Ratio" },
+  "analytics.dsi": { en: "Days Sales of Inv", am: "የመጋዘን ቀናት", om: "Days Sales of Inv" },
+
+  // —— Document Templates ——
+  "templates.title": { en: "Document Branding", am: "የሰነድ ምልክት", om: "Document Branding" },
+  "templates.subtitle": { en: "Customize the look of your Invoices, POs, and Delivery Notes.", am: "የደረሰኞችዎን እና የትእዛዞችዎን ገጽታ ያብጁ።", om: "Customize the look of your Invoices, POs, and Delivery Notes." },
+  "templates.logo": { en: "Company Logo URL", am: "የኩባንያ አርማ URL", om: "Company Logo URL" },
+  "templates.primaryColor": { en: "Primary Brand Color", am: "ዋና የምርት ቀለም", om: "Primary Brand Color" },
+  "templates.footer": { en: "Footer Text", am: "የግርጌ ጽሑፍ", om: "Footer Text" },
+  "templates.headers": { en: "Document Headers", am: "የሰነድ አርእስቶች", om: "Document Headers" },
+  "templates.preview": { en: "Live Preview", am: "ቀጥታ ቅድመ እይታ", om: "Live Preview" },
+  "templates.save": { en: "Save Templates", am: "ቅጦችን አስቀምጥ", om: "Save Templates" },
 
   "sidebar.version": { en: "v1.0.0 · Integra ERP", am: "v1.0.0 · ኢንተግራ ERP", om: "v1.0.0 · Integra ERP" },
 });

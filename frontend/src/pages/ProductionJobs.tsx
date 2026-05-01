@@ -107,11 +107,13 @@ import {
   CheckCircle2,
   Timer,
   Layers,
+  ClipboardCheck,
 } from "lucide-react";
 
 const ITEMS_PER_PAGE = 8;
 
 import { ProductionMetrics } from "@/components/ProductionMetrics";
+import QualityInspectionDialog from "@/components/QualityInspectionDialog";
 
 const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
   const { t } = useLocale();
@@ -145,6 +147,10 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
   const [issueSerial, setIssueSerial] = useState("");
   const [outputLot, setOutputLot] = useState("");
   const [outputExpiry, setOutputExpiry] = useState("");
+
+  const [qcDialogOpen, setQcDialogOpen] = useState(false);
+  const [qcType, setQcType] = useState<'incoming' | 'in_process' | 'final'>('final');
+  const [qcOpIndex, setQcOpIndex] = useState<number | undefined>(undefined);
 
   const { data: allJobs = [], isLoading } = useQuery({
     queryKey: ["productions"],
@@ -844,6 +850,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                           <th className="text-left p-2">#</th>
                           <th className="text-left p-2">Op</th>
                           <th className="text-left p-2">WC</th>
+                          <th className="text-left p-2">QC</th>
                           <th className="text-left p-2">Status</th>
                           <th className="text-right p-2">Labor</th>
                           <th className="text-right p-2">S/R</th>
@@ -859,6 +866,21 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                             </td>
                             <td className="p-2">{op.workCenterCode || "—"}</td>
                             <td className="p-2">
+                               {(op as any).qualityRequired ? (
+                                 <Badge 
+                                  variant={(op as any).qualityStatus === 'passed' ? 'success' : (op as any).qualityStatus === 'failed' ? 'destructive' : 'warning'}
+                                  className="text-[9px] px-1.5 cursor-pointer"
+                                  onClick={() => {
+                                    setQcType('in_process');
+                                    setQcOpIndex(i);
+                                    setQcDialogOpen(true);
+                                  }}
+                                 >
+                                   {(op as any).qualityStatus || 'Pending'}
+                                 </Badge>
+                               ) : "—"}
+                             </td>
+                             <td className="p-2">
                               <Badge variant="outline" className="text-[10px]">
                                 {op.status}
                               </Badge>
@@ -1209,10 +1231,22 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                 <Button variant="outline" className="rounded-full" onClick={() => setSelectedJob(null)}>
                   Close
                 </Button>
-                <Button className="rounded-full" onClick={() => setUpdateStatusJob(selectedJob)}>
-                  Update status
-                </Button>
-              </DialogFooter>
+                 <Button className="rounded-full" onClick={() => setUpdateStatusJob(selectedJob)}>
+                   Update status
+                 </Button>
+                 <Button 
+                   variant="outline" 
+                   className="rounded-full border-emerald-500/50 text-emerald-600 hover:bg-emerald-50"
+                   onClick={() => {
+                     setQcType('final');
+                     setQcOpIndex(undefined);
+                     setQcDialogOpen(true);
+                   }}
+                 >
+                   <ClipboardCheck className="h-4 w-4 mr-2" />
+                   Final Inspection
+                 </Button>
+               </DialogFooter>
             </>
           )}
         </DialogContent>
@@ -1421,6 +1455,18 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {selectedJob && (
+        <QualityInspectionDialog 
+          open={qcDialogOpen}
+          onOpenChange={setQcDialogOpen}
+          productionJobId={selectedJob._id}
+          operationIndex={qcOpIndex}
+          inspectionType={qcType}
+          jobId={selectedJob.jobId}
+          productName={selectedJob.bom?.name}
+        />
+      )}
     </div>
   );
 };

@@ -6,22 +6,43 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Building2, Mail, ShieldAlert, Briefcase, Fingerprint, Save, Key } from 'lucide-react';
+import { Building2, Mail, ShieldAlert, Briefcase, Fingerprint, Save, Key, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
+  const [name, setName] = React.useState(user?.name || '');
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    if (user?.name) setName(user.name);
+  }, [user?.name]);
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Identity preferences synchronized successfully");
+    if (!name.trim()) {
+      toast.error("Name cannot be empty");
+      return;
+    }
+    
+    setIsSaving(true);
+    const result = await updateProfile({ name });
+    setIsSaving(false);
+
+    if (result.success) {
+      toast.success("Identity preferences synchronized successfully");
+    } else {
+      toast.error(result.message || "Failed to synchronize preferences");
+    }
   };
 
   if (!user) return null;
+
+  const displayRole = user.platformRole === "super_admin" ? "Platform Super Admin" : user.role.replace('_', ' ');
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-8 pb-8 animate-in fade-in duration-500">
@@ -44,7 +65,7 @@ export default function Profile() {
           <div className="h-8 w-px bg-border/70" />
           <div className="text-right">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Tier</p>
-            <p className="text-sm font-semibold text-primary mt-0.5">{user.role.replace('_', ' ').toUpperCase()}</p>
+            <p className="text-sm font-semibold text-primary mt-0.5 uppercase">{displayRole}</p>
           </div>
           <div className="h-8 w-px bg-border/70" />
           <div className="text-right">
@@ -72,7 +93,7 @@ export default function Profile() {
                 <h3 className="text-xl font-bold tracking-tight text-[#1a2744]">{user.name}</h3>
                 <div className="flex items-center justify-center gap-2 mt-1.5">
                   <Badge variant="secondary" className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md border-none bg-primary/10 text-primary">
-                    {user.role.replace('_', ' ')}
+                    {displayRole}
                   </Badge>
                 </div>
               </div>
@@ -122,7 +143,7 @@ export default function Profile() {
               </div>
             </div>
             <p className="mt-4 text-[13px] font-medium leading-relaxed text-muted-foreground">
-              Access is currently synchronized with individual role: <strong className="text-foreground uppercase">{user.role.replace('_', ' ')}</strong>. 
+              Access is currently synchronized with individual role: <strong className="text-foreground uppercase">{displayRole}</strong>. 
               Permissions are immutable without administrative override.
             </p>
           </Card>
@@ -152,7 +173,11 @@ export default function Profile() {
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label className="text-xs font-bold text-muted-foreground/60 ml-1">Full Nomenclature</Label>
-                    <Input value={user.name} disabled className="h-10 rounded-xl bg-secondary/30 border-border/10 font-medium text-sm px-4 focus:bg-background transition-all opacity-80" />
+                    <Input 
+                      value={name} 
+                      onChange={(e) => setName(e.target.value)}
+                      className="h-10 rounded-xl bg-background border-border/10 font-medium text-sm px-4 focus:ring-primary transition-all" 
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-bold text-muted-foreground/60 ml-1">Official ID Code</Label>
@@ -180,8 +205,7 @@ export default function Profile() {
                       <h4 className="text-sm font-bold uppercase tracking-wider text-[#1a2744]">Access Logic Restricted</h4>
                     </div>
                     <p className="text-xs font-medium text-muted-foreground leading-relaxed max-w-xl">
-                      Core identity parameters are locked. For modification of statutory records or authorization capabilities, 
-                      please submit a formal protocol request to the <strong className="text-foreground">Systems Governance Board</strong>.
+                      Statutory records like Employee ID and Department are locked. To modify these, please contact the HR administrator.
                     </p>
                   </div>
                 </div>
@@ -189,9 +213,10 @@ export default function Profile() {
                 <div className="flex justify-end pt-8 mt-auto">
                   <Button 
                     type="submit"
+                    disabled={isSaving || name === user.name}
                     className="h-10 rounded-full bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
                   >
-                    <Save className="h-4 w-4 mr-2" />
+                    {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                     Commit Preferences
                   </Button>
                 </div>

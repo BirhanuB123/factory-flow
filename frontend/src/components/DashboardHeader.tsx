@@ -384,7 +384,9 @@ export function DashboardHeader() {
             <Button variant="ghost" className="flex h-10 items-center gap-2 rounded-full p-1 pl-2 hover:bg-secondary/80">
               <div className="hidden text-right md:mr-1 md:flex md:flex-col">
                 <span className="text-xs font-semibold leading-none">{user?.name || settings.displayName}</span>
-                <span className="text-[10px] text-muted-foreground">{user?.role || settings.role}</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {user?.platformRole === "super_admin" ? "Platform Super Admin" : (user?.role || settings.role)}
+                </span>
               </div>
               <span className="relative inline-flex">
                 <Avatar className="h-9 w-9 border border-border/60 shadow-erp-sm">

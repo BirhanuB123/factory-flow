@@ -17,6 +17,7 @@ const { getBoms, getBom, createBom, updateBom, deleteBom } = require('./controll
 const {
   getJobs,
   getJob,
+  getJobByToken,
   createJob,
   createJobFromOrder,
   reserveJobMaterials,
@@ -143,6 +144,7 @@ const { listPending, approve: approveRequest, reject: rejectRequest } = require(
 const { listAuditLogs } = require('./controllers/auditLogsController');
 const {
   xeroInvoicesCsv,
+  xeroBillsCsv,
   quickBooksBillsCsv,
   qbExpensesCsv,
 } = require('./controllers/integrationsController');
@@ -168,9 +170,25 @@ const {
   receivePurchaseOrder,
   cancelPurchaseOrder,
   patchPurchaseOrderSourcing,
+  getPurchaseOrderHtml,
 } = require('./controllers/purchaseOrderController');
 const { globalSearch } = require('./controllers/searchController');
 const { getMovements, createMovement } = require('./controllers/inventoryMovementController');
+const { getLocations, createLocation, updateLocation, deleteLocation } = require('./controllers/locationController');
+const {
+  getLeads,
+  getLead,
+  createLead,
+  updateLead,
+  deleteLead,
+  convertLeadToClient,
+  getQuotes,
+  getQuote,
+  createQuote,
+  updateQuote,
+  deleteQuote,
+  convertQuoteToOrder,
+} = require('./controllers/crmController');
 const { movementRules, handleValidation } = require('./middleware/validateRequest');
 const authRoutes = require('./routes/authRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
@@ -180,6 +198,10 @@ const billingWebhookRoutes = require('./routes/billingWebhookRoutes');
 const billingRoutes = require('./routes/billingRoutes');
 const posRoutes = require('./routes/posRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const analyticsController = require('./controllers/analyticsController');
+const tenantController = require('./controllers/tenantController');
+const qualityController = require('./controllers/qualityController');
+const purchaseOrderController = require('./controllers/purchaseOrderController');
 const { protect, authorize, authorizePerm, P, requireSuperAdmin } = require('./middleware/authMiddleware');
 const { withTenant } = require('./middleware/tenantMiddleware');
 const { requireTenantModule } = require('./utils/tenantModules');
@@ -296,9 +318,30 @@ app.post(
   createMovement
 );
 
+app.get('/api/inventory/locations', getLocations);
+app.post('/api/inventory/locations', authorizePerm(P.INVENTORY_POST), createLocation);
+app.put('/api/inventory/locations/:id', authorizePerm(P.INVENTORY_POST), updateLocation);
+app.delete('/api/inventory/locations/:id', authorizePerm(P.INVENTORY_POST), deleteLocation);
+
+// CRM Routes
+app.get('/api/crm/leads', getLeads);
+app.get('/api/crm/leads/:id', getLead);
+app.post('/api/crm/leads', createLead);
+app.put('/api/crm/leads/:id', updateLead);
+app.delete('/api/crm/leads/:id', deleteLead);
+app.post('/api/crm/leads/:id/convert', convertLeadToClient);
+
+app.get('/api/crm/quotes', getQuotes);
+app.get('/api/crm/quotes/:id', getQuote);
+app.post('/api/crm/quotes', createQuote);
+app.put('/api/crm/quotes/:id', updateQuote);
+app.delete('/api/crm/quotes/:id', deleteQuote);
+app.post('/api/crm/quotes/:id/convert', convertQuoteToOrder);
+
 app.get('/api/purchase-orders', authorizePerm(P.PO_VIEW), listPurchaseOrders);
 app.post('/api/purchase-orders', authorizePerm(P.PO_CREATE), createPurchaseOrder);
 app.get('/api/purchase-orders/:id', authorizePerm(P.PO_VIEW), getPurchaseOrder);
+app.get('/api/purchase-orders/:id/html', authorizePerm(P.PO_VIEW), getPurchaseOrderHtml);
 app.put('/api/purchase-orders/:id', authorizePerm(P.PO_CREATE), updatePurchaseOrder);
 app.patch(
   '/api/purchase-orders/:id/sourcing',
@@ -347,6 +390,7 @@ app.get(
 );
 app.get('/api/production/kpis', authorizePerm(P.DASHBOARD_MFG), getProductionKpis);
 app.post('/api/production/:id/reserve-materials', reserveJobMaterials);
+app.get('/api/production/job-by-token/:token', getJobByToken);
 app.get('/api/production/:id', authorizePerm(P.DASHBOARD_MFG), getJob);
 app.put('/api/production/:id', updateJob);
 app.delete('/api/production/:id', deleteJob);
@@ -588,6 +632,29 @@ app.post('/api/finance/vendor-bills/from-po/:poId', createVendorBillFromPO);
 app.post('/api/finance/vendor-bills/:id/payments', recordVendorPayment);
 app.post('/api/finance/expenses', createExpense);
 app.get('/api/finance/stats', getFinanceStats);
+
+// Financial Integrations
+app.get('/api/finance/integrations/xero/invoices', authorizePerm(P.FINANCE_READ), xeroInvoicesCsv);
+app.get('/api/finance/integrations/xero/bills', authorizePerm(P.FINANCE_READ), xeroBillsCsv);
+app.get('/api/finance/integrations/quickbooks/bills', authorizePerm(P.FINANCE_READ), quickBooksBillsCsv);
+app.get('/api/finance/integrations/quickbooks/expenses', authorizePerm(P.FINANCE_READ), qbExpensesCsv);
+
+// Analytics & BI
+app.get('/api/analytics/oee', authorizePerm(P.DASHBOARD_VIEW), analyticsController.getOeeAnalytics);
+app.get('/api/analytics/profitability', authorizePerm(P.DASHBOARD_VIEW), analyticsController.getProductProfitability);
+app.get('/api/analytics/inventory-turnover', authorizePerm(P.DASHBOARD_VIEW), analyticsController.getInventoryTurnover);
+
+// Quality Control
+app.get('/api/quality/checklists', protect, qualityController.listChecklists);
+app.post('/api/quality/checklists', protect, qualityController.createChecklist);
+app.patch('/api/quality/checklists/:id', protect, qualityController.updateChecklist);
+app.get('/api/quality/checklists/search', protect, qualityController.getChecklistForJob);
+app.post('/api/quality/inspections/submit', protect, qualityController.submitInspection);
+
+// Tenant Settings
+app.get('/api/tenant/settings', protect, tenantController.getSettings);
+app.patch('/api/tenant/document-settings', protect, tenantController.updateDocumentSettings);
+app.patch('/api/tenant/info', protect, tenantController.updateTenantInfo);
 
 app.use('/api/notifications', notificationRoutes);
 

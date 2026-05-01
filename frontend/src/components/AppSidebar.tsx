@@ -3,6 +3,7 @@ import {
   Wrench,
   Package,
   FileStack,
+  CalendarDays,
   ShoppingCart,
   Users,
   UserCog,
@@ -12,10 +13,21 @@ import {
   Truck,
   PackageCheck,
   Layers,
-  Shield,
   BarChart3,
   Store,
+  QrCode,
+  ScanBarcode,
+  LayoutTemplate,
+  Shield,
+  FileBarChart,
+  ClipboardCheck,
+  ChevronRight,
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,17 +45,50 @@ import {
   SidebarMenuItem,
   SidebarHeader,
   SidebarFooter,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 /** Nav: optional `permissions` (any) or `roles` (legacy self-service). No filter = any authenticated user. */
-const allNavItems = [
+type NavItem = {
+  titleKey: string;
+  url?: string;
+  icon: any;
+  permissions?: string[];
+  roles?: readonly string[];
+  platformSuperAdmin?: boolean;
+  items?: readonly {
+    titleKey: string;
+    url: string;
+    icon: any;
+    permissions?: string[];
+    roles?: readonly string[];
+  }[];
+};
+
+const allNavItems: readonly NavItem[] = [
   { titleKey: "nav.dashboard", url: "/", icon: LayoutDashboard, permissions: [PERMS.DASHBOARD_VIEW] },
-  { titleKey: "nav.production", url: "/production", icon: Factory, permissions: [PERMS.DASHBOARD_MFG] },
+  { titleKey: "nav.analytics", url: "/analytics", icon: BarChart3, permissions: [PERMS.DASHBOARD_VIEW] },
+  { titleKey: "nav.reports", url: "/reports", icon: FileBarChart, permissions: [PERMS.DASHBOARD_VIEW] },
+
+  {
+    titleKey: "nav.productsAndMaterials",
+    icon: Package,
+    items: [
+      { titleKey: "nav.production", url: "/production", icon: Factory, permissions: [PERMS.DASHBOARD_MFG] },
+      { titleKey: "nav.productionKiosk", url: "/kiosk/production", icon: QrCode, permissions: [PERMS.DASHBOARD_MFG] },
+      { titleKey: "nav.scheduling", url: "/scheduling", icon: CalendarDays, permissions: [PERMS.DASHBOARD_MFG] },
+      { titleKey: "nav.receivingKiosk", url: "/kiosk/receiving", icon: ScanBarcode, permissions: [PERMS.DASHBOARD_INVENTORY] },
+    ],
+  },
+
   { titleKey: "nav.jobs", url: "/production-jobs", icon: Wrench, permissions: [PERMS.DASHBOARD_MFG] },
   { titleKey: "nav.boms", url: "/boms", icon: FileStack, permissions: [PERMS.DASHBOARD_MFG] },
   { titleKey: "nav.orders", url: "/orders", icon: ShoppingCart, roles: ["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"] as const },
+  { titleKey: "nav.crm", url: "/crm", icon: LayoutTemplate, permissions: [PERMS.DASHBOARD_VIEW] },
   { titleKey: "nav.pos", url: "/pos", icon: Store, permissions: [PERMS.POS_VIEW] },
   { titleKey: "nav.clients", url: "/clients", icon: Users, roles: ["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"] as const },
   { titleKey: "nav.inventory", url: "/inventory", icon: Package, permissions: [PERMS.DASHBOARD_INVENTORY] },
@@ -69,16 +114,23 @@ const allNavItems = [
     icon: Shield,
     platformSuperAdmin: true,
   },
-  { titleKey: "nav.reports", url: "/reports", icon: BarChart3, permissions: [PERMS.DASHBOARD_VIEW] },
+  { titleKey: "nav.documentTemplates", url: "/document-templates", icon: LayoutTemplate, roles: ["Admin", "finance_head"] as const },
+  { titleKey: "nav.quality", url: "/quality-settings", icon: ClipboardCheck, roles: ["Admin", "warehouse_head"] as const },
   { titleKey: "nav.settings", url: "/settings", icon: Settings },
-] as const;
+];
 
-const routeModuleMap: Partial<Record<(typeof allNavItems)[number]["url"], TenantModuleKey>> = {
+const routeModuleMap: Partial<Record<string, TenantModuleKey>> = {
   "/production": "manufacturing",
+  "/kiosk/production": "manufacturing",
   "/production-jobs": "manufacturing",
+  "/scheduling": "manufacturing",
   "/boms": "manufacturing",
   "/inventory": "inventory",
+  "/kiosk/receiving": "inventory",
   "/orders": "sales",
+  "/analytics": "sales",
+  "/reports": "sales",
+  "/crm": "sales",
   "/clients": "sales",
   "/shipments": "sales",
   "/purchase-orders": "procurement",
@@ -96,24 +148,56 @@ export function AppSidebar() {
   const { user, can } = useAuth();
   const { t } = useLocale();
 
-  const navItems = allNavItems.filter((item) => {
-    if ("platformSuperAdmin" in item && item.platformSuperAdmin) {
-      return user?.platformRole === "super_admin";
-    }
-    const moduleKey = routeModuleMap[item.url];
-    if (moduleKey && user?.tenantModuleFlags?.[moduleKey] === false) {
-      return false;
-    }
-    if ("permissions" in item && item.permissions?.length) {
-      return item.permissions.some((p) => can(p));
-    }
-    if ("roles" in item && item.roles) {
-      const allowed = item.roles as readonly string[];
-      if (user && allowed.includes(user.role)) return true;
-      return false;
-    }
-    return true;
-  });
+  const navItems = allNavItems
+    .map((item) => {
+      // Filter the item itself
+      const visible = (() => {
+        if ("platformSuperAdmin" in item && item.platformSuperAdmin) {
+          return user?.platformRole === "super_admin";
+        }
+        if (item.url) {
+          const moduleKey = routeModuleMap[item.url];
+          if (moduleKey && user?.tenantModuleFlags?.[moduleKey] === false) {
+            return false;
+          }
+        }
+        if ("permissions" in item && item.permissions?.length) {
+          if (!item.permissions.some((p) => can(p))) return false;
+        }
+        if ("roles" in item && item.roles) {
+          const allowed = item.roles as readonly string[];
+          if (!user || !allowed.includes(user.role)) return false;
+        }
+        return true;
+      })();
+
+      if (!visible) return null;
+
+      // Filter sub-items if any
+      if (item.items) {
+        const filteredSubItems = item.items.filter((sub) => {
+          const subModuleKey = routeModuleMap[sub.url];
+          if (subModuleKey && user?.tenantModuleFlags?.[subModuleKey] === false) {
+            return false;
+          }
+          if (sub.permissions?.length) {
+            if (!sub.permissions.some((p) => can(p))) return false;
+          }
+          if (sub.roles) {
+            const allowed = sub.roles as readonly string[];
+            if (!user || !allowed.includes(user.role)) return false;
+          }
+          return true;
+        });
+
+        if (filteredSubItems.length === 0) return null;
+
+        return { ...item, items: filteredSubItems };
+      }
+
+      return item;
+    })
+    .filter(Boolean) as NavItem[];
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border z-20">
@@ -150,10 +234,65 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
               {navItems.map((item) => {
-                const active =
-                  item.url === "/"
+                const active = item.url
+                  ? item.url === "/"
                     ? currentPath === "/"
-                    : currentPath === item.url || currentPath.startsWith(item.url + "/");
+                    : currentPath === item.url || currentPath.startsWith(item.url + "/")
+                  : item.items?.some((sub) => currentPath === sub.url || currentPath.startsWith(sub.url + "/"));
+
+                if (item.items) {
+                  return (
+                    <Collapsible
+                      key={`${item.titleKey}`}
+                      asChild
+                      defaultOpen={active}
+                      className="group/collapsible"
+                    >
+                      <SidebarMenuItem>
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton tooltip={t(item.titleKey)} size="lg" className="h-11 rounded-xl px-3">
+                            <item.icon
+                              className={[
+                                "!h-[18px] !w-[18px] shrink-0",
+                                active ? "text-[hsl(221,83%,53%)]" : "text-sidebar-muted",
+                              ].join(" ")}
+                            />
+                            {!collapsed && (
+                              <>
+                                <span className="truncate">{t(item.titleKey)}</span>
+                                <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                              </>
+                            )}
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {item.items.map((subItem) => {
+                              const subActive =
+                                currentPath === subItem.url || currentPath.startsWith(subItem.url + "/");
+                              return (
+                                <SidebarMenuSubItem key={subItem.url}>
+                                  <SidebarMenuSubButton asChild isActive={subActive}>
+                                    <NavLink to={subItem.url}>
+                                      <subItem.icon
+                                        className={[
+                                          "!h-[16px] !w-[16px] shrink-0",
+                                          subActive ? "text-[hsl(221,83%,53%)]" : "text-sidebar-muted",
+                                        ].join(" ")}
+                                      />
+                                      <span>{t(subItem.titleKey)}</span>
+                                    </NavLink>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              );
+                            })}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  );
+                }
+
                 return (
                   <SidebarMenuItem key={`${item.titleKey}-${item.url}`}>
                     <SidebarMenuButton
@@ -163,10 +302,10 @@ export function AppSidebar() {
                       className="h-11 rounded-xl px-3 transition-colors data-[active=true]:shadow-sm"
                     >
                       <NavLink
-                        to={item.url}
+                        to={item.url!}
                         end
                         className="text-sidebar-foreground/80 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground"
-                        activeClassName="!bg-sidebar-accent !text-[hsl(221,83%,45%)] !font-semibold"
+                        activeClassName="!bg-sidebar-accent !text-[hsl(221,83%,70%)] !font-semibold"
                       >
                         <item.icon
                           className={[

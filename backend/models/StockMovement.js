@@ -9,6 +9,8 @@ const MOVEMENT_TYPES = [
   'production_output',
   'production_issue',
   'production_return',
+  'transfer_out',
+  'transfer_in',
 ];
 
 const StockMovementSchema = new mongoose.Schema({
@@ -23,6 +25,17 @@ const StockMovementSchema = new mongoose.Schema({
     ref: 'Product',
     required: true,
     index: true,
+  },
+  location: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Location',
+    default: null,
+    index: true,
+  },
+  toLocation: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Location',
+    default: null,
   },
   /** Positive = stock increase, negative = decrease */
   delta: {

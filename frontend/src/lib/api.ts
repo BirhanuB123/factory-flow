@@ -170,6 +170,12 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+export const authApi = {
+  updateProfile: async (data: { name: string }) => {
+    const response = await api.patch('/auth/me', data);
+    return response.data;
+  },
+};
 
 export const inventoryApi = {
   getAll: async () => {
@@ -232,6 +238,10 @@ export const productionApi = {
   },
   getOne: async (id: string) => {
     const response = await api.get(`/production/${id}`);
+    return response.data.data;
+  },
+  getByToken: async (token: string) => {
+    const response = await api.get(`/production/job-by-token/${token}`);
     return response.data.data;
   },
   create: async (data: any) => {
@@ -377,6 +387,63 @@ export const manufacturingApi = {
   },
   listDowntime: async (params?: { assetId?: string; limit?: number }) => {
     const response = await api.get('/manufacturing/downtime', { params });
+    return response.data.data;
+  },
+  getWorkCenters: async () => {
+    const response = await api.get('/manufacturing/work-centers');
+    return response.data.data;
+  },
+};
+
+export const analyticsApi = {
+  getOee: async (params?: any) => {
+    const response = await api.get('/analytics/oee', { params });
+    return response.data.data;
+  },
+  getProfitability: async (params?: any) => {
+    const response = await api.get('/analytics/profitability', { params });
+    return response.data.data;
+  },
+  getInventoryTurnover: async (params?: any) => {
+    const response = await api.get('/analytics/inventory-turnover', { params });
+    return response.data.data;
+  },
+};
+
+export const tenantApi = {
+  getSettings: async () => {
+    const response = await api.get('/tenant/settings');
+    return response.data.data;
+  },
+  updateDocumentSettings: async (documentSettings: any) => {
+    const response = await api.patch('/tenant/document-settings', { documentSettings });
+    return response.data.data;
+  },
+  updateInfo: async (info: any) => {
+    const response = await api.patch('/tenant/info', info);
+    return response.data.data;
+  },
+};
+
+export const qualityApi = {
+  getChecklists: async () => {
+    const response = await api.get('/quality/checklists');
+    return response.data.data;
+  },
+  createChecklist: async (data: any) => {
+    const response = await api.post('/quality/checklists', data);
+    return response.data.data;
+  },
+  updateChecklist: async (id: string, data: any) => {
+    const response = await api.patch(`/quality/checklists/${id}`, data);
+    return response.data.data;
+  },
+  searchChecklists: async (type: string) => {
+    const response = await api.get('/quality/checklists/search', { params: { type } });
+    return response.data.data;
+  },
+  submitInspection: async (data: any) => {
+    const response = await api.post('/quality/inspections/submit', data);
     return response.data.data;
   },
 };
@@ -690,6 +757,81 @@ export const inventoryMovementsApi = {
     return response.data.data;
   },
 };
+
+export const locationsApi = {
+  getAll: async () => {
+    const response = await api.get('/inventory/locations');
+    return response.data.data;
+  },
+  create: async (data: { name: string; type?: string; parentLocation?: string | null }) => {
+    const response = await api.post('/inventory/locations', data);
+    return response.data.data;
+  },
+  update: async (id: string, data: { name?: string; type?: string; parentLocation?: string | null }) => {
+    const response = await api.put(`/inventory/locations/${id}`, data);
+    return response.data.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/inventory/locations/${id}`);
+    return response.data;
+  },
+};
+
+export const crmApi = {
+  leads: {
+    getAll: async () => {
+      const response = await api.get('/crm/leads');
+      return response.data.data;
+    },
+    getOne: async (id: string) => {
+      const response = await api.get(`/crm/leads/${id}`);
+      return response.data.data;
+    },
+    create: async (data: any) => {
+      const response = await api.post('/crm/leads', data);
+      return response.data.data;
+    },
+    update: async (id: string, data: any) => {
+      const response = await api.put(`/crm/leads/${id}`, data);
+      return response.data.data;
+    },
+    delete: async (id: string) => {
+      const response = await api.delete(`/crm/leads/${id}`);
+      return response.data;
+    },
+    convert: async (id: string) => {
+      const response = await api.post(`/crm/leads/${id}/convert`);
+      return response.data.data;
+    },
+  },
+  quotes: {
+    getAll: async () => {
+      const response = await api.get('/crm/quotes');
+      return response.data.data;
+    },
+    getOne: async (id: string) => {
+      const response = await api.get(`/crm/quotes/${id}`);
+      return response.data.data;
+    },
+    create: async (data: any) => {
+      const response = await api.post('/crm/quotes', data);
+      return response.data.data;
+    },
+    update: async (id: string, data: any) => {
+      const response = await api.put(`/crm/quotes/${id}`, data);
+      return response.data.data;
+    },
+    delete: async (id: string) => {
+      const response = await api.delete(`/crm/quotes/${id}`);
+      return response.data;
+    },
+    convert: async (id: string) => {
+      const response = await api.post(`/crm/quotes/${id}/convert`);
+      return response.data.data;
+    },
+  },
+};
+
 
 export type APAgingPayload = {
   buckets: {

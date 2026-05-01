@@ -53,6 +53,16 @@ const tenantSchema = new mongoose.Schema(
       finance: { type: Boolean, default: true },
       hr: { type: Boolean, default: true },
     },
+    documentSettings: {
+      logoUrl: { type: String, default: '' },
+      primaryColor: { type: String, default: '#4f46e5' },
+      fontFamily: { type: String, default: 'Inter, sans-serif' },
+      footerText: { type: String, default: '' },
+      invoiceHeader: { type: String, default: 'TAX INVOICE' },
+      poHeader: { type: String, default: 'PURCHASE ORDER' },
+      dnHeader: { type: String, default: 'DELIVERY NOTE' },
+      showTaxId: { type: Boolean, default: true },
+    },
   },
   { timestamps: true }
 );

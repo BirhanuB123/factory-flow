@@ -20,11 +20,20 @@ const QualityInspectionSchema = new mongoose.Schema({
   purchaseOrder: { type: mongoose.Schema.Types.ObjectId, ref: 'PurchaseOrder', default: null },
   poLineIndex: Number,
   productionJob: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductionJob', default: null },
+  operationIndex: { type: Number, default: null },
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
+  checklist: { type: mongoose.Schema.Types.ObjectId, ref: 'QualityChecklist', default: null },
+  checklistResults: [
+    {
+      prompt: String,
+      value: mongoose.Schema.Types.Mixed,
+      status: { type: String, enum: ['pass', 'fail', 'na'], default: 'pass' },
+    }
+  ],
   lotNumber: String,
   quantityInspected: Number,
   notes: String,
-  inspectedAt: Date,
+  inspectedAt: { type: Date, default: Date.now },
   inspector: String,
   createdAt: { type: Date, default: Date.now },
 });

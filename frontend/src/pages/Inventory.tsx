@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { inventoryApi, inventoryMovementsApi, inventoryAlertsApi, downloadReportCsv } from "@/lib/api";
+import { inventoryApi, inventoryMovementsApi, inventoryAlertsApi, downloadReportCsv, locationsApi } from "@/lib/api";
 import { submitInventoryMovementWhenOnline } from "@/lib/offlineCriticalActions";
 import { SavedViewsBar } from "@/components/SavedViewsBar";
 import { useCurrency } from "@/hooks/use-currency";
@@ -39,12 +39,14 @@ import {
   ChevronRight,
   Layers,
   CheckCircle2,
+  MapPin,
 } from "lucide-react";
 import { InventoryMetrics } from "@/components/InventoryMetrics";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocale } from "@/contexts/LocaleContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InventoryAgingTab } from "@/components/inventory/InventoryAgingTab";
+import { LocationsTab } from "@/components/inventory/LocationsTab";
 import { Clock } from "lucide-react";
 type StockLevel = "In Stock" | "Low Stock" | "Out of Stock";
 
@@ -128,13 +130,15 @@ export default function Inventory({
   const [movFilterProductId, setMovFilterProductId] = useState("");
   const [movDialogOpen, setMovDialogOpen] = useState(false);
   const [movProductId, setMovProductId] = useState("");
-  const [movKind, setMovKind] = useState<"receipt" | "issue" | "adjustment">("receipt");
+  const [movKind, setMovKind] = useState<"receipt" | "issue" | "adjustment" | "transfer">("receipt");
   const [movQty, setMovQty] = useState(1);
   const [movNote, setMovNote] = useState("");
   const [movLotNumber, setMovLotNumber] = useState("");
   const [movBatchNumber, setMovBatchNumber] = useState("");
   const [movSerialNumber, setMovSerialNumber] = useState("");
   const [movExpirationDate, setMovExpirationDate] = useState("");
+  const [movLocationId, setMovLocationId] = useState("");
+  const [movToLocationId, setMovToLocationId] = useState("");
 
   useEffect(() => {
     if (embedded) return;
@@ -164,6 +168,12 @@ export default function Inventory({
   const { data: inventoryData = [], isLoading } = useQuery({
     queryKey: ['inventory'],
     queryFn: inventoryApi.getAll,
+  });
+
+  const { data: locations = [] } = useQuery({
+    queryKey: ["inventory-locations"],
+    queryFn: locationsApi.getAll,
+    enabled: !embedded,
   });
 
   const createMutation = useMutation({
@@ -245,6 +255,8 @@ export default function Inventory({
       setMovBatchNumber("");
       setMovSerialNumber("");
       setMovExpirationDate("");
+      setMovLocationId("");
+      setMovToLocationId("");
     },
     onError: (err: { response?: { data?: { message?: string } } }) => {
       toast.error(err?.response?.data?.message || "Movement failed");
@@ -757,6 +769,13 @@ export default function Inventory({
               <Clock className="mr-2 h-4 w-4" />
               Inventory Aging
             </TabsTrigger>
+            <TabsTrigger
+              value="locations"
+              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+            >
+              <MapPin className="mr-2 h-4 w-4" />
+              Locations
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="register" className="mt-0 space-y-6 focus-visible:outline-none">
@@ -859,6 +878,10 @@ export default function Inventory({
 
           <TabsContent value="aging" className="mt-0 focus-visible:outline-none">
             <InventoryAgingTab />
+          </TabsContent>
+
+          <TabsContent value="locations" className="mt-0 focus-visible:outline-none">
+            <LocationsTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -1279,9 +1302,51 @@ export default function Inventory({
                   <SelectItem value="receipt">Receipt (inbound)</SelectItem>
                   <SelectItem value="issue">Issue (outbound)</SelectItem>
                   <SelectItem value="adjustment">Adjustment (signed)</SelectItem>
+                  <SelectItem value="transfer">Transfer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            
+            <div className={`grid ${movKind === 'transfer' ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+              <div className="space-y-2">
+                <Label>{movKind === 'transfer' ? 'From Location' : 'Location'}</Label>
+                <Select
+                  value={movLocationId || "__none__"}
+                  onValueChange={(v) => setMovLocationId(v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Default (None)</SelectItem>
+                    {locations.map((loc: any) => (
+                      <SelectItem key={loc._id} value={loc._id}>{loc.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {movKind === 'transfer' && (
+                <div className="space-y-2">
+                  <Label>To Location</Label>
+                  <Select
+                    value={movToLocationId || "__none__"}
+                    onValueChange={(v) => setMovToLocationId(v === "__none__" ? "" : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Select destination</SelectItem>
+                      {locations.map((loc: any) => (
+                        <SelectItem key={loc._id} value={loc._id}>{loc.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label>{movKind === "adjustment" ? "Delta (+/−)" : "Quantity"}</Label>
               <Input
@@ -1397,6 +1462,8 @@ export default function Inventory({
                   batchNumber: movBatchNumber,
                   serialNumber: movSerialNumber,
                   expirationDate: movExpirationDate || null,
+                  locationId: movLocationId || null,
+                  toLocationId: movToLocationId || null,
                 } as any);
               }}
             >

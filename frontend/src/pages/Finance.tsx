@@ -522,6 +522,34 @@ export default function Finance() {
               >
                 Production
               </DropdownMenuItem>
+              <div className="h-px bg-muted my-1" />
+              <div className="px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">
+                Integrations
+              </div>
+              <DropdownMenuItem
+                className="text-xs font-bold text-blue-600"
+                onClick={() => downloadReportCsv("/finance/integrations/xero/invoices", `xero-sales-${Date.now()}.csv`)}
+              >
+                Xero Sales Invoices
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-xs font-bold text-blue-600"
+                onClick={() => downloadReportCsv("/finance/integrations/xero/bills", `xero-bills-${Date.now()}.csv`)}
+              >
+                Xero Purchase Bills
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-xs font-bold text-emerald-600"
+                onClick={() => downloadReportCsv("/finance/integrations/quickbooks/bills", `qb-bills-${Date.now()}.csv`)}
+              >
+                QuickBooks Bills
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-xs font-bold text-emerald-600"
+                onClick={() => downloadReportCsv("/finance/integrations/quickbooks/expenses", `qb-expenses-${Date.now()}.csv`)}
+              >
+                QuickBooks Expenses
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           {canFinance && (

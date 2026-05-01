@@ -13,29 +13,39 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { AuthProvider } from "./contexts/AuthContext";
 import { LocaleProvider } from "./contexts/LocaleContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import Login from "./pages/Login.tsx";
-import InviteAccept from "./pages/InviteAccept.tsx";
-import ChangePassword from "./pages/ChangePassword.tsx";
-import Profile from "./pages/Profile.tsx";
-import Index from "./pages/Index.tsx";
-import Reports from "./pages/Reports.tsx";
-import ProductionJobs from "./pages/ProductionJobs.tsx";
-import Inventory from "./pages/Inventory.tsx";
-import Boms from "./pages/Boms.tsx";
-import Orders from "./pages/Orders.tsx";
-import Clients from "./pages/Clients.tsx";
-import Hr from "./pages/Hr.tsx";
-import EmployeeHr from "./pages/EmployeeHr.tsx";
-import Finance from "./pages/Finance.tsx";
-import Production from "./pages/Production.tsx";
-import PurchaseOrders from "./pages/PurchaseOrders.tsx";
-import Shipments from "./pages/Shipments.tsx";
-import Settings from "./pages/Settings.tsx";
-import SmeBundle from "./pages/SmeBundle.tsx";
-import NotFound from "./pages/NotFound.tsx";
-import PlatformAdmin from "./pages/PlatformAdmin.tsx";
-import PlatformTenantDetail from "./pages/PlatformTenantDetail.tsx";
-import Pos from "./pages/Pos.tsx";
+import { LoadingLogo } from "@/components/ui/LoadingLogo";
+
+const Login = React.lazy(() => import("./pages/Login.tsx"));
+const InviteAccept = React.lazy(() => import("./pages/InviteAccept.tsx"));
+const ChangePassword = React.lazy(() => import("./pages/ChangePassword.tsx"));
+const Profile = React.lazy(() => import("./pages/Profile.tsx"));
+const Index = React.lazy(() => import("./pages/Index.tsx"));
+const Reports = React.lazy(() => import("./pages/Reports.tsx"));
+const ProductionJobs = React.lazy(() => import("./pages/ProductionJobs.tsx"));
+const Inventory = React.lazy(() => import("./pages/Inventory.tsx"));
+const Boms = React.lazy(() => import("./pages/Boms.tsx"));
+const Orders = React.lazy(() => import("./pages/Orders.tsx"));
+const Clients = React.lazy(() => import("./pages/Clients.tsx"));
+const Hr = React.lazy(() => import("./pages/Hr.tsx"));
+const EmployeeHr = React.lazy(() => import("./pages/EmployeeHr.tsx"));
+const Finance = React.lazy(() => import("./pages/Finance.tsx"));
+const Production = React.lazy(() => import("./pages/Production.tsx"));
+const PurchaseOrders = React.lazy(() => import("./pages/PurchaseOrders.tsx"));
+const Shipments = React.lazy(() => import("./pages/Shipments.tsx"));
+const Settings = React.lazy(() => import("./pages/Settings.tsx"));
+const SmeBundle = React.lazy(() => import("./pages/SmeBundle.tsx"));
+const NotFound = React.lazy(() => import("./pages/NotFound.tsx"));
+const PlatformAdmin = React.lazy(() => import("./pages/PlatformAdmin.tsx"));
+const PlatformTenantDetail = React.lazy(() => import("./pages/PlatformTenantDetail.tsx"));
+const Pos = React.lazy(() => import("./pages/Pos.tsx"));
+const ProductionKiosk = React.lazy(() => import("./pages/kiosk/ProductionKiosk.tsx"));
+const ReceivingKiosk = React.lazy(() => import("./pages/kiosk/ReceivingKiosk.tsx"));
+const Crm = React.lazy(() => import("./pages/Crm.tsx"));
+const Scheduling = React.lazy(() => import("./pages/Scheduling.tsx"));
+const Analytics = React.lazy(() => import("./pages/Analytics.tsx"));
+const DocumentTemplates = React.lazy(() => import("./pages/DocumentTemplates.tsx"));
+const QualitySettings = React.lazy(() => import("./pages/QualitySettings.tsx"));
+import { KioskLayout } from "./components/KioskLayout";
 import { SuperAdminRoute } from "./components/SuperAdminRoute";
 import { MustChangePasswordGate } from "./components/MustChangePasswordGate";
 import { TenantModuleRoute } from "./components/TenantModuleRoute";
@@ -215,7 +225,9 @@ const Layout = () => {
           <OfflineQueueBanner />
           <AnnouncementBanner />
           <main className="min-h-0 min-w-0 flex-1 overflow-auto bg-background p-3 sm:p-4 lg:p-6">
-            <Outlet />
+            <React.Suspense fallback={<div className="flex h-full w-full items-center justify-center py-12"><LoadingLogo size={48} /></div>}>
+              <Outlet />
+            </React.Suspense>
           </main>
         </div>
       </div>
@@ -232,73 +244,85 @@ const App = () => {
         <BrowserRouter>
           <AuthProvider>
             <LocaleProvider>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/invite" element={<InviteAccept />} />
-                <Route element={<ProtectedRoute />}>
-                  <Route element={<MustChangePasswordGate />}>
-                    <Route element={<Layout />}>
-                      <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_VIEW]} />}>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/reports" element={<Reports />} />
+              <React.Suspense fallback={<div className="flex h-screen w-screen items-center justify-center"><LoadingLogo size={64} /></div>}>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/invite" element={<InviteAccept />} />
+                  <Route element={<ProtectedRoute />}>
+                    <Route element={<MustChangePasswordGate />}>
+                      <Route element={<KioskLayout />}>
+                        <Route path="/kiosk/production/:token?" element={<ProductionKiosk />} />
+                        <Route path="/kiosk/receiving" element={<ReceivingKiosk />} />
                       </Route>
-                      <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_MFG]} />}>
-                        <Route element={<TenantModuleRoute moduleKey="manufacturing" moduleLabel="Manufacturing & production" />}>
-                          <Route path="/production" element={<Production />} />
-                          <Route path="/production-jobs" element={<ProductionJobs />} />
-                          <Route path="/boms" element={<Boms />} />
+
+                      <Route element={<Layout />}>
+                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_VIEW]} />}>
+                          <Route path="/" element={<Index />} />
+                          <Route path="/analytics" element={<Analytics />} />
+                          <Route path="/reports" element={<Reports />} />
                         </Route>
+                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_MFG]} />}>
+                          <Route element={<TenantModuleRoute moduleKey="manufacturing" moduleLabel="Manufacturing & production" />}>
+                            <Route path="/production" element={<Production />} />
+                            <Route path="/production-jobs" element={<ProductionJobs />} />
+                            <Route path="/scheduling" element={<Scheduling />} />
+                            <Route path="/boms" element={<Boms />} />
+                          </Route>
+                        </Route>
+                        <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
+                          <Route element={<ProtectedRoute requiredPermissions={[PERMS.POS_VIEW]} />}>
+                            <Route path="/pos" element={<Pos />} />
+                          </Route>
+                          <Route element={<ProtectedRoute allowedRoles={["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"]} />}>
+                            <Route path="/orders" element={<Orders />} />
+                            <Route path="/crm" element={<Crm />} />
+                            <Route path="/clients" element={<Clients />} />
+                          </Route>
+                        </Route>
+                        <Route element={<TenantModuleRoute moduleKey="inventory" moduleLabel="Inventory & stock" />}>
+                          <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_INVENTORY]} />}>
+                            <Route path="/inventory" element={<Inventory />} />
+                          </Route>
+                        </Route>
+                        <Route element={<TenantModuleRoute moduleKey="procurement" moduleLabel="Procurement & POs" />}>
+                          <Route element={<ProtectedRoute requiredPermissions={[PERMS.PO_VIEW]} />}>
+                            <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                          </Route>
+                        </Route>
+                        <Route element={<TenantModuleRoute moduleKey="hr" moduleLabel="HR & payroll" />}>
+                          <Route element={<ProtectedRoute requiredPermissions={[PERMS.HR_FULL]} />}>
+                            <Route path="/hr" element={<Hr />} />
+                          </Route>
+                          <Route element={<ProtectedRoute allowedRoles={['employee']} />}>
+                            <Route path="/my-hr" element={<EmployeeHr />} />
+                          </Route>
+                        </Route>
+                        <Route element={<TenantModuleRoute moduleKey="finance" moduleLabel="Finance & AP/AR" />}>
+                          <Route element={<ProtectedRoute requiredPermissions={[PERMS.FINANCE_READ]} />}>
+                            <Route path="/finance" element={<Finance />} />
+                          </Route>
+                        </Route>
+                        <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
+                          <Route element={<ProtectedRoute requiredPermissions={[PERMS.SHIPMENTS_VIEW]} />}>
+                            <Route path="/shipments" element={<Shipments />} />
+                          </Route>
+                        </Route>
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="/account/change-password" element={<ChangePassword />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/document-templates" element={<DocumentTemplates />} />
+                        <Route path="/quality-settings" element={<QualitySettings />} />
+                        <Route path="/sme-bundle" element={<SmeBundle />} />
+                        <Route element={<SuperAdminRoute />}>
+                          <Route path="/platform" element={<PlatformAdmin />} />
+                          <Route path="/platform/tenants/:tenantId" element={<PlatformTenantDetail />} />
+                        </Route>
+                        <Route path="*" element={<NotFound />} />
                       </Route>
-                      <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
-                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.POS_VIEW]} />}>
-                          <Route path="/pos" element={<Pos />} />
-                        </Route>
-                        <Route element={<ProtectedRoute allowedRoles={["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"]} />}>
-                          <Route path="/orders" element={<Orders />} />
-                          <Route path="/clients" element={<Clients />} />
-                        </Route>
-                      </Route>
-                      <Route element={<TenantModuleRoute moduleKey="inventory" moduleLabel="Inventory & stock" />}>
-                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_INVENTORY]} />}>
-                          <Route path="/inventory" element={<Inventory />} />
-                        </Route>
-                      </Route>
-                      <Route element={<TenantModuleRoute moduleKey="procurement" moduleLabel="Procurement & POs" />}>
-                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.PO_VIEW]} />}>
-                          <Route path="/purchase-orders" element={<PurchaseOrders />} />
-                        </Route>
-                      </Route>
-                      <Route element={<TenantModuleRoute moduleKey="hr" moduleLabel="HR & payroll" />}>
-                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.HR_FULL]} />}>
-                          <Route path="/hr" element={<Hr />} />
-                        </Route>
-                        <Route element={<ProtectedRoute allowedRoles={['employee']} />}>
-                          <Route path="/my-hr" element={<EmployeeHr />} />
-                        </Route>
-                      </Route>
-                      <Route element={<TenantModuleRoute moduleKey="finance" moduleLabel="Finance & AP/AR" />}>
-                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.FINANCE_READ]} />}>
-                          <Route path="/finance" element={<Finance />} />
-                        </Route>
-                      </Route>
-                      <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
-                        <Route element={<ProtectedRoute requiredPermissions={[PERMS.SHIPMENTS_VIEW]} />}>
-                          <Route path="/shipments" element={<Shipments />} />
-                        </Route>
-                      </Route>
-                      <Route path="/profile" element={<Profile />} />
-                      <Route path="/account/change-password" element={<ChangePassword />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="/sme-bundle" element={<SmeBundle />} />
-                      <Route element={<SuperAdminRoute />}>
-                        <Route path="/platform" element={<PlatformAdmin />} />
-                        <Route path="/platform/tenants/:tenantId" element={<PlatformTenantDetail />} />
-                      </Route>
-                      <Route path="*" element={<NotFound />} />
                     </Route>
                   </Route>
-                </Route>
-              </Routes>
+                </Routes>
+              </React.Suspense>
             </LocaleProvider>
           </AuthProvider>
         </BrowserRouter>

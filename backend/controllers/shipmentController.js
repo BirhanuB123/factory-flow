@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const asyncHandler = require('../middleware/asyncHandler');
 const Shipment = require('../models/Shipment');
 const Order = require('../models/Order');
+const Tenant = require('../models/Tenant');
 const { formatEthiopianLong, formatEthiopianNumeric } = require('../utils/ethiopianDate');
 const { byTenant } = require('../utils/tenantQuery');
 const { applyMovement } = require('../services/stockService');
@@ -323,6 +324,11 @@ exports.getDeliveryNoteHtml = asyncHandler(async (req, res) => {
       ],
     })
     .lean();
+  
+  const tenant = await Tenant.findById(req.tenantId).select('documentSettings legalName').lean();
+  const ds = tenant?.documentSettings || {};
+  const primaryColor = ds.primaryColor || '#4f46e5';
+
   if (!s) {
     res.status(404).setHeader('Content-Type', 'text/plain');
     return res.send('Shipment not found');
@@ -357,12 +363,27 @@ exports.getDeliveryNoteHtml = asyncHandler(async (req, res) => {
   .muted{color:#555;font-size:12px}
   table{width:100%;border-collapse:collapse;margin-top:12px}
   th,td{border:1px solid #ccc;padding:8px;text-align:left}
-  th{background:#f0f0f0;font-size:11px}
+  th{background:#f0f0f0;font-size:11px;border-top:2px solid ${primaryColor}}
   .num{text-align:right;font-variant-numeric:tabular-nums}
+  .header-table{width:100%;border:none;margin-bottom:20px}
+  .header-table td{border:none;padding:0;vertical-align:top}
+  .logo{max-height:60px;margin-bottom:10px}
   @media print{.no-print{display:none}}
 </style></head><body>
   <p class="no-print"><a href="#" onclick="window.print();return false">Print</a></p>
-  <h1>Delivery note <span class="am">/ የመላኪያ ማስረጃ</span></h1>
+  
+  <table class="header-table">
+    <tr>
+      <td>
+        ${ds.logoUrl ? `<img src="${esc(ds.logoUrl)}" class="logo" />` : `<h1>${esc(tenant?.legalName || 'Integra ERP')}</h1>`}
+      </td>
+      <td style="text-align:right">
+        <h1 style="color:${primaryColor}">${esc(ds.dnHeader || 'Delivery Note')} <span class="am">/ የመላኪያ ማስረጃ</span></h1>
+        <p class="muted"># ${esc(s.shipmentNumber)}</p>
+      </td>
+    </tr>
+  </table>
+
   <p class="muted">Gregorian: ${esc(gDate)} &nbsp;|&nbsp; Ethiopian: ${esc(ethLong)} (${esc(ethNum)})</p>
   <p><strong>Shipment / ሹፌራ</strong> ${esc(s.shipmentNumber)}<br/>
   <strong>Order</strong> ${esc(String(order?._id || '').slice(-8))}<br/>
@@ -388,6 +409,7 @@ exports.getDeliveryNoteHtml = asyncHandler(async (req, res) => {
       .join('')}
   </table>
   <p class="muted" style="margin-top:32px">Receiver signature / ተቀባይ ፊርማ: _______________________ &nbsp; Date / ቀን: __________</p>
+  ${ds.footerText ? `<div style="margin-top:40px;padding-top:10px;border-top:1px solid #eee;font-size:10px;color:#888">${esc(ds.footerText)}</div>` : ''}
 </body></html>`;
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(html);

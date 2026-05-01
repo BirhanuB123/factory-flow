@@ -1,4 +1,7 @@
 const asyncHandler = require('express-async-handler');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const Employee = require('../models/Employee');
 const Tenant = require('../models/Tenant');
 const generateToken = require('../utils/generateToken');
@@ -6,6 +9,34 @@ const { rolePermissions } = require('../config/permissions');
 const { hashInviteToken } = require('../utils/inviteToken');
 const { ensureTenantAccess } = require('../utils/tenantAccess');
 const { normalizeModuleFlags } = require('../utils/tenantModules');
+
+// --- Multer config for avatar uploads ---
+const avatarStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const dir = path.join(__dirname, '..', 'uploads', 'avatars');
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, _file, cb) => {
+    const ext = path.extname(_file.originalname).toLowerCase() || '.png';
+    cb(null, `${req.user._id}${ext}`);
+  },
+});
+
+const avatarFileFilter = (_req, file, cb) => {
+  const allowed = /\.(jpg|jpeg|png|gif|webp)$/i;
+  if (allowed.test(path.extname(file.originalname))) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files (jpg, png, gif, webp) are allowed'), false);
+  }
+};
+
+const uploadAvatarMulter = multer({
+  storage: avatarStorage,
+  fileFilter: avatarFileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+}).single('avatar');
 
 async function buildTenantSubscription(tenantId) {
   if (!tenantId) return null;
@@ -55,6 +86,7 @@ const loginUser = asyncHandler(async (req, res) => {
       tenantId: user.tenantId,
       platformRole: user.platformRole || 'none',
       mustChangePassword: !!user.mustChangePassword,
+      profilePicture: user.profilePicture || '',
       permissions: rolePermissions(user.role),
       tenantSubscription,
       tenantModuleFlags: tenantSubscription?.moduleFlags || undefined,
@@ -96,6 +128,7 @@ const getMe = asyncHandler(async (req, res) => {
       tenantId: effectiveTenantId,
       platformRole: user.platformRole || 'none',
       mustChangePassword: !!user.mustChangePassword,
+      profilePicture: user.profilePicture || '',
       permissions: rolePermissions(user.role),
       tenantSubscription,
       tenantModuleFlags: tenantSubscription?.moduleFlags || undefined,
@@ -181,6 +214,7 @@ const updateMe = asyncHandler(async (req, res) => {
       tenantId: updatedUser.tenantId,
       platformRole: updatedUser.platformRole || 'none',
       mustChangePassword: !!updatedUser.mustChangePassword,
+      profilePicture: updatedUser.profilePicture || '',
       permissions: rolePermissions(updatedUser.role),
       tenantSubscription,
       tenantModuleFlags: tenantSubscription?.moduleFlags || undefined,
@@ -191,6 +225,58 @@ const updateMe = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Upload / update avatar for current user
+// @route   POST /api/auth/me/avatar
+// @access  Private (all roles)
+const uploadAvatar = (req, res) => {
+  uploadAvatarMulter(req, res, async (multerErr) => {
+    if (multerErr) {
+      return res.status(400).json({ success: false, message: multerErr.message });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image file provided' });
+    }
+
+    try {
+      const relativePath = `/uploads/avatars/${req.file.filename}`;
+      const user = await Employee.findById(req.user._id);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      // Delete old avatar if it exists and is a different file
+      if (user.profilePicture && user.profilePicture !== relativePath) {
+        const oldPath = path.join(__dirname, '..', user.profilePicture);
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+        }
+      }
+
+      user.profilePicture = relativePath;
+      await user.save();
+
+      const tenantSubscription = await buildTenantSubscription(user.tenantId);
+      res.json({
+        _id: user._id,
+        employeeId: user.employeeId,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        department: user.department,
+        tenantId: user.tenantId,
+        platformRole: user.platformRole || 'none',
+        mustChangePassword: !!user.mustChangePassword,
+        profilePicture: user.profilePicture,
+        permissions: rolePermissions(user.role),
+        tenantSubscription,
+        tenantModuleFlags: tenantSubscription?.moduleFlags || undefined,
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message || 'Avatar upload failed' });
+    }
+  });
+};
+
 module.exports = {
   loginUser,
   getMe,
@@ -198,4 +284,5 @@ module.exports = {
   changePassword,
   getPermissionsDoc,
   updateMe,
+  uploadAvatar,
 };

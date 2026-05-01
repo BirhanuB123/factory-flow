@@ -1,18 +1,21 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Building2, Mail, ShieldAlert, Briefcase, Fingerprint, Save, Key, Loader2 } from 'lucide-react';
+import { Building2, Mail, ShieldAlert, Briefcase, Fingerprint, Save, Key, Loader2, Camera } from 'lucide-react';
+import { getApiBaseUrl } from '@/lib/apiBase';
 import { toast } from 'sonner';
 
 export default function Profile() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, uploadAvatar } = useAuth();
   const [name, setName] = React.useState(user?.name || '');
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (user?.name) setName(user.name);
@@ -40,7 +43,26 @@ export default function Profile() {
     }
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const result = await uploadAvatar(file);
+    setIsUploading(false);
+
+    if (result.success) {
+      toast.success("Profile picture updated successfully");
+    } else {
+      toast.error(result.message || "Failed to update profile picture");
+    }
+  };
+
   if (!user) return null;
+
+  const avatarUrl = user.profilePicture 
+    ? `${getApiBaseUrl()}${user.profilePicture}` 
+    : '/default-avatar.svg';
 
   const displayRole = user.platformRole === "super_admin" ? "Platform Super Admin" : user.role.replace('_', ' ');
 
@@ -83,11 +105,29 @@ export default function Profile() {
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsl(var(--primary)/0.15),transparent)]" />
             </div>
             <CardContent className="-mt-14 pb-8 flex flex-col items-center text-center relative z-10 px-6">
-              <Avatar className="h-28 w-28 border-4 border-background shadow-lg mb-4 transition-transform duration-500 group-hover:scale-105">
-                <AvatarFallback className="bg-primary/10 text-primary text-3xl font-bold">
-                  {getInitials(user.name)}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative group/avatar cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                <Avatar className="h-28 w-28 border-4 border-background shadow-lg mb-4 transition-transform duration-500 group-hover/avatar:scale-105">
+                  <AvatarImage src={avatarUrl} alt={user.name} className="object-cover" />
+                  <AvatarFallback className="bg-primary/10 text-primary text-3xl font-bold">
+                    {getInitials(user.name)}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <div className="absolute inset-0 mb-4 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-300">
+                  {isUploading ? (
+                    <Loader2 className="h-8 w-8 text-white animate-spin" />
+                  ) : (
+                    <Camera className="h-8 w-8 text-white" />
+                  )}
+                </div>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept="image/png, image/jpeg, image/gif, image/webp"
+                  onChange={handleFileChange}
+                />
+              </div>
               
               <div className="space-y-1">
                 <h3 className="text-xl font-bold tracking-tight text-[#1a2744]">{user.name}</h3>

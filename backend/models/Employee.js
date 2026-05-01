@@ -104,6 +104,11 @@ const employeeSchema = mongoose.Schema({
     type: Date,
     default: null,
   },
+  /** Relative URL for profile avatar (e.g. /uploads/avatars/userId.jpg) */
+  profilePicture: {
+    type: String,
+    default: '',
+  },
 }, {
   timestamps: true
 });

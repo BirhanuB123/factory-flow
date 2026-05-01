@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const pinoHttp = require('pino-http');
@@ -231,6 +232,8 @@ app.use(
     credentials: true,
   })
 );
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(
   express.json({

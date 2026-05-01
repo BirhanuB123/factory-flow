@@ -29,6 +29,7 @@ export interface User {
   platformRole?: "none" | "super_admin";
   /** After temp-password onboarding; must use change-password flow */
   mustChangePassword?: boolean;
+  profilePicture?: string;
   permissions?: string[];
   tenantSubscription?: {
     status: "active" | "trial" | "suspended" | "archived" | string;
@@ -53,6 +54,7 @@ export function userFromApiPayload(data: Record<string, unknown>): User {
     tenantId: data.tenantId != null ? String(data.tenantId) : undefined,
     platformRole: data.platformRole === "super_admin" ? "super_admin" : "none",
     mustChangePassword: data.mustChangePassword === true,
+    profilePicture: data.profilePicture ? String(data.profilePicture) : undefined,
     permissions: data.permissions as string[] | undefined,
     tenantSubscription:
       data.tenantSubscription && typeof data.tenantSubscription === "object"
@@ -81,6 +83,7 @@ interface AuthContextType {
   actAsTenantId: string | null;
   setActAsTenantId: (tenantId: string | null) => void;
   updateProfile: (data: { name: string }) => Promise<{ success: boolean; message?: string }>;
+  uploadAvatar: (file: File) => Promise<{ success: boolean; message?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -158,6 +161,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { success: true };
     } catch (error: any) {
       console.error("Failed to update profile:", error);
+      const msg = error.response?.data?.message || error.message || "Unknown error";
+      return { success: false, message: msg };
+    }
+  }, []);
+
+  const uploadAvatar = useCallback(async (file: File) => {
+    try {
+      const payload = await authApi.uploadAvatar(file);
+      const updatedUser = userFromApiPayload(payload);
+      setUser(updatedUser);
+      localStorage.setItem("erp_user", JSON.stringify(updatedUser));
+      return { success: true };
+    } catch (error: any) {
+      console.error("Failed to upload avatar:", error);
       const msg = error.response?.data?.message || error.message || "Unknown error";
       return { success: false, message: msg };
     }
@@ -307,6 +324,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         actAsTenantId,
         setActAsTenantId,
         updateProfile,
+        uploadAvatar,
       }}
     >
       {children}

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="256" fill="#1976D2"/>
+  
+  <!-- Suit -->
+  <path d="M106 512 C 106 380, 156 330, 256 330 C 356 330, 406 380, 406 512 Z" fill="#546E7A"/>
+  <!-- Shirt base -->
+  <path d="M186 350 L 256 430 L 326 350 L 256 512 Z" fill="#78909C"/>
+  <!-- Shirt collar left -->
+  <path d="M200 330 L 256 390 L 160 390 Z" fill="#455A64"/>
+  <!-- Shirt collar right -->
+  <path d="M312 330 L 256 390 L 352 390 Z" fill="#455A64"/>
+
+  <!-- Neck -->
+  <rect x="220" y="260" width="72" height="80" fill="#E6A865"/>
+
+  <!-- Tie -->
+  <path d="M246 380 L 266 380 L 276 512 L 236 512 Z" fill="#FF3D00"/>
+  <polygon points="246,380 266,380 256,410" fill="#DD2C00"/>
+
+  <!-- Ears -->
+  <circle cx="160" cy="220" r="24" fill="#FFB74D"/>
+  <circle cx="352" cy="220" r="24" fill="#FFB74D"/>
+
+  <!-- Face -->
+  <rect x="176" y="120" width="160" height="180" rx="70" fill="#FFCC80"/>
+
+  <!-- Hair -->
+  <path d="M176 170 C 176 90, 256 90, 336 170 C 346 120, 256 70, 166 120 Z" fill="#455A64"/>
+  <path d="M176 150 C 220 120, 256 160, 336 140 C 300 80, 190 90, 176 150 Z" fill="#455A64"/>
+</svg>

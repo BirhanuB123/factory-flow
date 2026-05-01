@@ -7,6 +7,7 @@ const {
   changePassword,
   getPermissionsDoc,
   updateMe,
+  uploadAvatar,
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 const { withTenant } = require('../middleware/tenantMiddleware');
@@ -29,6 +30,7 @@ router.post(
 router.put('/password', protect, changePasswordRules, handleValidation, changePassword);
 router.get('/me', protect, withTenant, getMe);
 router.patch('/me', protect, updateMe);
+router.post('/me/avatar', protect, uploadAvatar);
 router.get('/permissions', protect, withTenant, getPermissionsDoc);
 
 module.exports = router;

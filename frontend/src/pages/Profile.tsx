@@ -60,8 +60,10 @@ export default function Profile() {
 
   if (!user) return null;
 
+  const getBaseUrl = () => getApiBaseUrl().replace(/\/api\/?$/, '');
+  
   const avatarUrl = user.profilePicture 
-    ? `${getApiBaseUrl()}${user.profilePicture}` 
+    ? `${getBaseUrl()}${user.profilePicture}` 
     : '/default-avatar.svg';
 
   const displayRole = user.platformRole === "super_admin" ? "Platform Super Admin" : user.role.replace('_', ' ');

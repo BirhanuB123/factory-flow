@@ -3,7 +3,7 @@ import { Search, Bell, Settings as SettingsIcon, LogOut, User, Shield, AlertTria
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -192,6 +192,9 @@ export function DashboardHeader() {
     toast.success(t("header.toastLoggedOut"));
     navigate("/login");
   };
+
+  const getBaseUrl = () => API_BASE_URL.replace(/\/api\/?$/, '');
+  const avatarUrl = user?.profilePicture ? `${getBaseUrl()}${user.profilePicture}` : undefined;
 
   const getInitials = (name?: string | null) => {
     if (!name || typeof name !== 'string') return "??";
@@ -390,6 +393,7 @@ export function DashboardHeader() {
               </div>
               <span className="relative inline-flex">
                 <Avatar className="h-9 w-9 border border-border/60 shadow-erp-sm">
+                  {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.name || "User"} className="object-cover" />}
                   <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
                     {getInitials(user?.name || settings.displayName || "User")}
                   </AvatarFallback>

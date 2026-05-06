@@ -59,6 +59,14 @@ const InvoiceSchema = new mongoose.Schema({
     ref: 'Shipment',
     default: null,
   },
+  lines: [
+    {
+      product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+      quantity: { type: Number, required: true },
+      unitPrice: { type: Number, required: true },
+      sku: { type: String, default: '' },
+    }
+  ],
   createdAt: {
     type: Date,
     default: Date.now

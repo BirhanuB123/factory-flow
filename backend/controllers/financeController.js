@@ -252,6 +252,30 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
     invoiceAmount = Math.round(invoiceAmount * discountFactor * 100) / 100;
   }
 
+  const invoiceLines = [];
+  if (shipment) {
+    for (const ln of shipment.lines) {
+      const item = order.items[ln.lineIndex];
+      if (item) {
+        invoiceLines.push({
+          product: item.product?._id || item.product,
+          quantity: ln.quantity,
+          unitPrice: item.price,
+          sku: item.product?.sku || '',
+        });
+      }
+    }
+  } else {
+    for (const item of order.items) {
+      invoiceLines.push({
+        product: item.product?._id || item.product,
+        quantity: item.quantity,
+        unitPrice: item.price,
+        sku: item.product?.sku || '',
+      });
+    }
+  }
+
   let invId = await allocateNextInvoiceNumber(req.tenantId);
   const due = dueDate
     ? new Date(dueDate)
@@ -287,6 +311,7 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
       invoiceDate: new Date(),
       shippedAt: shipDate,
       shipment: shipment ? shipment._id : null,
+      lines: invoiceLines,
       status: 'Pending',
     });
   } catch (e) {
@@ -313,6 +338,7 @@ exports.createInvoiceFromOrder = asyncHandler(async (req, res) => {
         invoiceDate: new Date(),
         shippedAt: shipDate,
         shipment: shipment ? shipment._id : null,
+        lines: invoiceLines,
         status: 'Pending',
       });
     } else {

@@ -12,7 +12,21 @@ import { productionApi, manufacturingApi } from "@/lib/api";
 import type { TenantModuleFlags } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertTriangle, Ban, CalendarClock, CheckCircle2, Zap, LayoutGrid, Users, DollarSign, Activity, Truck } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  Ban,
+  BarChart3,
+  CalendarClock,
+  CheckCircle2,
+  DollarSign,
+  Factory,
+  LayoutDashboard,
+  ShieldCheck,
+  Truck,
+  Users,
+  Zap,
+} from "lucide-react";
 import { PERMS } from "@/lib/permissions";
 import { useLocale } from "@/contexts/LocaleContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -84,10 +98,105 @@ const Index = () => {
       { key: "hr" as const, labelKey: "dashboard.moduleHr" as const },
     ] as const
   ).filter((m) => moduleFlags?.[m.key as keyof TenantModuleFlags] === false);
+  const isSuperAdmin = user?.platformRole === "super_admin";
+  const enabledModuleCount = 6 - disabledModules.length;
+  const systemHealthLabel = !mfgDash
+    ? "Platform overview"
+    : hasOpenDowntime
+      ? t("dashboard.checkAssets")
+      : t("dashboard.operational");
+  const oeeProxyLabel = !mfgDash || kpis == null ? "0%" : `${kpis.oeeProxyPct}%`;
 
   return (
     <div className="space-y-6 pb-8 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card shadow-erp">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(var(--card)),hsl(var(--secondary)/0.62)_50%,hsl(var(--accent)/0.72))]" />
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-emerald-500 to-amber-500" />
+        <div className="relative grid gap-6 p-6 lg:grid-cols-[1fr_360px] lg:p-7">
+          <div className="min-w-0">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-primary">
+              {isSuperAdmin ? <ShieldCheck className="h-3.5 w-3.5" /> : <LayoutDashboard className="h-3.5 w-3.5" />}
+              {isSuperAdmin ? "Platform command center" : "Operations command center"}
+            </div>
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <div>
+                <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">{t("dashboard.title")}</h1>
+                <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-muted-foreground">{t("dashboard.subtitle")}</p>
+              </div>
+              <Badge variant="outline" className="w-fit rounded-full bg-background/70 px-3 py-1 text-[10px] font-black uppercase tracking-widest">
+                {isSuperAdmin ? "Super admin" : user?.role || "Dashboard"}
+              </Badge>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {[
+                {
+                  label: "System health",
+                  value: systemHealthLabel,
+                  detail: hasOpenDowntime ? "Open maintenance signal" : "Workspace running",
+                  icon: CheckCircle2,
+                  tone: hasOpenDowntime ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400",
+                  bg: hasOpenDowntime ? "bg-amber-500/10" : "bg-emerald-500/10",
+                },
+                {
+                  label: "Module access",
+                  value: `${enabledModuleCount}/6`,
+                  detail: disabledModules.length === 0 ? "All core modules enabled" : `${disabledModules.length} restricted`,
+                  icon: Factory,
+                  tone: "text-primary",
+                  bg: "bg-primary/10",
+                },
+                {
+                  label: "OEE proxy",
+                  value: oeeProxyLabel,
+                  detail: "30 day manufacturing signal",
+                  icon: BarChart3,
+                  tone: "text-amber-600 dark:text-amber-400",
+                  bg: "bg-amber-500/10",
+                },
+              ].map((item) => (
+                <div key={item.label} className="rounded-2xl border border-border/55 bg-background/78 p-4 shadow-erp-sm backdrop-blur">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{item.label}</p>
+                      <p className="mt-1 truncate text-xl font-black tracking-tight">{item.value}</p>
+                    </div>
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${item.bg}`}>
+                      <item.icon className={`h-5 w-5 ${item.tone}`} />
+                    </div>
+                  </div>
+                  <p className="mt-2 truncate text-xs font-semibold text-muted-foreground">{item.detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-background/80 p-5 shadow-erp-sm backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current role</p>
+                <p className="mt-1 text-xl font-black tracking-tight">{isSuperAdmin ? "Super Admin" : user?.role || "User"}</p>
+                <p className="mt-1 text-xs font-semibold text-muted-foreground">{user?.role || user?.platformRole || "Platform access"}</p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-5 space-y-3">
+              <div className="flex items-center justify-between rounded-xl bg-secondary/45 px-4 py-3">
+                <span className="text-sm font-semibold text-muted-foreground">Operational scope</span>
+                <span className="font-black">{isSuperAdmin ? "All tenants" : "Tenant"}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl bg-secondary/45 px-4 py-3">
+                <span className="text-sm font-semibold text-muted-foreground">Modules enabled</span>
+                <span className="font-black">{enabledModuleCount}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("dashboard.title")}</h1>
           <p className="mt-1 text-sm font-medium text-muted-foreground">{t("dashboard.subtitle")}</p>
@@ -215,31 +324,31 @@ const Index = () => {
 
       {user?.platformRole === "super_admin" || user?.role === "Admin" ? (
         <Tabs defaultValue="operations" className="space-y-6">
-          <TabsList className="bg-transparent p-0 border-b border-border/50 rounded-none w-full justify-start h-auto flex-wrap">
+          <TabsList className="h-auto w-full justify-start gap-2 rounded-2xl border border-border/60 bg-card p-2 shadow-erp-sm flex-wrap">
             <TabsTrigger
               value="operations"
-              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+              className="rounded-xl px-4 py-2.5 font-bold text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
               <Activity className="mr-2 h-4 w-4" />
               Operations
             </TabsTrigger>
             <TabsTrigger
               value="finance"
-              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+              className="rounded-xl px-4 py-2.5 font-bold text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
               <DollarSign className="mr-2 h-4 w-4" />
               Finance
             </TabsTrigger>
             <TabsTrigger
               value="hr"
-              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+              className="rounded-xl px-4 py-2.5 font-bold text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
               <Users className="mr-2 h-4 w-4" />
               Human Resources
             </TabsTrigger>
             <TabsTrigger
               value="procurement"
-              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+              className="rounded-xl px-4 py-2.5 font-bold text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
               <Truck className="mr-2 h-4 w-4" />
               Procurement

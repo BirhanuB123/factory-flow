@@ -159,6 +159,8 @@ export function KpiCards() {
       color: "hsl(221, 83%, 53%)",
       icon: Globe,
       href: mfgEnabled ? "/production" : "/inventory",
+      chip: "Assets",
+      bg: "from-blue-500/12 to-cyan-500/5",
     },
     {
       label: t("kpi.valueOfAssets"),
@@ -167,6 +169,8 @@ export function KpiCards() {
       color: "hsl(32, 95%, 52%)",
       icon: Sun,
       href: "/inventory",
+      chip: "Inventory",
+      bg: "from-amber-500/14 to-orange-500/5",
     },
     {
       label: t("kpi.netAssetsValue"),
@@ -175,6 +179,8 @@ export function KpiCards() {
       color: "hsl(262, 83%, 58%)",
       icon: LayoutGrid,
       href: "/inventory",
+      chip: "Net value",
+      bg: "from-violet-500/13 to-blue-500/5",
     },
     {
       label: t("kpi.purchasesFY"),
@@ -183,6 +189,8 @@ export function KpiCards() {
       color: "hsl(152, 69%, 42%)",
       icon: Wallet,
       href: "/purchase-orders",
+      chip: "Fiscal year",
+      bg: "from-emerald-500/14 to-teal-500/5",
     },
   ];
 
@@ -193,7 +201,7 @@ export function KpiCards() {
           key={kpi.label}
           role="link"
           tabIndex={0}
-          className="cursor-pointer border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl"
+          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border/60 bg-card shadow-erp-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-erp focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           onClick={() => navigate(kpi.href)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -202,18 +210,32 @@ export function KpiCards() {
             }
           }}
         >
-          <CardContent className="flex flex-col items-center p-6 pt-7 text-center">
-            <div className="relative mb-4 flex h-[4.5rem] w-[4.5rem] items-center justify-center">
-              <StatRing pct={kpi.ring} color={kpi.color} size={72} stroke={5} />
-              <div
-                className="absolute flex h-11 w-11 items-center justify-center rounded-full bg-muted/50"
-                style={{ color: kpi.color }}
-              >
-                <kpi.icon className="h-5 w-5" strokeWidth={2} />
+          <div className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-b ${kpi.bg}`} />
+          <CardContent className="relative p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{kpi.chip}</p>
+                <p className="mt-2 truncate text-3xl font-black tracking-tight text-foreground">{kpi.value}</p>
+              </div>
+              <div className="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center">
+                <StatRing pct={kpi.ring} color={kpi.color} size={72} stroke={5} />
+                <div
+                  className="absolute flex h-11 w-11 items-center justify-center rounded-full bg-background/80 shadow-sm"
+                  style={{ color: kpi.color }}
+                >
+                  <kpi.icon className="h-5 w-5" strokeWidth={2} />
+                </div>
               </div>
             </div>
-            <p className="text-3xl font-bold tracking-tight text-foreground">{kpi.value}</p>
-            <p className="mt-1.5 text-sm font-medium text-muted-foreground">{kpi.label}</p>
+            <div className="mt-5 flex items-center justify-between gap-3 border-t border-border/50 pt-4">
+              <p className="text-sm font-semibold text-muted-foreground">{kpi.label}</p>
+              <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full transition-all duration-700 group-hover:opacity-90"
+                  style={{ width: `${kpi.ring}%`, backgroundColor: kpi.color }}
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
       ))}

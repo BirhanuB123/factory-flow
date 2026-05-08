@@ -16,6 +16,11 @@ import {
   FileText,
   BookMarked,
   Banknote,
+  Activity,
+  AlertCircle,
+  CheckCircle2,
+  ReceiptText,
+  WalletCards,
 } from "lucide-react";
 import { LoadingLogo } from "@/components/ui/LoadingLogo";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -169,13 +174,12 @@ function FinanceLedgerTable({
                   </TableCell>
                   <TableCell>
                     <div
-                      className={`text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${
-                        t.type === "Income"
+                      className={`text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${t.type === "Income"
                           ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                           : t.type === "Journal"
                             ? "bg-violet-500/15 text-violet-600 dark:text-violet-400"
                             : "bg-rose-500/15 text-rose-600 dark:text-rose-400"
-                      }`}
+                        }`}
                     >
                       {t.type === "Income" ? (
                         <TrendingUp className="h-3 w-3" />
@@ -191,13 +195,12 @@ function FinanceLedgerTable({
                   <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{t.description}</TableCell>
                   <TableCell>
                     <span
-                      className={`text-sm font-black ${
-                        t.type === "Income"
+                      className={`text-sm font-black ${t.type === "Income"
                           ? "text-emerald-500"
                           : t.type === "Journal"
                             ? "text-violet-600 dark:text-violet-400"
                             : "text-rose-500"
-                      }`}
+                        }`}
                       title={
                         t.type === "Income" && t.grossBeforeWht != null
                           ? `Net receivable. Gross before WHT: ${symbol}${formatAmount(t.grossBeforeWht)}`
@@ -282,7 +285,7 @@ export default function Finance() {
     type: "Income" as TransactionType,
     description: "",
   });
-  
+
   const [financeStats, setFinanceStats] = useState({
     revenue: 0,
     expenses: 0,
@@ -452,13 +455,13 @@ export default function Finance() {
         throw new Error("Failed to add transaction");
       }
     } catch (error) {
-       // Demo mode fallback
-       setTransactions([{ ...newTransaction, id: `DEMO-${Math.floor(Math.random() * 1000)}` } as Transaction, ...transactions]);
-       toast({
-         title: "Demo Mode",
-         description: "Item added to local state for visualization.",
-       });
-       setIsDialogOpen(false);
+      // Demo mode fallback
+      setTransactions([{ ...newTransaction, id: `DEMO-${Math.floor(Math.random() * 1000)}` } as Transaction, ...transactions]);
+      toast({
+        title: "Demo Mode",
+        description: "Item added to local state for visualization.",
+      });
+      setIsDialogOpen(false);
     }
   };
 
@@ -475,519 +478,590 @@ export default function Finance() {
     });
   }, [q, transactions]);
 
+  const dashboardSummary = useMemo(() => {
+    const incomeCount = transactions.filter((t) => t.type === "Income").length;
+    const expenseCount = transactions.filter((t) => t.type === "Expense").length;
+    const overdueCount = transactions.filter((t) => t.status === "Overdue").length;
+    const settledCount = transactions.filter((t) => t.status === "Paid" || t.status === "Posted").length;
+    const totalCount = transactions.length || 1;
+    const collectionRate = Math.round((settledCount / totalCount) * 100);
+    const expenseRatio =
+      (financeStats.revenue ?? 0) > 0 ? Math.round(((financeStats.expenses ?? 0) / financeStats.revenue) * 100) : 0;
+    const openAr = arPayload?.totals?.openAR ?? financeStats.pending ?? 0;
+
+    return {
+      incomeCount,
+      expenseCount,
+      overdueCount,
+      settledCount,
+      collectionRate,
+      expenseRatio,
+      openAr,
+    };
+  }, [arPayload?.totals?.openAR, financeStats.expenses, financeStats.pending, financeStats.revenue, transactions]);
+
   return (
-    <>
+    <div>
       <div className="space-y-8 pb-8 animate-in fade-in duration-500">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.finance.title")}</h1>
-            <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.finance.subtitle")}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-10 gap-2 rounded-full border-primary/20 font-semibold shadow-erp-sm">
-                <Download className="h-4 w-4" />
-                Export CSV
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem
-                className="text-xs font-bold"
-                onClick={() => downloadReportCsv("/reports/export/ar", `ar-${Date.now()}.csv`)}
-              >
-                Open AR
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-xs font-bold"
-                onClick={() => downloadReportCsv("/reports/export/ap", `ap-${Date.now()}.csv`)}
-              >
-                Open AP
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-xs font-bold"
-                onClick={() => downloadReportCsv("/reports/export/orders", `orders-${Date.now()}.csv`)}
-              >
-                Orders
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-xs font-bold"
-                onClick={() => downloadReportCsv("/reports/export/inventory", `inventory-${Date.now()}.csv`)}
-              >
-                Inventory
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-xs font-bold"
-                onClick={() => downloadReportCsv("/reports/export/production", `production-${Date.now()}.csv`)}
-              >
-                Production
-              </DropdownMenuItem>
-              <div className="h-px bg-muted my-1" />
-              <div className="px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">
-                Integrations
+        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card shadow-erp">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.16),transparent_34%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--secondary)/0.55))]" />
+          <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-emerald-500/10 to-transparent" />
+          <div className="relative flex flex-col justify-between gap-6 p-6 lg:flex-row lg:items-end lg:p-7">
+            <div className="max-w-3xl">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-primary">
+                <WalletCards className="h-3.5 w-3.5" />
+                Finance command center
               </div>
-              <DropdownMenuItem
-                className="text-xs font-bold text-blue-600"
-                onClick={() => downloadReportCsv("/finance/integrations/xero/invoices", `xero-sales-${Date.now()}.csv`)}
-              >
-                Xero Sales Invoices
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-xs font-bold text-blue-600"
-                onClick={() => downloadReportCsv("/finance/integrations/xero/bills", `xero-bills-${Date.now()}.csv`)}
-              >
-                Xero Purchase Bills
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-xs font-bold text-emerald-600"
-                onClick={() => downloadReportCsv("/finance/integrations/quickbooks/bills", `qb-bills-${Date.now()}.csv`)}
-              >
-                QuickBooks Bills
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-xs font-bold text-emerald-600"
-                onClick={() => downloadReportCsv("/finance/integrations/quickbooks/expenses", `qb-expenses-${Date.now()}.csv`)}
-              >
-                QuickBooks Expenses
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {canFinance && (
-            <>
-              <Button
-                variant="outline"
-                className="h-10 gap-2 rounded-full border-amber-500/40 font-semibold text-amber-700 shadow-erp-sm dark:text-amber-400"
-                onClick={() => setEthCsvOpen(true)}
-              >
-                <FileText className="h-4 w-4" />
-                Ethiopia tax CSV
-              </Button>
-              <Dialog open={ethCsvOpen} onOpenChange={setEthCsvOpen}>
-                <DialogContent className="rounded-2xl border border-border/60 shadow-erp sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="text-lg font-bold text-[#1a2744]">Statutory CSV exports</DialogTitle>
-                    <DialogDescription className="text-xs">
-                      Date range filters invoice/bill dates. See docs for accountant column mapping.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid grid-cols-2 gap-3 py-2">
-                    <div>
-                      <Label className="text-[10px] uppercase">From</Label>
-                      <Input type="date" value={ethFrom} onChange={(e) => setEthFrom(e.target.value)} className="mt-1" />
+              <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">{t("pages.finance.title")}</h1>
+              <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-muted-foreground">{t("pages.finance.subtitle")}</p>
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
+                {[
+                  { label: "Collection", value: `${dashboardSummary.collectionRate}%`, icon: CheckCircle2, tone: "text-emerald-600" },
+                  { label: "Open AR", value: format(dashboardSummary.openAr), icon: ReceiptText, tone: "text-primary" },
+                  { label: "Expense ratio", value: `${dashboardSummary.expenseRatio}%`, icon: Activity, tone: "text-amber-600" },
+                  { label: "Overdue", value: String(dashboardSummary.overdueCount), icon: AlertCircle, tone: "text-rose-600" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-border/50 bg-background/70 px-4 py-3 shadow-sm backdrop-blur">
+                    <div className="flex items-center gap-2">
+                      <item.icon className={`h-4 w-4 ${item.tone}`} />
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{item.label}</p>
                     </div>
-                    <div>
-                      <Label className="text-[10px] uppercase">To</Label>
-                      <Input type="date" value={ethTo} onChange={(e) => setEthTo(e.target.value)} className="mt-1" />
-                    </div>
+                    <p className="mt-1 text-lg font-black tracking-tight">{item.value}</p>
                   </div>
-                  <div className="grid gap-2">
-                    {[
-                      { path: "/finance/reports/ethiopia/vat-sales.csv", file: "vat-sales" },
-                      { path: "/finance/reports/ethiopia/vat-purchases.csv", file: "vat-purchases" },
-                      { path: "/finance/reports/ethiopia/withholding-sales.csv", file: "wht-sales" },
-                      { path: "/finance/reports/ethiopia/withholding-purchases.csv", file: "wht-purchases" },
-                    ].map(({ path, file }) => (
-                      <Button
-                        key={path}
-                        variant="secondary"
-                        className="justify-start font-mono text-xs"
-                        onClick={() =>
-                          downloadReportCsv(path, `${file}-${ethFrom}-${ethTo}.csv`, { from: ethFrom, to: ethTo })
-                        }
-                      >
-                        Download {file}
-                      </Button>
-                    ))}
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </>
-          )}
-          {canWriteFinance && (
-          <Dialog open={invFromOrderOpen} onOpenChange={(o) => { setInvFromOrderOpen(o); if (!o) setInvShipmentId(""); }}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="h-10 gap-2 rounded-full border-border/60 font-semibold shadow-erp-sm">
-                <FileInput className="h-4 w-4" />
-                Invoice from order
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="rounded-2xl border border-border/60 shadow-erp sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle className="text-lg font-bold text-[#1a2744]">Invoice from sales order</DialogTitle>
-                <DialogDescription>
-                  If the order has shipped packages, pick a shipment to invoice. Otherwise one full-order invoice.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-2">
-                <div className="space-y-2">
-                  <Label>Order</Label>
-                  <Select
-                    value={invOrderId}
-                    onValueChange={(v) => {
-                      setInvOrderId(v);
-                      setInvShipmentId("");
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select order" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      {(ordersForInv as { _id: string; client?: { name: string }; totalAmount: number }[]).map((o) => (
-                        <SelectItem key={o._id} value={o._id}>
-                          {o.client?.name ?? "—"} · ${o.totalAmount} · …{o._id.slice(-6)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {needShipmentInvoice && (
-                  <div className="space-y-2">
-                    <Label>Shipment (shipped)</Label>
-                    <Select value={invShipmentId} onValueChange={setInvShipmentId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select shipment" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {shippedOnOrder.map((s) => (
-                          <SelectItem key={s._id} value={s._id}>
-                            {s.shipmentNumber}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label>Due date</Label>
-                  <Input type="date" value={invDue} onChange={(e) => setInvDue(e.target.value)} />
-                </div>
-                <div className="rounded-lg border p-3 space-y-3">
-                  <Label className="text-[10px] uppercase">Tax override (optional)</Label>
-                  <div className="space-y-2">
-                    <Label>Tax category key</Label>
-                    <Input
-                      value={invTaxCategory}
-                      onChange={(e) => setInvTaxCategory(e.target.value)}
-                      placeholder="e.g. service, export"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-2">
-                      <Label>Force VAT %</Label>
-                      <Input
-                        type="number"
-                        value={invForceVatRate}
-                        onChange={(e) => setInvForceVatRate(e.target.value)}
-                        placeholder="leave empty"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Force WHT %</Label>
-                      <Input
-                        type="number"
-                        value={invForceWhtRate}
-                        onChange={(e) => setInvForceWhtRate(e.target.value)}
-                        placeholder="leave empty"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      id="inv-vat-exempt"
-                      type="checkbox"
-                      checked={invVatExempt}
-                      onChange={(e) => setInvVatExempt(e.target.checked)}
-                    />
-                    <Label htmlFor="inv-vat-exempt" className="font-normal">
-                      VAT exempt / zero-rated
-                    </Label>
-                  </div>
-                </div>
+                ))}
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setInvFromOrderOpen(false)}>Cancel</Button>
-                <Button
-                  disabled={
-                    !invOrderId ||
-                    invFromOrderMut.isPending ||
-                    (needShipmentInvoice && !invShipmentId)
-                  }
-                  onClick={() => invFromOrderMut.mutate()}
-                >
-                  Create invoice
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          )}
-        {canWriteFinance && (
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
-              <Plus className="h-4 w-4" />
-              New entry
-            </Button>
-          </DialogTrigger>
-              <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-erp sm:max-w-xl">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-primary to-purple-500" />
-                <DialogHeader className="space-y-4">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
-                    <ArrowRightLeft className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">New Ledger Entry</DialogTitle>
-                    <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Record fiscal movement authorization</DialogDescription>
-                  </div>
-                </DialogHeader>
-                <div className="grid gap-6 py-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Traffic Type</Label>
-                      <Select
-                        value={newTransaction.type}
-                        onValueChange={(value: TransactionType) => setNewTransaction({ ...newTransaction, type: value })}
-                      >
-                        <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold italic">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-card/95 backdrop-blur-xl border-white/10">
-                          <SelectItem value="Income" className="text-xs font-black uppercase italic tracking-wider text-emerald-500">Income (Inflow)</SelectItem>
-                          <SelectItem value="Expense" className="text-xs font-black uppercase italic tracking-wider text-rose-500">Expense (Outflow)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Status</Label>
-                      <Select
-                        value={newTransaction.status}
-                        onValueChange={(value: FinanceStatus) => setNewTransaction({ ...newTransaction, status: value })}
-                      >
-                        <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold italic">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-card/95 backdrop-blur-xl border-white/10">
-                          <SelectItem value="Paid" className="text-xs font-black uppercase italic tracking-wider text-emerald-500">Paid/Settled</SelectItem>
-                          <SelectItem value="Pending" className="text-xs font-black uppercase italic tracking-wider text-amber-500">Pending</SelectItem>
-                          <SelectItem value="Overdue" className="text-xs font-black uppercase italic tracking-wider text-rose-500">Overdue</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Classification</Label>
-                      <Input
-                        value={newTransaction.category}
-                        onChange={(e) => setNewTransaction({ ...newTransaction, category: e.target.value })}
-                        className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
-                        placeholder="e.g. R&D, Logistics"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Fiscal Value ({symbol})</Label>
-                      <Input
-                        type="number"
-                        value={newTransaction.amount}
-                        onChange={(e) => setNewTransaction({ ...newTransaction, amount: parseFloat(e.target.value) })}
-                        className="h-11 rounded-xl bg-white/5 border-white/10 font-mono font-bold text-lg"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Full Transaction Particulars</Label>
-                    <Input
-                      value={newTransaction.description}
-                      onChange={(e) => setNewTransaction({ ...newTransaction, description: e.target.value })}
-                      className="h-11 rounded-xl bg-white/5 border-white/10 font-bold italic text-sm"
-                      placeholder="Transaction details..."
-                    />
-                  </div>
-                </div>
-                <DialogFooter className="mt-4 gap-3">
-                  <Button variant="ghost" className="h-12 rounded-xl px-8 font-black uppercase italic text-xs tracking-widest" onClick={() => setIsDialogOpen(false)}>Abort</Button>
-                  <Button 
-                    className="h-12 rounded-xl px-12 font-black uppercase italic text-xs tracking-widest shadow-xl shadow-primary/20 animate-pulse-slow active:scale-95 transition-all bg-primary"
-                    onClick={handleAddTransaction}
-                  >
-                    Authorize Entry
+            </div>
+            <div className="flex flex-wrap gap-2 lg:max-w-md lg:justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-10 gap-2 rounded-full border-primary/20 font-semibold shadow-erp-sm">
+                    <Download className="h-4 w-4" />
+                    Export CSV
                   </Button>
-                </DialogFooter>
-              </DialogContent>
-        </Dialog>
-        )}
-          </div>
-        </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem
+                    className="text-xs font-bold"
+                    onClick={() => downloadReportCsv("/reports/export/ar", `ar-${Date.now()}.csv`)}
+                  >
+                    Open AR
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs font-bold"
+                    onClick={() => downloadReportCsv("/reports/export/ap", `ap-${Date.now()}.csv`)}
+                  >
+                    Open AP
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs font-bold"
+                    onClick={() => downloadReportCsv("/reports/export/orders", `orders-${Date.now()}.csv`)}
+                  >
+                    Orders
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs font-bold"
+                    onClick={() => downloadReportCsv("/reports/export/inventory", `inventory-${Date.now()}.csv`)}
+                  >
+                    Inventory
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs font-bold"
+                    onClick={() => downloadReportCsv("/reports/export/production", `production-${Date.now()}.csv`)}
+                  >
+                    Production
+                  </DropdownMenuItem>
+                  <div className="h-px bg-muted my-1" />
+                  <div className="px-2 py-1.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">
+                    Integrations
+                  </div>
+                  <DropdownMenuItem
+                    className="text-xs font-bold text-blue-600"
+                    onClick={() => downloadReportCsv("/finance/integrations/xero/invoices", `xero-sales-${Date.now()}.csv`)}
+                  >
+                    Xero Sales Invoices
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs font-bold text-blue-600"
+                    onClick={() => downloadReportCsv("/finance/integrations/xero/bills", `xero-bills-${Date.now()}.csv`)}
+                  >
+                    Xero Purchase Bills
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs font-bold text-emerald-600"
+                    onClick={() => downloadReportCsv("/finance/integrations/quickbooks/bills", `qb-bills-${Date.now()}.csv`)}
+                  >
+                    QuickBooks Bills
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs font-bold text-emerald-600"
+                    onClick={() => downloadReportCsv("/finance/integrations/quickbooks/expenses", `qb-expenses-${Date.now()}.csv`)}
+                  >
+                    QuickBooks Expenses
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {canFinance && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="h-10 gap-2 rounded-full border-amber-500/40 font-semibold text-amber-700 shadow-erp-sm dark:text-amber-400"
+                    onClick={() => setEthCsvOpen(true)}
+                  >
+                    <FileText className="h-4 w-4" />
+                    Ethiopia tax CSV
+                  </Button>
+                  <Dialog open={ethCsvOpen} onOpenChange={setEthCsvOpen}>
+                    <DialogContent className="rounded-2xl border border-border/60 shadow-erp sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle className="text-lg font-bold text-[#1a2744]">Statutory CSV exports</DialogTitle>
+                        <DialogDescription className="text-xs">
+                          Date range filters invoice/bill dates. See docs for accountant column mapping.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid grid-cols-2 gap-3 py-2">
+                        <div>
+                          <Label className="text-[10px] uppercase">From</Label>
+                          <Input type="date" value={ethFrom} onChange={(e) => setEthFrom(e.target.value)} className="mt-1" />
+                        </div>
+                        <div>
+                          <Label className="text-[10px] uppercase">To</Label>
+                          <Input type="date" value={ethTo} onChange={(e) => setEthTo(e.target.value)} className="mt-1" />
+                        </div>
+                      </div>
+                      <div className="grid gap-2">
+                        {[
+                          { path: "/finance/reports/ethiopia/vat-sales.csv", file: "vat-sales" },
+                          { path: "/finance/reports/ethiopia/vat-purchases.csv", file: "vat-purchases" },
+                          { path: "/finance/reports/ethiopia/withholding-sales.csv", file: "wht-sales" },
+                          { path: "/finance/reports/ethiopia/withholding-purchases.csv", file: "wht-purchases" },
+                        ].map(({ path, file }) => (
+                          <Button
+                            key={path}
+                            variant="secondary"
+                            className="justify-start font-mono text-xs"
+                            onClick={() =>
+                              downloadReportCsv(path, `${file}-${ethFrom}-${ethTo}.csv`, { from: ethFrom, to: ethTo })
+                            }
+                          >
+                            Download {file}
+                          </Button>
+                        ))}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </>
+              )}
+              {canWriteFinance && (
+                <Dialog open={invFromOrderOpen} onOpenChange={(o) => { setInvFromOrderOpen(o); if (!o) setInvShipmentId(""); }}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="h-10 gap-2 rounded-full border-border/60 font-semibold shadow-erp-sm">
+                      <FileInput className="h-4 w-4" />
+                      Invoice from order
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="rounded-2xl border border-border/60 shadow-erp sm:max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle className="text-lg font-bold text-[#1a2744]">Invoice from sales order</DialogTitle>
+                      <DialogDescription>
+                        If the order has shipped packages, pick a shipment to invoice. Otherwise one full-order invoice.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-2">
+                      <div className="space-y-2">
+                        <Label>Order</Label>
+                        <Select
+                          value={invOrderId}
+                          onValueChange={(v) => {
+                            setInvOrderId(v);
+                            setInvShipmentId("");
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select order" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-64">
+                            {(ordersForInv as { _id: string; client?: { name: string }; totalAmount: number }[]).map((o) => (
+                              <SelectItem key={o._id} value={o._id}>
+                                {o.client?.name ?? "—"} · ${o.totalAmount} · …{o._id.slice(-6)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {needShipmentInvoice && (
+                        <div className="space-y-2">
+                          <Label>Shipment (shipped)</Label>
+                          <Select value={invShipmentId} onValueChange={setInvShipmentId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select shipment" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {shippedOnOrder.map((s) => (
+                                <SelectItem key={s._id} value={s._id}>
+                                  {s.shipmentNumber}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label>Due date</Label>
+                        <Input type="date" value={invDue} onChange={(e) => setInvDue(e.target.value)} />
+                      </div>
+                      <div className="rounded-lg border p-3 space-y-3">
+                        <Label className="text-[10px] uppercase">Tax override (optional)</Label>
+                        <div className="space-y-2">
+                          <Label>Tax category key</Label>
+                          <Input
+                            value={invTaxCategory}
+                            onChange={(e) => setInvTaxCategory(e.target.value)}
+                            placeholder="e.g. service, export"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-2">
+                            <Label>Force VAT %</Label>
+                            <Input
+                              type="number"
+                              value={invForceVatRate}
+                              onChange={(e) => setInvForceVatRate(e.target.value)}
+                              placeholder="leave empty"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Force WHT %</Label>
+                            <Input
+                              type="number"
+                              value={invForceWhtRate}
+                              onChange={(e) => setInvForceWhtRate(e.target.value)}
+                              placeholder="leave empty"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="inv-vat-exempt"
+                            type="checkbox"
+                            checked={invVatExempt}
+                            onChange={(e) => setInvVatExempt(e.target.checked)}
+                          />
+                          <Label htmlFor="inv-vat-exempt" className="font-normal">
+                            VAT exempt / zero-rated
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setInvFromOrderOpen(false)}>Cancel</Button>
+                      <Button
+                        disabled={
+                          !invOrderId ||
+                          invFromOrderMut.isPending ||
+                          (needShipmentInvoice && !invShipmentId)
+                        }
+                        onClick={() => invFromOrderMut.mutate()}
+                      >
+                        Create invoice
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
+              {canWriteFinance && (
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
+                      <Plus className="h-4 w-4" />
+                      New entry
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 bg-card shadow-erp sm:max-w-xl">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-primary to-purple-500" />
+                    <DialogHeader className="space-y-4">
+                      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
+                        <ArrowRightLeft className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter">New Ledger Entry</DialogTitle>
+                        <DialogDescription className="text-xs font-bold uppercase tracking-widest opacity-60">Record fiscal movement authorization</DialogDescription>
+                      </div>
+                    </DialogHeader>
+                    <div className="grid gap-6 py-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Traffic Type</Label>
+                          <Select
+                            value={newTransaction.type}
+                            onValueChange={(value: TransactionType) => setNewTransaction({ ...newTransaction, type: value })}
+                          >
+                            <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold italic">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-card/95 backdrop-blur-xl border-white/10">
+                              <SelectItem value="Income" className="text-xs font-black uppercase italic tracking-wider text-emerald-500">Income (Inflow)</SelectItem>
+                              <SelectItem value="Expense" className="text-xs font-black uppercase italic tracking-wider text-rose-500">Expense (Outflow)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Status</Label>
+                          <Select
+                            value={newTransaction.status}
+                            onValueChange={(value: FinanceStatus) => setNewTransaction({ ...newTransaction, status: value })}
+                          >
+                            <SelectTrigger className="h-11 rounded-xl bg-white/5 border-white/10 font-bold italic">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-card/95 backdrop-blur-xl border-white/10">
+                              <SelectItem value="Paid" className="text-xs font-black uppercase italic tracking-wider text-emerald-500">Paid/Settled</SelectItem>
+                              <SelectItem value="Pending" className="text-xs font-black uppercase italic tracking-wider text-amber-500">Pending</SelectItem>
+                              <SelectItem value="Overdue" className="text-xs font-black uppercase italic tracking-wider text-rose-500">Overdue</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
 
-        <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Revenue</p>
-            <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{format(financeStats.revenue ?? 0)}</p>
-          </div>
-          <div className="h-8 w-px bg-border/70" />
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Expenses</p>
-            <p className="text-sm font-semibold text-foreground">{format(financeStats.expenses ?? 0)}</p>
-          </div>
-          <div className="h-8 w-px bg-border/70" />
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Net</p>
-            <p
-              className={`text-sm font-semibold ${(financeStats.profit ?? 0) >= 0 ? "text-primary" : "text-destructive"}`}
-            >
-              {format(financeStats.profit ?? 0)}
-            </p>
-          </div>
-          <div className="h-8 w-px bg-border/70" />
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pending</p>
-            <p className="text-sm font-semibold text-amber-600">{format(financeStats.pending ?? 0)}</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Classification</Label>
+                          <Input
+                            value={newTransaction.category}
+                            onChange={(e) => setNewTransaction({ ...newTransaction, category: e.target.value })}
+                            className="h-11 rounded-xl bg-white/5 border-white/10 font-bold"
+                            placeholder="e.g. R&D, Logistics"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Fiscal Value ({symbol})</Label>
+                          <Input
+                            type="number"
+                            value={newTransaction.amount}
+                            onChange={(e) => setNewTransaction({ ...newTransaction, amount: parseFloat(e.target.value) })}
+                            className="h-11 rounded-xl bg-white/5 border-white/10 font-mono font-bold text-lg"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Full Transaction Particulars</Label>
+                        <Input
+                          value={newTransaction.description}
+                          onChange={(e) => setNewTransaction({ ...newTransaction, description: e.target.value })}
+                          className="h-11 rounded-xl bg-white/5 border-white/10 font-bold italic text-sm"
+                          placeholder="Transaction details..."
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter className="mt-4 gap-3">
+                      <Button variant="ghost" className="h-12 rounded-xl px-8 font-black uppercase italic text-xs tracking-widest" onClick={() => setIsDialogOpen(false)}>Abort</Button>
+                      <Button
+                        className="h-12 rounded-xl px-12 font-black uppercase italic text-xs tracking-widest shadow-xl shadow-primary/20 animate-pulse-slow active:scale-95 transition-all bg-primary"
+                        onClick={handleAddTransaction}
+                      >
+                        Authorize Entry
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
           </div>
         </div>
 
         <FinanceMetrics stats={financeStats} />
 
-        <Tabs defaultValue="all" className="space-y-6">
-        <StickyModuleTabs>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <TabsList className={moduleTabsListClassName()}>
-              <TabsTrigger value="all" className={moduleTabsTriggerClassName()}>
-                All journals
-              </TabsTrigger>
-              <TabsTrigger
-                value="income"
-                className={`${moduleTabsTriggerClassName()} data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-emerald-500/25`}
-              >
-                <TrendingUp className="h-4 w-4 shrink-0" />
-                Invoices
-              </TabsTrigger>
-              <TabsTrigger
-                value="expense"
-                className={`${moduleTabsTriggerClassName()} data-[state=active]:bg-rose-600 data-[state=active]:text-white data-[state=active]:shadow-rose-500/25`}
-              >
-                <TrendingDown className="h-4 w-4 shrink-0" />
-                Expenses
-              </TabsTrigger>
-              <TabsTrigger value="ar-aging" className={moduleTabsTriggerClassName()}>
-                <Clock className="h-4 w-4 shrink-0" />
-                AR aging
-              </TabsTrigger>
-              <TabsTrigger value="ap" className={moduleTabsTriggerClassName()}>
-                <Building2 className="h-4 w-4 shrink-0" />
-                AP & vendors
-              </TabsTrigger>
-              <TabsTrigger value="payroll" className={moduleTabsTriggerClassName()}>
-                <Banknote className="h-4 w-4 shrink-0" />
-                Payroll
-              </TabsTrigger>
-            </TabsList>
-            <div className="relative w-full sm:max-w-xs group shrink-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <Input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search ledger…"
-                className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-10 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
-              />
-            </div>
-          </div>
-        </StickyModuleTabs>
-
-        <TabsContent value="all" className="mt-0 focus-visible:outline-none">
-          <FinanceLedgerTable
-            rows={filteredTransactions}
-            loading={loading}
-            onOpenTaxInvoice={canFinance ? openTaxInvoice : undefined}
-          />
-        </TabsContent>
-        <TabsContent value="income" className="mt-0 focus-visible:outline-none">
-          <FinanceLedgerTable
-            rows={filteredTransactions.filter((t) => t.type === "Income")}
-            loading={loading}
-            onOpenTaxInvoice={canFinance ? openTaxInvoice : undefined}
-          />
-        </TabsContent>
-        <TabsContent value="expense" className="mt-0 focus-visible:outline-none">
-          <FinanceLedgerTable
-            rows={filteredTransactions.filter((t) => t.type === "Expense")}
-            loading={loading}
-          />
-        </TabsContent>
-        <TabsContent value="ar-aging" className="mt-0 space-y-6 focus-visible:outline-none">
-          {arPayload && (
-            <>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                {[
-                  { label: "Not due", k: "notDue" as const, t: arPayload.totals.notDue },
-                  { label: "1–30 d", k: "days1_30" as const, t: arPayload.totals.days1_30 },
-                  { label: "31–60 d", k: "days31_60" as const, t: arPayload.totals.days31_60 },
-                  { label: "61–90 d", k: "days61_90" as const, t: arPayload.totals.days61_90 },
-                  { label: "90+ d", k: "days90plus" as const, t: arPayload.totals.days90plus },
-                ].map((b) => (
-                  <div key={b.k} className="rounded-2xl border-0 bg-card p-4 shadow-erp-sm">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{b.label}</p>
-                    <p className="text-xl font-bold tracking-tight">{format(b.t)}</p>
-                  </div>
-                ))}
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-erp-sm">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cashflow health</p>
+                <h2 className="mt-1 text-xl font-black tracking-tight text-foreground">Revenue, cost, and collection signal</h2>
               </div>
-              <p className="text-sm font-semibold text-[#1a2744]">
-                Open AR: {format(arPayload.totals.openAR)}
-              </p>
-              {(
-                [
-                  ["days90plus", "90+ days past due"],
-                  ["days61_90", "61–90 days past due"],
-                  ["days31_60", "31–60 days past due"],
-                  ["days1_30", "1–30 days past due"],
-                  ["notDue", "Not yet due"],
-                ] as const
-              ).map(([bucket, title]) => (
-                <div key={bucket} className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-erp">
-                  <p className="border-b border-border/50 bg-muted/20 px-4 py-2 text-xs font-bold uppercase text-[#1a2744]">
-                    {title}
-                  </p>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Invoice</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                        <TableHead>Due</TableHead>
-                        <TableHead className="text-right">Days late</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(arPayload.buckets[bucket] as { invoiceId: string; clientName: string; amount: number; dueDate: string; daysPastDue: number }[]).length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground py-6">—</TableCell>
-                        </TableRow>
-                      ) : (
-                        (arPayload.buckets[bucket] as { invoiceId: string; clientName: string; amount: number; dueDate: string; daysPastDue: number }[]).map((row) => (
-                          <TableRow key={row.invoiceId + bucket}>
-                            <TableCell className="font-mono text-xs">{row.invoiceId}</TableCell>
-                            <TableCell>{row.clientName}</TableCell>
-                            <TableCell className="text-right font-bold">{format(row.amount)}</TableCell>
-                            <TableCell className="text-xs">{new Date(row.dueDate).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-right">{row.daysPastDue}</TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+              <Badge variant={(financeStats.profit ?? 0) >= 0 ? "success" : "destructive"} className="w-fit text-[10px] font-black uppercase tracking-widest">
+                {(financeStats.profit ?? 0) >= 0 ? "Profitable" : "Margin risk"}
+              </Badge>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              {[
+                { label: "Invoices", value: dashboardSummary.incomeCount, color: "bg-emerald-500" },
+                { label: "Expenses", value: dashboardSummary.expenseCount, color: "bg-rose-500" },
+                { label: "Settled", value: dashboardSummary.settledCount, color: "bg-blue-500" },
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl border border-border/50 bg-secondary/30 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{item.label}</p>
+                    <span className={`h-2.5 w-2.5 rounded-full ${item.color}`} />
+                  </div>
+                  <p className="mt-3 text-3xl font-black tracking-tight">{item.value}</p>
                 </div>
               ))}
-            </>
-          )}
-        </TabsContent>
-        <TabsContent value="ap" className="mt-0 focus-visible:outline-none">
-          <FinanceApTab symbol={symbol} canWrite={canWriteFinance} />
-        </TabsContent>
-        <TabsContent value="payroll" className="mt-0 focus-visible:outline-none">
-          <FinancePayrollTab />
-        </TabsContent>
-      </Tabs>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-erp-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Next focus</p>
+                <h2 className="text-lg font-black tracking-tight">Review open balances</h2>
+              </div>
+            </div>
+            <div className="mt-5 space-y-3">
+              <div className="flex items-center justify-between rounded-xl bg-secondary/35 px-4 py-3">
+                <span className="text-sm font-semibold text-muted-foreground">Pending value</span>
+                <span className="font-black">{format(financeStats.pending ?? 0)}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl bg-secondary/35 px-4 py-3">
+                <span className="text-sm font-semibold text-muted-foreground">Overdue entries</span>
+                <span className="font-black text-rose-600">{dashboardSummary.overdueCount}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Tabs defaultValue="all" className="space-y-6">
+            <StickyModuleTabs>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <TabsList className={moduleTabsListClassName()}>
+                  <TabsTrigger value="all" className={moduleTabsTriggerClassName()}>
+                    All journals
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="income"
+                    className={`${moduleTabsTriggerClassName()} data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-emerald-500/25`}
+                  >
+                    <TrendingUp className="h-4 w-4 shrink-0" />
+                    Invoices
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="expense"
+                    className={`${moduleTabsTriggerClassName()} data-[state=active]:bg-rose-600 data-[state=active]:text-white data-[state=active]:shadow-rose-500/25`}
+                  >
+                    <TrendingDown className="h-4 w-4 shrink-0" />
+                    Expenses
+                  </TabsTrigger>
+                  <TabsTrigger value="ar-aging" className={moduleTabsTriggerClassName()}>
+                    <Clock className="h-4 w-4 shrink-0" />
+                    AR aging
+                  </TabsTrigger>
+                  <TabsTrigger value="ap" className={moduleTabsTriggerClassName()}>
+                    <Building2 className="h-4 w-4 shrink-0" />
+                    AP & vendors
+                  </TabsTrigger>
+                  <TabsTrigger value="payroll" className={moduleTabsTriggerClassName()}>
+                    <Banknote className="h-4 w-4 shrink-0" />
+                    Payroll
+                  </TabsTrigger>
+                </TabsList>
+                <div className="relative w-full sm:max-w-xs group shrink-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <Input
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="Search ledger…"
+                    className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-10 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
+                  />
+                </div>
+              </div>
+            </StickyModuleTabs>
+
+            <TabsContent value="all" className="mt-0 focus-visible:outline-none">
+              <FinanceLedgerTable
+                rows={filteredTransactions}
+                loading={loading}
+                onOpenTaxInvoice={canFinance ? openTaxInvoice : undefined}
+              />
+            </TabsContent>
+            <TabsContent value="income" className="mt-0 focus-visible:outline-none">
+              <FinanceLedgerTable
+                rows={filteredTransactions.filter((t) => t.type === "Income")}
+                loading={loading}
+                onOpenTaxInvoice={canFinance ? openTaxInvoice : undefined}
+              />
+            </TabsContent>
+            <TabsContent value="expense" className="mt-0 focus-visible:outline-none">
+              <FinanceLedgerTable
+                rows={filteredTransactions.filter((t) => t.type === "Expense")}
+                loading={loading}
+              />
+            </TabsContent>
+            <TabsContent value="ar-aging" className="mt-0 space-y-6 focus-visible:outline-none">
+              {arPayload && (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {[
+                      { label: "Not due", k: "notDue" as const, t: arPayload.totals.notDue },
+                      { label: "1–30 d", k: "days1_30" as const, t: arPayload.totals.days1_30 },
+                      { label: "31–60 d", k: "days31_60" as const, t: arPayload.totals.days31_60 },
+                      { label: "61–90 d", k: "days61_90" as const, t: arPayload.totals.days61_90 },
+                      { label: "90+ d", k: "days90plus" as const, t: arPayload.totals.days90plus },
+                    ].map((b) => (
+                      <div key={b.k} className="rounded-2xl border-0 bg-card p-4 shadow-erp-sm">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{b.label}</p>
+                        <p className="text-xl font-bold tracking-tight">{format(b.t)}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-sm font-semibold text-[#1a2744]">
+                    Open AR: {format(arPayload.totals.openAR)}
+                  </p>
+                  {(
+                    [
+                      ["days90plus", "90+ days past due"],
+                      ["days61_90", "61–90 days past due"],
+                      ["days31_60", "31–60 days past due"],
+                      ["days1_30", "1–30 days past due"],
+                      ["notDue", "Not yet due"],
+                    ] as const
+                  ).map(([bucket, title]) => (
+                    <div key={bucket} className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-erp">
+                      <p className="border-b border-border/50 bg-muted/20 px-4 py-2 text-xs font-bold uppercase text-[#1a2744]">
+                        {title}
+                      </p>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Invoice</TableHead>
+                            <TableHead>Client</TableHead>
+                            <TableHead className="text-right">Amount</TableHead>
+                            <TableHead>Due</TableHead>
+                            <TableHead className="text-right">Days late</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(arPayload.buckets[bucket] as { invoiceId: string; clientName: string; amount: number; dueDate: string; daysPastDue: number }[]).length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-muted-foreground py-6">—</TableCell>
+                            </TableRow>
+                          ) : (
+                            (arPayload.buckets[bucket] as { invoiceId: string; clientName: string; amount: number; dueDate: string; daysPastDue: number }[]).map((row) => (
+                              <TableRow key={row.invoiceId + bucket}>
+                                <TableCell className="font-mono text-xs">{row.invoiceId}</TableCell>
+                                <TableCell>{row.clientName}</TableCell>
+                                <TableCell className="text-right font-bold">{format(row.amount)}</TableCell>
+                                <TableCell className="text-xs">{new Date(row.dueDate).toLocaleDateString()}</TableCell>
+                                <TableCell className="text-right">{row.daysPastDue}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ))}
+                </>
+              )}
+            </TabsContent>
+            <TabsContent value="ap" className="mt-0 focus-visible:outline-none">
+              <FinanceApTab symbol={symbol} canWrite={canWriteFinance} />
+            </TabsContent>
+            <TabsContent value="payroll" className="mt-0 focus-visible:outline-none">
+              <FinancePayrollTab />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-    </>
-  );
+      );
 }

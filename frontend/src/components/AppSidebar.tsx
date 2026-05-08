@@ -66,57 +66,82 @@ type NavItem = {
     icon: any;
     permissions?: string[];
     roles?: readonly string[];
+    platformSuperAdmin?: boolean;
   }[];
 };
 
 const allNavItems: readonly NavItem[] = [
-  { titleKey: "nav.dashboard", url: "/", icon: LayoutDashboard, permissions: [PERMS.DASHBOARD_VIEW] },
-  { titleKey: "nav.analytics", url: "/analytics", icon: BarChart3, permissions: [PERMS.DASHBOARD_VIEW] },
-  { titleKey: "nav.reports", url: "/reports", icon: FileBarChart, permissions: [PERMS.DASHBOARD_VIEW] },
-
   {
-    titleKey: "nav.productsAndMaterials",
-    icon: Package,
+    titleKey: "nav.intelligence",
+    icon: BarChart3,
     items: [
-      { titleKey: "nav.production", url: "/production", icon: Factory, permissions: [PERMS.DASHBOARD_MFG] },
-      { titleKey: "nav.productionKiosk", url: "/kiosk/production", icon: QrCode, permissions: [PERMS.DASHBOARD_MFG] },
-      { titleKey: "nav.scheduling", url: "/scheduling", icon: CalendarDays, permissions: [PERMS.DASHBOARD_MFG] },
-      { titleKey: "nav.receivingKiosk", url: "/kiosk/receiving", icon: ScanBarcode, permissions: [PERMS.DASHBOARD_INVENTORY] },
+      { titleKey: "nav.dashboard", url: "/", icon: LayoutDashboard, permissions: [PERMS.DASHBOARD_VIEW] },
+      { titleKey: "nav.analytics", url: "/analytics", icon: BarChart3, permissions: [PERMS.DASHBOARD_VIEW] },
+      { titleKey: "nav.reports", url: "/reports", icon: FileBarChart, permissions: [PERMS.DASHBOARD_VIEW] },
     ],
   },
-
-  { titleKey: "nav.jobs", url: "/production-jobs", icon: Wrench, permissions: [PERMS.DASHBOARD_MFG] },
-  { titleKey: "nav.boms", url: "/boms", icon: FileStack, permissions: [PERMS.DASHBOARD_MFG] },
-  { titleKey: "nav.orders", url: "/orders", icon: ShoppingCart, roles: ["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"] as const },
-  { titleKey: "nav.crm", url: "/crm", icon: LayoutTemplate, permissions: [PERMS.DASHBOARD_VIEW] },
-  { titleKey: "nav.pos", url: "/pos", icon: Store, permissions: [PERMS.POS_VIEW] },
-  { titleKey: "nav.clients", url: "/clients", icon: Users, roles: ["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"] as const },
-  { titleKey: "nav.inventory", url: "/inventory", icon: Package, permissions: [PERMS.DASHBOARD_INVENTORY] },
-  { titleKey: "nav.purchasing", url: "/purchase-orders", icon: Truck, permissions: [PERMS.PO_VIEW] },
   {
-    titleKey: "nav.shipments",
-    url: "/shipments",
-    icon: PackageCheck,
-    permissions: [PERMS.SHIPMENTS_VIEW],
+    titleKey: "nav.commercial",
+    icon: ShoppingCart,
+    items: [
+      { titleKey: "nav.crm", url: "/crm", icon: LayoutTemplate, permissions: [PERMS.DASHBOARD_VIEW] },
+      { titleKey: "nav.clients", url: "/clients", icon: Users, roles: ["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"] as const },
+      { titleKey: "nav.orders", url: "/orders", icon: ShoppingCart, roles: ["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"] as const },
+      { titleKey: "nav.pos", url: "/pos", icon: Store, permissions: [PERMS.POS_VIEW] },
+    ],
   },
-  { titleKey: "nav.hr", url: "/hr", icon: UserCog, permissions: [PERMS.HR_FULL] },
-  { titleKey: "nav.myHr", url: "/my-hr", icon: UserCog, roles: ["employee"] as const },
+  {
+    titleKey: "nav.operations",
+    icon: Factory,
+    items: [
+      { titleKey: "nav.production", url: "/production", icon: Factory, permissions: [PERMS.DASHBOARD_MFG] },
+      { titleKey: "nav.jobs", url: "/production-jobs", icon: Wrench, permissions: [PERMS.DASHBOARD_MFG] },
+      { titleKey: "nav.scheduling", url: "/scheduling", icon: CalendarDays, permissions: [PERMS.DASHBOARD_MFG] },
+      { titleKey: "nav.boms", url: "/boms", icon: FileStack, permissions: [PERMS.DASHBOARD_MFG] },
+      { titleKey: "nav.quality", url: "/quality-settings", icon: ClipboardCheck, roles: ["Admin", "warehouse_head"] as const },
+    ],
+  },
+  {
+    titleKey: "nav.supplyChain",
+    icon: Truck,
+    items: [
+      { titleKey: "nav.inventory", url: "/inventory", icon: Package, permissions: [PERMS.DASHBOARD_INVENTORY] },
+      { titleKey: "nav.purchasing", url: "/purchase-orders", icon: Truck, permissions: [PERMS.PO_VIEW] },
+      { titleKey: "nav.shipments", url: "/shipments", icon: PackageCheck, permissions: [PERMS.SHIPMENTS_VIEW] },
+    ],
+  },
+  {
+    titleKey: "nav.people",
+    icon: Users,
+    items: [
+      { titleKey: "nav.hr", url: "/hr", icon: UserCog, permissions: [PERMS.HR_FULL] },
+      { titleKey: "nav.myHr", url: "/my-hr", icon: UserCog, roles: ["employee"] as const },
+    ],
+  },
   {
     titleKey: "nav.finance",
     url: "/finance",
     icon: CircleDollarSign,
     permissions: [PERMS.FINANCE_READ],
   },
-  { titleKey: "nav.smeBundle", url: "/sme-bundle", icon: Layers },
   {
-    titleKey: "nav.platform",
-    url: "/platform",
-    icon: Shield,
-    platformSuperAdmin: true,
+    titleKey: "nav.kiosks",
+    icon: ScanBarcode,
+    items: [
+      { titleKey: "nav.productionKiosk", url: "/kiosk/production", icon: QrCode, permissions: [PERMS.DASHBOARD_MFG] },
+      { titleKey: "nav.receivingKiosk", url: "/kiosk/receiving", icon: ScanBarcode, permissions: [PERMS.DASHBOARD_INVENTORY] },
+    ],
   },
-  { titleKey: "nav.documentTemplates", url: "/document-templates", icon: LayoutTemplate, roles: ["Admin", "finance_head"] as const },
-  { titleKey: "nav.quality", url: "/quality-settings", icon: ClipboardCheck, roles: ["Admin", "warehouse_head"] as const },
-  { titleKey: "nav.settings", url: "/settings", icon: Settings },
+  {
+    titleKey: "nav.system",
+    icon: Settings,
+    items: [
+      { titleKey: "nav.smeBundle", url: "/sme-bundle", icon: Layers },
+      { titleKey: "nav.documentTemplates", url: "/document-templates", icon: LayoutTemplate, roles: ["Admin", "finance_head"] as const },
+      { titleKey: "nav.platform", url: "/platform", icon: Shield, platformSuperAdmin: true },
+      { titleKey: "nav.settings", url: "/settings", icon: Settings },
+    ],
+  },
 ];
 
 const routeModuleMap: Partial<Record<string, TenantModuleKey>> = {
@@ -176,6 +201,9 @@ export function AppSidebar() {
       // Filter sub-items if any
       if (item.items) {
         const filteredSubItems = item.items.filter((sub) => {
+          if (sub.platformSuperAdmin) {
+            if (user?.platformRole !== "super_admin") return false;
+          }
           const subModuleKey = routeModuleMap[sub.url];
           if (subModuleKey && user?.tenantModuleFlags?.[subModuleKey] === false) {
             return false;

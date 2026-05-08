@@ -35,10 +35,9 @@ const ClientSchema = new mongoose.Schema({
   }
 });
 
-ClientSchema.pre('validate', function normalizeClientKeys(next) {
+ClientSchema.pre('validate', function normalizeClientKeys() {
   if (typeof this.email === 'string') this.email = this.email.trim().toLowerCase();
   if (typeof this.tin === 'string') this.tin = this.tin.trim().toUpperCase();
-  next();
 });
 
 ClientSchema.index(

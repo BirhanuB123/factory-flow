@@ -26,8 +26,8 @@ const errorHandler = (err, req, res, next) => {
   const errorText = Array.isArray(msg) ? msg.join(', ') : msg;
   const httpStatus = error.statusCode || err.statusCode || 500;
 
-  if (httpStatus >= 500) {
-    logger.error({ err: err.message, stack: err.stack }, 'request error');
+  if (httpStatus >= 400) {
+    logger.error({ err: err.message, stack: err.stack, name: err.name }, 'request error');
   }
 
   res.status(httpStatus).json({

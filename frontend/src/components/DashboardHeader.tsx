@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { Search, Bell, Settings as SettingsIcon, LogOut, User, Shield, AlertTriangle, CheckCircle2, Loader2, Info } from "lucide-react";
+import { Search, Bell, Settings as SettingsIcon, LogOut, User, Shield, AlertTriangle, CheckCircle2, Loader2, Info, Plus, ShoppingCart, Factory, Package } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { DynamicBreadcrumbs } from "@/components/DynamicBreadcrumbs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -221,6 +222,9 @@ export function DashboardHeader() {
   return (
     <header className="sticky top-0 z-50 flex min-h-[4.25rem] min-w-0 shrink-0 items-center gap-2 border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur-md lg:gap-4 lg:px-5">
       <SidebarTrigger className="shrink-0 text-muted-foreground" />
+      <div className="hidden md:block">
+        <DynamicBreadcrumbs />
+      </div>
       <div className="relative flex min-w-0 flex-1 justify-center">
         <div className="relative w-full max-w-2xl">
           <Input
@@ -318,6 +322,29 @@ export function DashboardHeader() {
 
       <div className="flex shrink-0 items-center gap-1">
         <ThemeToggle />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-primary/10 text-primary hover:bg-primary/20">
+              <Plus className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">Quick Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="cursor-pointer py-2" onClick={() => navigate("/orders")}>
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              <span>New Order</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer py-2" onClick={() => navigate("/production")}>
+              <Factory className="mr-2 h-4 w-4" />
+              <span>Start Job</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer py-2" onClick={() => navigate("/inventory")}>
+              <Package className="mr-2 h-4 w-4" />
+              <span>Add Stock</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="relative h-9 w-9">

@@ -137,6 +137,41 @@ const STRINGS = pack({
     am: "ምርቶች እና ቁሳቁሶች",
     om: "Oomishaa fi Meeshaalee",
   },
+  "nav.intelligence": {
+    en: "Intelligence",
+    am: "መረጃ",
+    om: "Intelligence",
+  },
+  "nav.commercial": {
+    en: "Commercial",
+    am: "ንግድ",
+    om: "Commercial",
+  },
+  "nav.operations": {
+    en: "Operations",
+    am: "ክንውኖች",
+    om: "Operations",
+  },
+  "nav.supplyChain": {
+    en: "Supply Chain",
+    am: "አቅርቦት ሰንሰለት",
+    om: "Supply Chain",
+  },
+  "nav.people": {
+    en: "People",
+    am: "ሰዎች",
+    om: "People",
+  },
+  "nav.kiosks": {
+    en: "Kiosks",
+    am: "ኪዮስኮች",
+    om: "Kiosks",
+  },
+  "nav.system": {
+    en: "System",
+    am: "ስርዓት",
+    om: "System",
+  },
   "nav.pos": {
     en: "POS",
     am: "POS",

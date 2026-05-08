@@ -48,9 +48,8 @@ const LeadSchema = new mongoose.Schema({
   }
 });
 
-LeadSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
+LeadSchema.pre('save', function() {
+  this.updatedAt = new Date();
 });
 
 module.exports = mongoose.model('Lead', LeadSchema);

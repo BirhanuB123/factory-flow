@@ -20,13 +20,19 @@ import {
 import { 
   Activity, 
   TrendingUp, 
+  TrendingDown,
   Package, 
   Zap, 
   DollarSign, 
   Loader2,
   Calendar,
   Download,
-  Filter
+  BarChart3,
+  Boxes,
+  CheckCircle2,
+  Gauge,
+  LineChart as LineChartIcon,
+  Sparkles
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,32 +91,107 @@ export default function Analytics() {
   };
 
   const isLoading = oeeLoading || profitLoading || turnoverLoading;
+  const avgOee = Math.round(oeeData.reduce((acc: number, cur: any) => acc + cur.oee, 0) / (oeeData.length || 1));
+  const totalProfit = Math.round(profitData.reduce((acc: number, cur: any) => acc + cur.profit, 0));
+  const totalRevenue = Math.round(profitData.reduce((acc: number, cur: any) => acc + cur.revenue, 0));
+  const avgTurnover = Math.round(
+    turnoverData.reduce((acc: number, cur: any) => acc + cur.turnoverRatio, 0) / (turnoverData.length || 1) * 10
+  ) / 10;
+  const topMargin = profitData.length
+    ? Math.max(...profitData.map((item: any) => Number(item.margin || 0)))
+    : 0;
+  const slowInventory = turnoverData.filter((item: any) => Number(item.dsi || 0) > 90).length;
+  const oeeProgress = Math.min(100, Math.max(8, avgOee));
+  const turnoverProgress = Math.min(100, Math.max(8, avgTurnover * 18));
 
   return (
-    <div className="flex flex-col gap-6 pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-bold tracking-tight">{t("analytics.title")}</h1>
-          <p className="text-muted-foreground">{t("analytics.subtitle")}</p>
-        </div>
-        
-        <div className="flex items-center gap-2 bg-background border p-1 rounded-xl shadow-erp-sm">
-          <div className="flex items-center gap-2 px-3 text-muted-foreground border-r">
-            <Calendar className="h-4 w-4" />
-            <span className="text-xs font-black uppercase tracking-widest">{t("reports.period")}</span>
+    <div className="flex flex-col gap-6 pb-10 animate-in fade-in duration-500">
+      <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card shadow-erp">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(var(--card)),hsl(var(--secondary)/0.64)_52%,hsl(var(--accent)/0.7))]" />
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-emerald-500 to-amber-500" />
+        <div className="relative grid gap-6 p-6 lg:grid-cols-[1fr_360px] lg:p-7">
+          <div className="min-w-0">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-primary">
+              <BarChart3 className="h-3.5 w-3.5" />
+              Analytics control room
+            </div>
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+              <div>
+                <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">{t("analytics.title")}</h1>
+                <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-muted-foreground">{t("analytics.subtitle")}</p>
+              </div>
+              <Badge variant="outline" className="w-fit rounded-full bg-background/70 px-3 py-1 text-[10px] font-black uppercase tracking-widest">
+                {period === "all" ? "All time" : `${period} day window`}
+              </Badge>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              {[
+                { label: "OEE signal", value: `${avgOee}%`, detail: `${oeeData.length} work centers`, icon: Gauge, tone: "text-primary", bg: "bg-primary/10" },
+                { label: "Margin peak", value: `${Math.round(topMargin)}%`, detail: "best product margin", icon: TrendingUp, tone: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10" },
+                { label: "Slow stock", value: String(slowInventory), detail: "items over 90 DSI", icon: Boxes, tone: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" },
+              ].map((item) => (
+                <div key={item.label} className="rounded-2xl border border-border/55 bg-background/78 p-4 shadow-erp-sm backdrop-blur">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{item.label}</p>
+                      <p className="mt-1 text-2xl font-black tracking-tight">{item.value}</p>
+                    </div>
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${item.bg}`}>
+                      <item.icon className={`h-5 w-5 ${item.tone}`} />
+                    </div>
+                  </div>
+                  <p className="mt-2 text-xs font-semibold text-muted-foreground">{item.detail}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[140px] border-none shadow-none focus:ring-0 font-bold">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 Days</SelectItem>
-              <SelectItem value="30">Last 30 Days</SelectItem>
-              <SelectItem value="90">Last 90 Days</SelectItem>
-              <SelectItem value="365">Last Year</SelectItem>
-              <SelectItem value="all">All Time</SelectItem>
-            </SelectContent>
-          </Select>
+
+          <div className="rounded-2xl border border-border/60 bg-background/80 p-5 shadow-erp-sm backdrop-blur">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Report period</p>
+                <p className="mt-1 text-xl font-black tracking-tight">
+                  {period === "all" ? "All Time" : `Last ${period} Days`}
+                </p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Calendar className="h-5 w-5" />
+              </div>
+            </div>
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="mt-5 h-11 rounded-xl border-border/60 bg-card font-bold shadow-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 Days</SelectItem>
+                <SelectItem value="30">Last 30 Days</SelectItem>
+                <SelectItem value="90">Last 90 Days</SelectItem>
+                <SelectItem value="365">Last Year</SelectItem>
+                <SelectItem value="all">All Time</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="mt-5 space-y-4">
+              <div>
+                <div className="mb-2 flex items-center justify-between text-xs font-bold text-muted-foreground">
+                  <span>Factory efficiency</span>
+                  <span>{avgOee}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${oeeProgress}%` }} />
+                </div>
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between text-xs font-bold text-muted-foreground">
+                  <span>Inventory velocity</span>
+                  <span>{avgTurnover}x</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-amber-500" style={{ width: `${turnoverProgress}%` }} />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -121,70 +202,84 @@ export default function Analytics() {
       ) : (
         <>
           {/* KPI Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="shadow-erp-sm border-none bg-indigo-500/5 backdrop-blur-md hover:bg-indigo-500/10 transition-colors">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-indigo-600/70 uppercase tracking-widest">Avg OEE</p>
-                    <h2 className="text-3xl font-black mt-1">
-                      {Math.round(oeeData.reduce((acc: number, cur: any) => acc + cur.oee, 0) / (oeeData.length || 1))}%
-                    </h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {[
+              {
+                label: "Avg OEE",
+                value: `${avgOee}%`,
+                sub: `${oeeData.length} active work centers`,
+                icon: Zap,
+                helper: Activity,
+                tone: "text-indigo-600 dark:text-indigo-400",
+                bg: "bg-indigo-500/10",
+                border: "border-indigo-500/20",
+              },
+              {
+                label: "Net Profit",
+                value: totalProfit.toLocaleString(),
+                sub: "Total profit in period",
+                icon: DollarSign,
+                helper: TrendingUp,
+                tone: "text-emerald-600 dark:text-emerald-400",
+                bg: "bg-emerald-500/10",
+                border: "border-emerald-500/20",
+              },
+              {
+                label: "Avg Turnover",
+                value: `${avgTurnover}x`,
+                sub: "Velocity of capital",
+                icon: Package,
+                helper: Sparkles,
+                tone: "text-amber-600 dark:text-amber-400",
+                bg: "bg-amber-500/10",
+                border: "border-amber-500/20",
+              },
+            ].map((item) => (
+              <Card
+                key={item.label}
+                className={`group overflow-hidden rounded-2xl border bg-card shadow-erp-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-erp ${item.border}`}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className={`text-sm font-black uppercase tracking-widest ${item.tone}`}>{item.label}</p>
+                      <h2 className="mt-1 truncate text-3xl font-black tracking-tight">{item.value}</h2>
+                    </div>
+                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${item.bg}`}>
+                      <item.icon className={`h-6 w-6 ${item.tone}`} />
+                    </div>
                   </div>
-                  <div className="p-3 bg-indigo-500/10 rounded-2xl">
-                    <Zap className="h-6 w-6 text-indigo-600" />
+                  <div className={`mt-4 flex items-center text-xs font-black uppercase ${item.tone}`}>
+                    <item.helper className="mr-1 h-3.5 w-3.5" />
+                    {item.sub}
                   </div>
-                </div>
-                <div className="mt-4 flex items-center text-xs font-bold text-indigo-600/60 uppercase">
-                  <Activity className="h-3 w-3 mr-1" />
-                  {oeeData.length} active work centers
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-erp-sm border-none bg-emerald-500/5 backdrop-blur-md hover:bg-emerald-500/10 transition-colors">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-emerald-600/70 uppercase tracking-widest">Net Profit</p>
-                    <h2 className="text-3xl font-black mt-1">
-                      {Math.round(profitData.reduce((acc: number, cur: any) => acc + cur.profit, 0)).toLocaleString()}
-                    </h2>
-                  </div>
-                  <div className="p-3 bg-emerald-500/10 rounded-2xl">
-                    <DollarSign className="h-6 w-6 text-emerald-600" />
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center text-xs font-bold text-emerald-600/60 uppercase truncate">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  Total profit in period
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-erp-sm border-none bg-amber-500/5 backdrop-blur-md hover:bg-amber-500/10 transition-colors">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-amber-600/70 uppercase tracking-widest">Avg Turnover</p>
-                    <h2 className="text-3xl font-black mt-1">
-                      {Math.round(turnoverData.reduce((acc: number, cur: any) => acc + cur.turnoverRatio, 0) / (turnoverData.length || 1) * 10) / 10}x
-                    </h2>
-                  </div>
-                  <div className="p-3 bg-amber-500/10 rounded-2xl">
-                    <Package className="h-6 w-6 text-amber-600" />
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center text-xs font-bold text-amber-600/60 uppercase">
-                   Velocity of capital
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid gap-4 lg:grid-cols-4">
+            {[
+              { label: "Revenue measured", value: totalRevenue.toLocaleString(), icon: LineChartIcon, tone: "text-primary", bg: "bg-primary/10" },
+              { label: "Products ranked", value: String(profitData.length), icon: CheckCircle2, tone: "text-emerald-600", bg: "bg-emerald-500/10" },
+              { label: "Inventory plotted", value: String(turnoverData.length), icon: Boxes, tone: "text-amber-600", bg: "bg-amber-500/10" },
+              { label: "Review signals", value: String(slowInventory), icon: TrendingDown, tone: "text-rose-600", bg: "bg-rose-500/10" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-erp-sm">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.bg}`}>
+                  <item.icon className={`h-5 w-5 ${item.tone}`} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{item.label}</p>
+                  <p className="mt-1 truncate text-xl font-black tracking-tight">{item.value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* OEE Chart */}
-            <Card className="shadow-erp-lg border-none overflow-hidden group">
+            <Card className="group overflow-hidden rounded-2xl border border-border/60 bg-card shadow-erp-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-lg font-black uppercase tracking-widest flex items-center gap-2">
@@ -193,7 +288,7 @@ export default function Analytics() {
                   </CardTitle>
                   <CardDescription>Efficiency metrics per Work Center</CardDescription>
                 </div>
-                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => downloadCsv(oeeData, "oee-analytics.csv")}>
+                <Button variant="ghost" size="icon" className="rounded-full opacity-0 transition-opacity group-hover:opacity-100" onClick={() => downloadCsv(oeeData, "oee-analytics.csv")}>
                   <Download className="h-4 w-4" />
                 </Button>
               </CardHeader>
@@ -220,7 +315,7 @@ export default function Analytics() {
             </Card>
 
             {/* Product Profitability */}
-            <Card className="shadow-erp-lg border-none overflow-hidden group">
+            <Card className="group overflow-hidden rounded-2xl border border-border/60 bg-card shadow-erp-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-lg font-black uppercase tracking-widest flex items-center gap-2">
@@ -229,7 +324,7 @@ export default function Analytics() {
                   </CardTitle>
                   <CardDescription>Revenue vs. Net Profit leaderboard</CardDescription>
                 </div>
-                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => downloadCsv(profitData, "profitability-analytics.csv")}>
+                <Button variant="ghost" size="icon" className="rounded-full opacity-0 transition-opacity group-hover:opacity-100" onClick={() => downloadCsv(profitData, "profitability-analytics.csv")}>
                   <Download className="h-4 w-4" />
                 </Button>
               </CardHeader>
@@ -255,7 +350,7 @@ export default function Analytics() {
             </Card>
 
             {/* Inventory Turnover */}
-            <Card className="shadow-erp-lg border-none overflow-hidden lg:col-span-2 group">
+            <Card className="group overflow-hidden rounded-2xl border border-border/60 bg-card shadow-erp-sm lg:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="text-lg font-black uppercase tracking-widest flex items-center gap-2">
@@ -264,7 +359,7 @@ export default function Analytics() {
                   </CardTitle>
                   <CardDescription>Stock velocity vs Days Sales in Inventory (DSI)</CardDescription>
                 </div>
-                <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => downloadCsv(turnoverData, "inventory-velocity.csv")}>
+                <Button variant="ghost" size="icon" className="rounded-full opacity-0 transition-opacity group-hover:opacity-100" onClick={() => downloadCsv(turnoverData, "inventory-velocity.csv")}>
                   <Download className="h-4 w-4" />
                 </Button>
               </CardHeader>
@@ -295,8 +390,8 @@ export default function Analytics() {
           </div>
 
           {/* Analysis Summary Table */}
-          <Card className="shadow-erp-lg border-none overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between bg-muted/20">
+          <Card className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-erp-sm">
+            <CardHeader className="flex flex-row items-center justify-between bg-muted/25">
                <div>
                   <CardTitle className="text-sm font-black uppercase tracking-widest">Efficiency Ranking</CardTitle>
                   <CardDescription>Top performing work centers and high-margin products</CardDescription>

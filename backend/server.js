@@ -4,7 +4,7 @@ const connectDB = require('./config/db');
 const app = require('./app');
 const { startTrialAutoSuspendScheduler } = require('./services/trialLifecycleService');
 
-const PORT = Number(process.env.PORT) || 5000;
+const PORT = Number(process.env.PORT) || 3000;
 
 connectDB()
   .then(() => {

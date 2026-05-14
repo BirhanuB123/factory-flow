@@ -82,9 +82,9 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen overflow-hidden bg-background">
+    <div className="flex h-screen w-full overflow-hidden bg-background">
       {/* Left: hero (desktop) */}
-      <div className="relative hidden lg:flex lg:w-[62.5%] flex-col justify-end overflow-hidden px-12 py-14 xl:px-16 xl:py-16 text-white">
+      <div className="relative hidden lg:flex lg:w-[62.5%] h-full flex-col justify-end overflow-hidden px-12 py-14 xl:px-16 xl:py-16 text-white">
         <div className="absolute inset-0 bg-primary/15 z-10" aria-hidden />
         <img
           //src="/login-bg.png"
@@ -119,22 +119,23 @@ export default function Login() {
       </div>
 
       {/* Right: sign-in */}
-      <div className="relative z-30 flex w-full flex-col items-center justify-center bg-gradient-to-b from-card via-card to-muted/30 px-5 py-10 sm:px-8 sm:py-12 lg:w-[37.5%] lg:border-l lg:border-border/50 lg:px-10 lg:py-14">
-        <div
-          className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent lg:hidden"
-          aria-hidden
-        />
+      <div className="relative z-30 flex h-full w-full flex-col overflow-y-auto bg-gradient-to-b from-card via-card to-muted/30 lg:w-[37.5%] lg:border-l lg:border-border/50">
+        <div className="flex min-h-full flex-col items-center justify-center px-5 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
+          <div
+            className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent lg:hidden"
+            aria-hidden
+          />
 
-        <div className="w-full max-w-[400px] animate-in fade-in zoom-in-95 duration-700 fill-mode-both">
-          <div className="mb-16 flex justify-center">
-            <img
-              src="/integra-logo.png"
-              alt="Integra logo"
-              className="h-auto w-full max-w-[380px] object-contain"
-            />
-          </div>
-          <div className="rounded-2xl border border-border/80 bg-card/95 p-8 shadow-[0_4px_28px_-6px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.04] sm:p-9 dark:ring-white/[0.06]">
-            <div className="mb-8 flex flex-col items-center space-y-3 text-center lg:items-start lg:text-left">
+          <div className="w-full max-w-[400px] animate-in fade-in zoom-in-95 duration-700 fill-mode-both">
+            <div className="mb-8 sm:mb-12 flex justify-center">
+              <img
+                src="/integra-logo.png"
+                alt="Integra logo"
+                className="h-auto w-full max-w-[320px] sm:max-w-[380px] object-contain"
+              />
+            </div>
+            <div className="rounded-2xl border border-border/80 bg-card/95 p-6 shadow-[0_4px_28px_-6px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.04] sm:p-8 dark:ring-white/[0.06]">
+              <div className="mb-6 sm:mb-8 flex flex-col items-center space-y-2 sm:space-y-3 text-center lg:items-start lg:text-left">
               <div className="mb-1 flex lg:hidden">
                 <div className="rounded-2xl border border-primary/20 bg-primary/10 p-3.5 shadow-sm">
                   <Building2 className="h-9 w-9 text-primary" aria-hidden />
@@ -216,6 +217,7 @@ export default function Login() {
             <Shield className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
             <span>{t("auth.sessionNote")}</span>
           </p>
+        </div>
         </div>
       </div>
     </div>

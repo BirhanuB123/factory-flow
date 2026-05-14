@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { purchaseOrdersApi, inventoryApi, apApi } from "@/lib/api";
@@ -18,7 +18,19 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Truck, CheckCircle, Package, Ban, FileText } from "lucide-react";
+import {
+  Plus,
+  Truck,
+  CheckCircle,
+  Package,
+  Ban,
+  FileText,
+  Search,
+  Clock,
+  AlertCircle,
+  Receipt,
+  ShipWheel,
+} from "lucide-react";
 import { ModuleDashboardLayout } from "@/components/ModuleDashboardLayout";
 import { useLocale } from "@/contexts/LocaleContext";
 import { useCurrency } from "@/hooks/use-currency";
@@ -31,7 +43,10 @@ const PERM = {
   cancel: "po:cancel",
 };
 
+const SHOW_LEGACY_PURCHASE_ORDER_TABLE = false;
+
 type POStatus = "draft" | "approved" | "partial_received" | "received" | "cancelled";
+type POStatusFilter = "all" | POStatus;
 
 interface POLine {
   _id?: string;
@@ -39,6 +54,14 @@ interface POLine {
   quantityOrdered: number;
   quantityReceived: number;
   unitCost: number;
+}
+
+interface ProductOption {
+  _id: string;
+  name: string;
+  sku: string;
+  trackingMethod?: "batch" | "serial" | string;
+  hasExpiry?: boolean;
 }
 
 interface LineInvCost {
@@ -81,6 +104,34 @@ function poLineTotalFunctional(po: PO) {
   return (po.lines || []).reduce((s, l) => s + l.quantityOrdered * (l.unitCost || 0) * fx, 0);
 }
 
+function receivedProgress(po: PO) {
+  const ordered = (po.lines || []).reduce((s, l) => s + (Number(l.quantityOrdered) || 0), 0);
+  const received = (po.lines || []).reduce((s, l) => s + (Number(l.quantityReceived) || 0), 0);
+  if (!ordered) return 0;
+  return Math.min(100, Math.round((received / ordered) * 100));
+}
+
+function statusLabel(status: POStatus) {
+  return status.replace("_", " ");
+}
+
+function statusBadgeClass(status: POStatus) {
+  switch (status) {
+    case "draft":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+    case "approved":
+      return "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300";
+    case "partial_received":
+      return "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300";
+    case "received":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+    case "cancelled":
+      return "border-destructive/30 bg-destructive/10 text-destructive";
+    default:
+      return "border-border bg-muted text-muted-foreground";
+  }
+}
+
 export default function PurchaseOrders() {
   const { t } = useLocale();
   const { format } = useCurrency();
@@ -113,6 +164,8 @@ export default function PurchaseOrders() {
   const [lcAmt, setLcAmt] = useState<string>("");
   const [lcCurr, setLcCurr] = useState("");
   const [lcExp, setLcExp] = useState("");
+  const [statusFilter, setStatusFilter] = useState<POStatusFilter>("all");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: pos = [], isLoading } = useQuery({
     queryKey: ["purchase-orders"],
@@ -142,7 +195,7 @@ export default function PurchaseOrders() {
       setReceiveSerial({});
       setReceiveExpiry({});
     }
-  }, [selected?._id, selected?.status]);
+  }, [selected]);
 
   const createMut = useMutation({
     mutationFn: () =>
@@ -315,6 +368,39 @@ export default function PurchaseOrders() {
     setSelected(po);
   }
 
+  const purchaseOrders = useMemo(() => (pos as PO[]) || [], [pos]);
+  const procurementStats = useMemo(() => {
+    const totalFunctional = purchaseOrders.reduce((sum, po) => sum + poLineTotalFunctional(po), 0);
+    const open = purchaseOrders.filter((p) => p.status !== "received" && p.status !== "cancelled");
+    const toReceive = purchaseOrders.filter((p) => ["approved", "partial_received"].includes(p.status));
+    const imports = purchaseOrders.filter((p) => p.supplyType === "import" && p.status !== "received" && p.status !== "cancelled");
+
+    return {
+      totalFunctional,
+      openCount: open.length,
+      draftCount: purchaseOrders.filter((p) => p.status === "draft").length,
+      toReceiveCount: toReceive.length,
+      importCount: imports.length,
+      receivedCount: purchaseOrders.filter((p) => p.status === "received").length,
+    };
+  }, [purchaseOrders]);
+
+  const filteredPurchaseOrders = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    return purchaseOrders.filter((po) => {
+      const matchesStatus = statusFilter === "all" || po.status === statusFilter;
+      const matchesSearch =
+        !q ||
+        po.poNumber.toLowerCase().includes(q) ||
+        po.supplierName.toLowerCase().includes(q) ||
+        (po.invoiceCurrency || "").toLowerCase().includes(q) ||
+        (po.lines || []).some((l) =>
+          `${l.product?.sku || ""} ${l.product?.name || ""}`.toLowerCase().includes(q)
+        );
+      return matchesStatus && matchesSearch;
+    });
+  }, [purchaseOrders, searchTerm, statusFilter]);
+
   return (
     <ModuleDashboardLayout
       title={t("pages.purchasing.title")}
@@ -336,18 +422,297 @@ export default function PurchaseOrders() {
       healthStats={[
         {
           label: t("pages.purchasing.openPos"),
-          value: String((pos as PO[]).filter((p) => p.status !== "received" && p.status !== "cancelled").length),
+          value: String(procurementStats.openCount),
         },
         {
           label: t("pages.purchasing.draftPos"),
-          value: String((pos as PO[]).filter((p) => p.status === "draft").length),
+          value: String(procurementStats.draftCount),
         },
         {
           label: t("pages.purchasing.toReceive"),
-          value: String((pos as PO[]).filter((p) => ["approved", "partial_received"].includes(p.status)).length),
+          value: String(procurementStats.toReceiveCount),
         },
       ]}
     >
+      <div className="space-y-6">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <Card className="overflow-hidden border-border/60 bg-card/80 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                    Commitment
+                  </p>
+                  <p className="mt-2 truncate text-2xl font-black tracking-tight">
+                    {format(procurementStats.totalFunctional)}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Functional value across all POs</p>
+                </div>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Receipt className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden border-border/60 bg-card/80 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                    Awaiting Receipt
+                  </p>
+                  <p className="mt-2 text-2xl font-black tracking-tight">{procurementStats.toReceiveCount}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Approved or partially received</p>
+                </div>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+                  <Package className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden border-border/60 bg-card/80 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                    Drafts
+                  </p>
+                  <p className="mt-2 text-2xl font-black tracking-tight">{procurementStats.draftCount}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Need review and approval</p>
+                </div>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+                  <Clock className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden border-border/60 bg-card/80 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                    Active Imports
+                  </p>
+                  <p className="mt-2 text-2xl font-black tracking-tight">{procurementStats.importCount}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Import POs still open</p>
+                </div>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600">
+                  <ShipWheel className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="overflow-hidden border-border/60 bg-card/80 shadow-sm">
+          <CardHeader className="border-b bg-muted/20 p-4 sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <CardTitle className="flex items-center gap-2 text-base font-black uppercase tracking-wide">
+                  <FileText className="h-5 w-5 text-primary" /> Purchase orders
+                </CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Review, approve, and receive supplier orders into stock.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative sm:w-72">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search PO, supplier, SKU"
+                    className="h-10 pl-9"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as POStatusFilter)}>
+                  <SelectTrigger className="h-10 sm:w-44">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="partial_received">Partial received</SelectItem>
+                    <SelectItem value="received">Received</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/10 hover:bg-muted/10">
+                    <TableHead className="min-w-[210px] pl-5">Purchase order</TableHead>
+                    <TableHead className="min-w-[180px]">Supplier</TableHead>
+                    <TableHead className="min-w-[190px]">Progress</TableHead>
+                    <TableHead className="min-w-[150px] text-right">Value</TableHead>
+                    <TableHead className="min-w-[210px]">Status</TableHead>
+                    <TableHead className="min-w-[150px] pr-5 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-14 text-center">
+                        <div className="mx-auto flex max-w-sm flex-col items-center gap-3 text-muted-foreground">
+                          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                          <p className="text-sm font-medium">Loading purchase orders...</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : purchaseOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-16 text-center">
+                        <div className="mx-auto max-w-md space-y-4 text-muted-foreground">
+                          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <FileText className="h-6 w-6" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-foreground">No purchase orders yet</p>
+                            <p className="text-sm">
+                              {can(PERM.create)
+                                ? "Create a draft, approve it, then receive materials into inventory."
+                                : "Purchase orders will appear here once your team creates them."}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                            <Button asChild variant="outline" size="sm" className="h-9">
+                              <Link to="/inventory">Inventory / SKUs</Link>
+                            </Button>
+                            {canPickVendor && (
+                              <Button asChild variant="outline" size="sm" className="h-9">
+                                <Link to="/finance">Finance & vendors</Link>
+                              </Button>
+                            )}
+                            <Button asChild variant="secondary" size="sm" className="h-9">
+                              <Link to="/sme-bundle">SME workflow</Link>
+                            </Button>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredPurchaseOrders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-14 text-center">
+                        <div className="mx-auto max-w-sm space-y-3 text-muted-foreground">
+                          <AlertCircle className="mx-auto h-8 w-8" />
+                          <p className="text-sm font-medium">No purchase orders match the current filters.</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSearchTerm("");
+                              setStatusFilter("all");
+                            }}
+                          >
+                            Clear filters
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredPurchaseOrders.map((po) => {
+                      const progress = receivedProgress(po);
+                      return (
+                        <TableRow
+                          key={po._id}
+                          className="cursor-pointer align-top hover:bg-muted/30"
+                          onClick={() => setSelected(po)}
+                        >
+                          <TableCell className="pl-5">
+                            <div className="space-y-1">
+                              <div className="font-mono text-sm font-black text-foreground">{po.poNumber}</div>
+                              <div className="flex flex-wrap gap-1">
+                                <Badge variant="outline" className="rounded-md text-[10px] font-black uppercase">
+                                  {po.lines?.length ?? 0} lines
+                                </Badge>
+                                {po.supplyType === "import" && (
+                                  <Badge className="rounded-md bg-sky-600 text-[10px] font-black uppercase">
+                                    Import
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-[260px] truncate text-sm font-semibold">{po.supplierName}</div>
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {(po.invoiceCurrency || "ETB").toUpperCase()} invoice
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between gap-3 text-xs">
+                                <span className="font-semibold text-muted-foreground">Received</span>
+                                <span className="font-mono font-black">{progress}%</span>
+                              </div>
+                              <div className="h-2 overflow-hidden rounded-full bg-muted">
+                                <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="font-mono text-sm font-black">{format(poLineTotal(po))}</div>
+                            {(po.invoiceCurrency && po.invoiceCurrency !== "ETB") ||
+                            (po.fxRateToFunctional && po.fxRateToFunctional !== 1) ? (
+                              <div className="text-[10px] text-muted-foreground">
+                                ETB {format(poLineTotalFunctional(po))}
+                              </div>
+                            ) : null}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1.5">
+                              <Badge
+                                variant="outline"
+                                className={`rounded-md text-[10px] font-black uppercase ${statusBadgeClass(po.status)}`}
+                              >
+                                {statusLabel(po.status)}
+                              </Badge>
+                              {(po.landedCostPoolTotal ?? 0) > 0 && (
+                                <Badge variant="secondary" className="rounded-md text-[10px] font-mono">
+                                  Landed {format(po.landedCostPoolTotal ?? 0)}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="pr-5 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-end gap-2">
+                              {po.status === "draft" && can(PERM.approve) && (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-8 gap-1.5"
+                                  onClick={() => approveMut.mutate(po._id)}
+                                >
+                                  <CheckCircle className="h-3.5 w-3.5" /> Approve
+                                </Button>
+                              )}
+                              {["approved", "partial_received"].includes(po.status) && can(PERM.receive) && (
+                                <Button size="sm" className="h-8 gap-1.5" onClick={() => openReceive(po)}>
+                                  <Package className="h-3.5 w-3.5" /> Receive
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {SHOW_LEGACY_PURCHASE_ORDER_TABLE && (
       <Card className="border-none shadow-xl bg-card/60 overflow-hidden">
         <CardHeader className="border-b">
           <CardTitle className="text-lg font-black uppercase flex items-center gap-2">
@@ -449,6 +814,7 @@ export default function PurchaseOrders() {
           </Table>
         </CardContent>
       </Card>
+      )}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="sm:max-w-lg">
@@ -494,7 +860,7 @@ export default function PurchaseOrders() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__">Select…</SelectItem>
-                      {(products as { _id: string; name: string; sku: string }[]).map((pr) => (
+                      {(products as ProductOption[]).map((pr) => (
                         <SelectItem key={pr._id} value={pr._id}>
                           {pr.sku} — {pr.name}
                         </SelectItem>
@@ -696,7 +1062,7 @@ export default function PurchaseOrders() {
                     if (rem <= 0) return null;
                     const inv = selected.lineInventoryCosts?.[i];
                     // Find full product details for tracking method
-                    const pFull = products.find((p: any) => p._id === l.product?._id);
+                    const pFull = (products as ProductOption[]).find((p) => p._id === l.product?._id);
                     const showBatch = pFull?.trackingMethod === 'batch';
                     const showSerial = pFull?.trackingMethod === 'serial';
                     const showExpiry = pFull?.hasExpiry;
@@ -789,7 +1155,7 @@ export default function PurchaseOrders() {
                     onClick={() => {
                       const receipts = selected.lines
                         .map((l, i) => {
-                          const pFull = products.find((p: any) => p._id === l.product?._id);
+                          const pFull = (products as ProductOption[]).find((p) => p._id === l.product?._id);
                           const qty = receiveQty[i] || 0;
                           
                           if (qty > 0) {
@@ -818,8 +1184,8 @@ export default function PurchaseOrders() {
                       }
                       try {
                         receiveMut.mutate({ id: selected._id, receipts });
-                      } catch (err: any) {
-                        toast.error(err.message);
+                      } catch (err: unknown) {
+                        toast.error(err instanceof Error ? err.message : "Receive failed");
                       }
                     }}
                   >

@@ -92,6 +92,11 @@ const STRINGS = pack({
     am: "ማስላኪያ",
     om: "Ergamtoota",
   },
+  "nav.globalTrade": {
+    en: "Global Trade",
+    am: "ዓለም አቀፍ ንግድ",
+    om: "Daldala Addunyaa",
+  },
   "nav.hr": {
     en: "HR",
     am: "ሰው ሀብት",

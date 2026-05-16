@@ -95,6 +95,10 @@ const MODULE_LABELS: Record<(typeof TENANT_MODULE_KEYS)[number], string> = {
   procurement: "Procurement & POs",
   finance: "Finance & AP/AR",
   hr: "HR & payroll",
+  crm: "CRM & Customers",
+  pos: "Point of Sale",
+  global_trade: "Global Trade & Shipping",
+  analytics: "Analytics & Intelligence",
 };
 
 function mergeDefaultFlags(m?: Partial<TenantModuleFlags>): TenantModuleFlags {
@@ -105,6 +109,10 @@ function mergeDefaultFlags(m?: Partial<TenantModuleFlags>): TenantModuleFlags {
     procurement: true,
     finance: true,
     hr: true,
+    crm: true,
+    pos: true,
+    global_trade: true,
+    analytics: true,
   };
   for (const k of TENANT_MODULE_KEYS) {
     if (m && typeof m[k] === "boolean") base[k] = m[k];

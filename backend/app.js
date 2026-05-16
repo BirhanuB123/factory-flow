@@ -199,6 +199,7 @@ const billingWebhookRoutes = require('./routes/billingWebhookRoutes');
 const billingRoutes = require('./routes/billingRoutes');
 const posRoutes = require('./routes/posRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const tradeRoutes = require('./routes/trade.routes');
 const analyticsController = require('./controllers/analyticsController');
 const tenantController = require('./controllers/tenantController');
 const qualityController = require('./controllers/qualityController');
@@ -306,6 +307,7 @@ app.use('/api/employee', requireTenantModule('hr'));
 app.use('/api/pos', requireTenantModule('sales'));
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/trade', tradeRoutes);
 
 app.use('/api/pos', posRoutes);
 app.use('/api/finance', financeAccess);

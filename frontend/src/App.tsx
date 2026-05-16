@@ -32,6 +32,8 @@ const Finance = React.lazy(() => import("./pages/Finance.tsx"));
 const Production = React.lazy(() => import("./pages/Production.tsx"));
 const PurchaseOrders = React.lazy(() => import("./pages/PurchaseOrders.tsx"));
 const Shipments = React.lazy(() => import("./pages/Shipments.tsx"));
+const GlobalTrade = React.lazy(() => import("./pages/GlobalTrade.tsx"));
+const GlobalTradeDetail = React.lazy(() => import("./pages/GlobalTradeDetail.tsx"));
 const Settings = React.lazy(() => import("./pages/Settings.tsx"));
 const SmeBundle = React.lazy(() => import("./pages/SmeBundle.tsx"));
 const NotFound = React.lazy(() => import("./pages/NotFound.tsx"));
@@ -305,6 +307,8 @@ const App = () => {
                         <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
                           <Route element={<ProtectedRoute requiredPermissions={[PERMS.SHIPMENTS_VIEW]} />}>
                             <Route path="/shipments" element={<Shipments />} />
+                            <Route path="/global-trade" element={<GlobalTrade />} />
+                            <Route path="/global-trade/:id" element={<GlobalTradeDetail />} />
                           </Route>
                         </Route>
                         <Route path="/profile" element={<Profile />} />

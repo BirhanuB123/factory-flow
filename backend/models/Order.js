@@ -75,6 +75,27 @@ const OrderSchema = new mongoose.Schema({
     ref: 'PosSession',
     default: null
   },
+  tradeType: {
+    type: String,
+    enum: ['local', 'export'],
+    default: 'local'
+  },
+  invoiceCurrency: {
+    type: String,
+    default: 'ETB',
+    trim: true,
+    uppercase: true
+  },
+  fxRateToFunctional: {
+    type: Number,
+    default: 1,
+    min: 0
+  },
+  incoterm: {
+    type: String,
+    enum: ['EXW', 'FCA', 'FOB', 'CFR', 'CIF', 'DAP', 'DDP', 'none'],
+    default: 'none'
+  },
   paymentDetails: {
     method: { type: String, enum: ['cash', 'card', 'mobile', 'chapa', 'other'], default: 'cash' },
     amountTendered: { type: Number, default: 0 },

@@ -22,6 +22,7 @@ import {
   FileBarChart,
   ClipboardCheck,
   ChevronRight,
+  Globe,
 } from "lucide-react";
 import {
   Collapsible,
@@ -108,6 +109,7 @@ const allNavItems: readonly NavItem[] = [
       { titleKey: "nav.inventory", url: "/inventory", icon: Package, permissions: [PERMS.DASHBOARD_INVENTORY] },
       { titleKey: "nav.purchasing", url: "/purchase-orders", icon: Truck, permissions: [PERMS.PO_VIEW] },
       { titleKey: "nav.shipments", url: "/shipments", icon: PackageCheck, permissions: [PERMS.SHIPMENTS_VIEW] },
+      { titleKey: "nav.globalTrade", url: "/global-trade", icon: Globe, permissions: [PERMS.SHIPMENTS_VIEW] },
     ],
   },
   {
@@ -153,16 +155,17 @@ const routeModuleMap: Partial<Record<string, TenantModuleKey>> = {
   "/inventory": "inventory",
   "/kiosk/receiving": "inventory",
   "/orders": "sales",
-  "/analytics": "sales",
-  "/reports": "sales",
-  "/crm": "sales",
+  "/analytics": "analytics",
+  "/reports": "analytics",
+  "/crm": "crm",
   "/clients": "sales",
-  "/shipments": "sales",
+  "/shipments": "global_trade",
+  "/global-trade": "global_trade",
   "/purchase-orders": "procurement",
   "/finance": "finance",
   "/hr": "hr",
   "/my-hr": "hr",
-  "/pos": "sales",
+  "/pos": "pos",
 };
 
 export function AppSidebar() {
@@ -245,7 +248,12 @@ export function AppSidebar() {
 
           {!collapsed && (
             <div className="flex min-w-0 flex-col">
-              <span className="text-lg font-bold tracking-tight text-sidebar-foreground">Integra</span>
+              <span 
+                className="text-lg font-bold tracking-tight text-sidebar-foreground truncate"
+                title={user?.tenantSubscription?.displayName || "Integra"}
+              >
+                {user?.tenantSubscription?.displayName || "Integra"}
+              </span>
               <span className="text-[11px] font-medium text-sidebar-muted">
                 {t("nav.erpSubtitle")}
               </span>

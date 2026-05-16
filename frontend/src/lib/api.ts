@@ -1518,6 +1518,10 @@ export const TENANT_MODULE_KEYS = [
   'procurement',
   'finance',
   'hr',
+  'crm',
+  'pos',
+  'global_trade',
+  'analytics',
 ] as const;
 
 export type TenantModuleKey = (typeof TENANT_MODULE_KEYS)[number];
@@ -1821,6 +1825,29 @@ export const billingApi = {
         txRef: string;
       };
     }>(`/billing/chapa/verify/${encodeURIComponent(txRef)}`);
+    return response.data;
+  },
+};
+
+export const tradeApi = {
+  getAll: async () => {
+    const response = await api.get('/trade');
+    return response.data;
+  },
+  getOne: async (id: string) => {
+    const response = await api.get(`/trade/${id}`);
+    return response.data;
+  },
+  create: async (data: any) => {
+    const response = await api.post('/trade', data);
+    return response.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/trade/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/trade/${id}`);
     return response.data;
   },
 };

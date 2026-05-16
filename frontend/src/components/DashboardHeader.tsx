@@ -220,59 +220,63 @@ export function DashboardHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex min-h-[4.25rem] min-w-0 shrink-0 items-center gap-2 border-b border-border/60 bg-background/95 px-3 py-2 backdrop-blur-md lg:gap-4 lg:px-5">
-      <SidebarTrigger className="shrink-0 text-muted-foreground" />
+    <header className="sticky top-0 z-50 flex min-h-[4.25rem] min-w-0 shrink-0 items-center gap-2 border-b border-slate-200/60 bg-slate-50/90 px-3 py-2 backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-950/90 lg:gap-4 lg:px-6">
+      <SidebarTrigger className="shrink-0 text-slate-500 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:bg-slate-800/50 rounded-md" />
       <div className="hidden md:block">
         <DynamicBreadcrumbs />
       </div>
       <div className="relative flex min-w-0 flex-1 justify-center">
-        <div className="relative w-full max-w-2xl">
-          <Input
-            ref={searchInputRef}
-            placeholder={t("header.searchPlaceholder")}
-            className="h-11 w-full rounded-full border-0 bg-muted/80 pl-4 pr-14 text-sm shadow-none placeholder:text-muted-foreground/70 focus-visible:ring-2 focus-visible:ring-primary/25 dark:bg-muted/50"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => searchQuery.trim().length > 1 && setShowSearch(true)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && searchQuery.trim().length > 1) performSearch();
-            }}
-          />
-          <Button
-            type="button"
-            size="icon"
-            className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 rounded-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
-            aria-label={t("header.searchAria")}
-            onClick={() => {
-              if (searchQuery.trim().length > 1) performSearch();
-              else searchInputRef.current?.focus();
-            }}
-          >
-            <Search className="h-4 w-4" />
-          </Button>
-          <span
-            className="pointer-events-none absolute right-14 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded-md border border-border/60 bg-background/90 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground xl:inline-flex"
-            aria-hidden
-          >
-            <kbd className="font-sans">Ctrl</kbd>
-            <kbd className="font-sans">K</kbd>
-          </span>
+        <div className="relative w-full max-w-2xl flex items-center">
+          <div className="flex w-full items-center rounded-full bg-slate-100 px-2 py-1.5 dark:bg-slate-900 transition-shadow focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:bg-white dark:focus-within:bg-slate-950 shadow-sm border border-transparent focus-within:border-blue-500/10">
+            <Input
+              ref={searchInputRef}
+              placeholder={t("header.searchPlaceholder")}
+              className="h-8 flex-1 border-0 bg-transparent px-3 text-sm shadow-none focus-visible:ring-0 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery.trim().length > 1 && setShowSearch(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && searchQuery.trim().length > 1) performSearch();
+              }}
+            />
+            <div className="flex items-center gap-2 pr-1">
+              <span
+                className="hidden items-center gap-0.5 rounded border border-slate-200/60 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-500 xl:inline-flex"
+                aria-hidden
+              >
+                <kbd className="font-sans">Ctrl</kbd>
+                <kbd className="font-sans">K</kbd>
+              </span>
+              <Button
+                type="button"
+                size="icon"
+                className="h-8 w-8 shrink-0 rounded-full bg-blue-600 text-white shadow-sm hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500"
+                aria-label={t("header.searchAria")}
+                onClick={() => {
+                  if (searchQuery.trim().length > 1) performSearch();
+                  else searchInputRef.current?.focus();
+                }}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
           {showSearch && (
-            <div className="absolute left-0 top-full z-50 mt-2 max-h-[400px] w-full overflow-y-auto rounded-2xl border border-border/60 bg-card p-2 shadow-erp">
-              <div className="flex items-center justify-between px-2 py-1 mb-1 border-b">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <div className="absolute left-0 top-full z-50 mt-2 max-h-[400px] w-full overflow-y-auto rounded-2xl border border-slate-200/60 bg-white p-2 shadow-xl dark:border-slate-800 dark:bg-slate-950">
+              <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-slate-100 dark:border-slate-800">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider dark:text-slate-500">
                   {t("header.searchResults")}
                 </span>
-                {isSearching && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                {isSearching && <Loader2 className="h-3 w-3 animate-spin text-slate-400" />}
                 <button 
                   onClick={() => setShowSearch(false)}
-                  className="text-[10px] text-primary hover:underline"
+                  className="text-[10px] text-blue-600 hover:underline dark:text-blue-400"
                 >
                   {t("common.close")}
                 </button>
               </div>
               {searchResults.length === 0 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
+                <div className="p-4 text-center text-sm text-slate-500">
                   {isSearching ? t("header.searching") : t("header.noResults")}
                 </div>
               ) : (
@@ -280,7 +284,7 @@ export function DashboardHeader() {
                   {searchResults.map((result) => (
                     <button
                       key={`${result.type}-${result.id}`}
-                      className="flex flex-col items-start w-full px-3 py-2 text-left rounded-sm hover:bg-muted transition-colors"
+                      className="flex flex-col items-start w-full px-3 py-2 text-left rounded-md hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
                       onClick={() => {
                         navigate(result.link);
                         setSearchQuery("");
@@ -288,12 +292,12 @@ export function DashboardHeader() {
                       }}
                     >
                       <div className="flex items-center gap-2 w-full">
-                        <span className="text-xs font-semibold">{result.title}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium uppercase ml-auto">
+                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">{result.title}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium uppercase ml-auto dark:bg-blue-900/20 dark:text-blue-400">
                           {result.type}
                         </span>
                       </div>
-                      <span className="text-[10px] text-muted-foreground">{result.subtitle}</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400">{result.subtitle}</span>
                     </button>
                   ))}
                 </div>
@@ -303,43 +307,43 @@ export function DashboardHeader() {
         </div>
       </div>
 
-      <div className="hidden shrink-0 items-center gap-1 lg:flex">
+      <div className="hidden shrink-0 items-center gap-2 lg:flex">
         <Button
           variant="ghost"
-          className="rounded-full font-medium text-muted-foreground hover:text-foreground"
+          className="rounded-full font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-100"
           onClick={() => navigate("/production")}
         >
           {t("header.listOfAssets")}
         </Button>
         <Button
           variant="outline"
-          className="rounded-full border-primary/20 px-5 font-medium text-foreground shadow-erp-sm hover:bg-accent/60"
+          className="rounded-full border-slate-200 px-5 font-medium text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
           onClick={() => navigate("/production")}
         >
           {t("header.addAsset")}
         </Button>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
-        <ThemeToggle />
+      <div className="flex shrink-0 items-center gap-2 ml-2">
+        <ThemeToggle className="hover:bg-slate-200/50 dark:hover:bg-slate-800/50" />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-primary/10 text-primary hover:bg-primary/20">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40">
               <Plus className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">Quick Actions</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-48 rounded-xl">
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400">Quick Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer py-2" onClick={() => navigate("/orders")}>
+            <DropdownMenuItem className="cursor-pointer py-2 rounded-md" onClick={() => navigate("/orders")}>
               <ShoppingCart className="mr-2 h-4 w-4" />
               <span>New Order</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer py-2" onClick={() => navigate("/production")}>
+            <DropdownMenuItem className="cursor-pointer py-2 rounded-md" onClick={() => navigate("/production")}>
               <Factory className="mr-2 h-4 w-4" />
               <span>Start Job</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer py-2" onClick={() => navigate("/inventory")}>
+            <DropdownMenuItem className="cursor-pointer py-2 rounded-md" onClick={() => navigate("/inventory")}>
               <Package className="mr-2 h-4 w-4" />
               <span>Add Stock</span>
             </DropdownMenuItem>
@@ -347,18 +351,18 @@ export function DashboardHeader() {
         </DropdownMenu>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-9 w-9">
-              <Bell className="h-4 w-4 text-muted-foreground" />
+            <Button variant="ghost" size="icon" className="relative h-9 w-9 text-slate-500 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:bg-slate-800/50 rounded-full">
+              <Bell className="h-4.5 w-4.5" />
               {unreadCount > 0 && (
-                <span className="absolute right-2 top-2 flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-destructive" />
+                <span className="absolute right-2.5 top-2 flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75 dark:bg-red-400" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500 dark:bg-red-400" />
                 </span>
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="end">
-            <div className="p-3 border-b flex justify-between items-center">
+          <PopoverContent className="w-80 p-0 rounded-xl" align="end">
+            <div className="p-3 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <h3 className="font-semibold text-sm">
                 {t("header.notifications")}
                 {unreadCount > 0 && ` (${unreadCount})`}
@@ -366,7 +370,7 @@ export function DashboardHeader() {
               {unreadCount > 0 && (
                 <button 
                   onClick={handleMarkAllAsRead}
-                  className="text-xs text-primary hover:underline font-medium"
+                  className="text-xs text-blue-600 hover:underline font-medium dark:text-blue-400"
                 >
                   {t("header.markAllRead")}
                 </button>
@@ -374,7 +378,7 @@ export function DashboardHeader() {
             </div>
             <div className="max-h-[300px] overflow-y-auto">
               {notifications.length === 0 ? (
-                <div className="p-8 text-center text-sm text-muted-foreground">
+                <div className="p-8 text-center text-sm text-slate-500">
                   {t("header.noNotifications")}
                 </div>
               ) : (
@@ -384,20 +388,20 @@ export function DashboardHeader() {
                     <div 
                       key={n._id} 
                       onClick={() => handleMarkAsRead(n._id, n.isRead)}
-                      className={`flex gap-3 p-4 hover:bg-muted/50 transition-colors cursor-pointer border-b last:border-0 text-sm ${!n.isRead ? 'bg-primary/5' : ''}`}
+                      className={`flex gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer border-b border-slate-100 dark:border-slate-800 last:border-0 text-sm ${!n.isRead ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
                     >
                       <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${uiTheme.color}`}>
                         {uiTheme.icon}
                       </div>
                       <div className="space-y-1 w-full">
                         <div className="flex justify-between items-start">
-                          <p className={`font-medium leading-none ${!n.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>
+                          <p className={`font-medium leading-none ${!n.isRead ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>
                             {n.title}
                           </p>
-                          {!n.isRead && <span className="h-2 w-2 rounded-full bg-primary shrink-0 z-10" />}
+                          {!n.isRead && <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0 z-10 dark:bg-blue-400" />}
                         </div>
-                        <p className="text-xs text-muted-foreground leading-snug">{n.description}</p>
-                        <p className="text-[10px] text-muted-foreground pt-1">
+                        <p className="text-xs text-slate-500 leading-snug dark:text-slate-400">{n.description}</p>
+                        <p className="text-[10px] text-slate-400 pt-1 dark:text-slate-500">
                           {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
                         </p>
                       </div>
@@ -411,38 +415,38 @@ export function DashboardHeader() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex h-10 items-center gap-2 rounded-full p-1 pl-2 hover:bg-secondary/80">
-              <div className="hidden text-right md:mr-1 md:flex md:flex-col">
-                <span className="text-xs font-semibold leading-none">{user?.name || settings.displayName}</span>
-                <span className="text-[10px] text-muted-foreground">
+            <Button variant="ghost" className="flex h-10 items-center gap-3 rounded-full p-1 pl-3 hover:bg-slate-200/50 dark:hover:bg-slate-800/50">
+              <div className="hidden text-right md:flex md:flex-col">
+                <span className="text-sm font-semibold leading-none text-slate-800 dark:text-slate-200">{user?.name || settings.displayName}</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                   {user?.platformRole === "super_admin" ? "Platform Super Admin" : (user?.role || settings.role)}
                 </span>
               </div>
               <span className="relative inline-flex">
-                <Avatar className="h-9 w-9 border border-border/60 shadow-erp-sm">
+                <Avatar className="h-9 w-9 border border-slate-200 shadow-sm dark:border-slate-700">
                   {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.name || "User"} className="object-cover" />}
-                  <AvatarFallback className="bg-primary/10 text-[11px] font-bold text-primary">
+                  <AvatarFallback className="bg-slate-200 text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                     {getInitials(user?.name || settings.displayName || "User")}
                   </AvatarFallback>
                 </Avatar>
                 <span
-                  className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[hsl(152,69%,45%)] ring-2 ring-background"
+                  className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-slate-950"
                   title={t("header.online")}
                   aria-hidden
                 />
               </span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end">
+          <DropdownMenuContent className="w-56 rounded-xl" align="end">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">{user?.name || settings.displayName}</p>
-                <p className="text-xs leading-none text-muted-foreground">{user?.email || settings.shopEmail}</p>
+                <p className="text-xs leading-none text-slate-500 dark:text-slate-400">{user?.email || settings.shopEmail}</p>
               </div>
             </DropdownMenuLabel>
             {user?.platformRole === "super_admin" ? (
               <>
-                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground pt-2">
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-slate-500 pt-2 dark:text-slate-400">
                   {t("header.companyContextApi")}
                 </DropdownMenuLabel>
                 <div className="px-2 pb-2">
@@ -451,23 +455,23 @@ export function DashboardHeader() {
               </>
             ) : null}
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/profile")}>
+            <DropdownMenuItem className="cursor-pointer rounded-md" onClick={() => navigate("/profile")}>
               <User className="mr-2 h-4 w-4" />
               <span>{t("header.profile")}</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/settings")}>
+            <DropdownMenuItem className="cursor-pointer rounded-md" onClick={() => navigate("/settings")}>
               <SettingsIcon className="mr-2 h-4 w-4" />
               <span>{t("header.settings")}</span>
             </DropdownMenuItem>
             {user?.platformRole === "super_admin" ? (
-              <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/platform")}>
+              <DropdownMenuItem className="cursor-pointer rounded-md" onClick={() => navigate("/platform")}>
                 <Shield className="mr-2 h-4 w-4" />
                 <span>{t("header.platformAdmin")}</span>
               </DropdownMenuItem>
             ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem 
-              className="text-destructive focus:bg-destructive/10 cursor-pointer"
+              className="text-red-600 focus:bg-red-50 dark:text-red-400 dark:focus:bg-red-900/10 cursor-pointer rounded-md"
               onClick={handleLogout}
             >
               <LogOut className="mr-2 h-4 w-4" />

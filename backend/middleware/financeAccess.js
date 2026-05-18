@@ -14,6 +14,12 @@ function financeAccess(req, res, next) {
   if (['Admin', 'finance_head'].includes(r)) return next();
   if (r === 'finance_viewer' && req.method === 'GET') return next();
   if (req.method === 'GET' && can(r, P.FINANCE_READ)) return next();
+  
+  // Allow all authenticated tenant users to read vendor lists (needed for Procurement & Global Trade)
+  if (req.method === 'GET' && (req.path === '/vendors' || req.path === '/vendors/all')) {
+    return next();
+  }
+
   const e = new Error('Not authorized for this finance action');
   e.statusCode = 403;
   return next(e);

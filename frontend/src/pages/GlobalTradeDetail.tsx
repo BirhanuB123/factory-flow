@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { tradeApi } from "@/lib/api";
+import { tradeApi, hrEmployeesApi, apApi } from "@/lib/api";
 import { useLocale } from "@/contexts/LocaleContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Save, Container, FileCheck, Anchor, Plane, RefreshCw, Plus, Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { 
+  ArrowLeft, Save, Container, FileCheck, Anchor, Plane, RefreshCw, Plus, Trash2,
+  Users, CreditCard, PlusCircle, Briefcase, FileText
+} from "lucide-react";
 import { toast } from "sonner";
 import { useEthiopianDateDisplay } from "@/hooks/use-ethiopian-date";
 
@@ -25,11 +37,32 @@ export default function GlobalTradeDetail() {
 
   const [formData, setFormData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
+  
+  const [expenseForm, setExpenseForm] = useState({
+    expenseType: "duty" as "freight" | "duty" | "clearing",
+    amount: 0,
+    vendorId: "",
+    billNumber: "",
+    billDate: "",
+    dueDate: "",
+    notes: "",
+  });
+  const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
 
   const { data: shipment, isLoading } = useQuery({
     queryKey: ["trade-shipment", id],
     queryFn: () => tradeApi.getOne(id!),
     enabled: !!id,
+  });
+
+  const { data: employees } = useQuery({
+    queryKey: ["hr-employees"],
+    queryFn: () => hrEmployeesApi.list(),
+  });
+
+  const { data: vendorsData } = useQuery({
+    queryKey: ["ap-vendors"],
+    queryFn: () => apApi.listVendors(),
   });
 
   useEffect(() => {
@@ -38,6 +71,7 @@ export default function GlobalTradeDetail() {
         ...shipment,
         etd: shipment.etd ? shipment.etd.split('T')[0] : '',
         eta: shipment.eta ? shipment.eta.split('T')[0] : '',
+        clearingAgent: shipment.clearingAgent?._id || shipment.clearingAgent || '',
       });
     }
   }, [shipment]);
@@ -53,6 +87,25 @@ export default function GlobalTradeDetail() {
     onError: (e: any) => toast.error(e?.response?.data?.message || "Failed to update"),
   });
 
+  const logExpenseMut = useMutation({
+    mutationFn: (data: typeof expenseForm) => tradeApi.logExpense(id!, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["trade-shipment", id] });
+      toast.success("Expense logged and Vendor Bill created successfully");
+      setIsExpenseDialogOpen(false);
+      setExpenseForm({
+        expenseType: "duty",
+        amount: 0,
+        vendorId: "",
+        billNumber: "",
+        billDate: "",
+        dueDate: "",
+        notes: "",
+      });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || "Failed to log expense"),
+  });
+
   if (isLoading || !formData) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
@@ -62,7 +115,11 @@ export default function GlobalTradeDetail() {
   }
 
   const handleSave = () => {
-    updateMut.mutate(formData);
+    const payload = {
+      ...formData,
+      clearingAgent: formData.clearingAgent === '' ? null : formData.clearingAgent,
+    };
+    updateMut.mutate(payload);
   };
 
   const handleAddContainer = () => {
@@ -344,8 +401,53 @@ export default function GlobalTradeDetail() {
           </CardContent>
         </Card>
 
-        {/* Documents */}
+        {/* HR Agent Assignment */}
         <Card className="rounded-3xl shadow-sm border-border/40">
+          <CardHeader className="border-b bg-muted/10 p-5">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Briefcase className="h-5 w-5 text-indigo-500" />
+              HR Assignment
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <Label className="font-semibold text-foreground">Customs Clearing Agent</Label>
+              {isEditing ? (
+                <Select 
+                  value={formData.clearingAgent || "none"} 
+                  onValueChange={(v) => setFormData({...formData, clearingAgent: v === "none" ? "" : v})}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Assign Clearing Agent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Unassigned</SelectItem>
+                    {employees?.map((emp: any) => (
+                      <SelectItem key={emp._id} value={emp._id}>{emp.name} ({emp.id || emp.employeeId})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/10 border border-border/40">
+                  <div className="h-10 w-10 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-indigo-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">
+                      {shipment.clearingAgent?.name || "Unassigned"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {shipment.clearingAgent?.employeeId ? `ID: ${shipment.clearingAgent.employeeId}` : "No agent assigned"}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Documents */}
+        <Card className="md:col-span-2 rounded-3xl shadow-sm border-border/40">
           <CardHeader className="border-b bg-muted/10 p-5">
             <CardTitle className="text-lg flex items-center gap-2">
               <FileCheck className="h-5 w-5 text-amber-500" />
@@ -353,7 +455,7 @@ export default function GlobalTradeDetail() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
                 { key: 'commercialInvoice', label: 'Commercial Invoice' },
                 { key: 'packingList', label: 'Packing List' },
@@ -388,6 +490,209 @@ export default function GlobalTradeDetail() {
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+        
+        {/* Empty placeholder or small summary to balance grid */}
+        <Card className="rounded-3xl shadow-sm border-border/40 p-6 flex flex-col justify-center items-center text-center">
+          <Anchor className="h-12 w-12 text-muted-foreground/30 mb-2 animate-bounce duration-[4000ms]" />
+          <h3 className="font-semibold text-foreground text-sm">Logistics Overview</h3>
+          <p className="text-xs text-muted-foreground mt-1 max-w-[200px]">Keep documentation up to date to guarantee fast customs clearance.</p>
+        </Card>
+      </div>
+
+      {/* Finance & Inventory Integrations */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Landed Costs & Finance */}
+        <Card className="md:col-span-2 rounded-3xl shadow-sm border-border/40">
+          <CardHeader className="border-b bg-muted/10 p-5">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-sky-500" />
+              Finance & Landed Costs
+            </CardTitle>
+            <CardDescription>Automate landed cost tracking and Vendor Bill linking.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            {/* Real-time Landed Cost Summary */}
+            <div>
+              <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground mb-3">Real-time Landed Costs on Purchase Order</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="p-4 rounded-2xl bg-muted/10 border border-border/40">
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Freight</p>
+                  <p className="text-lg font-bold mt-1 text-sky-600">{formData.purchaseOrder?.importFreight?.toFixed(2) || "0.00"} ETB</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-muted/10 border border-border/40">
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Duty</p>
+                  <p className="text-lg font-bold mt-1 text-amber-600">{formData.purchaseOrder?.importDuty?.toFixed(2) || "0.00"} ETB</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-muted/10 border border-border/40">
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Clearing</p>
+                  <p className="text-lg font-bold mt-1 text-emerald-600">{formData.purchaseOrder?.importClearing?.toFixed(2) || "0.00"} ETB</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20">
+                  <p className="text-xs text-primary/80 uppercase tracking-widest font-bold">Total Pool</p>
+                  <p className="text-lg font-black mt-1 text-primary">
+                    {((formData.purchaseOrder?.importFreight || 0) + 
+                      (formData.purchaseOrder?.importDuty || 0) + 
+                      (formData.purchaseOrder?.importClearing || 0)).toFixed(2)} ETB
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Vendor Bills associated with shipment */}
+            <div className="space-y-4 pt-4 border-t border-border/40">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Associated Vendor Bills</h3>
+                <Dialog open={isExpenseDialogOpen} onOpenChange={setIsExpenseDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="rounded-xl bg-primary hover:bg-primary/95 text-white gap-2">
+                      <PlusCircle className="h-4 w-4" /> Log Customs/Freight Bill
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md rounded-2xl border-border/40 shadow-xl bg-card">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-bold">Log Landed Cost Bill</DialogTitle>
+                      <DialogDescription>Log a freight, duty, or customs clearing agent bill to automatically create a Vendor Bill and update the Purchase Order landed costs.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>Expense Type</Label>
+                        <Select value={expenseForm.expenseType} onValueChange={(v: any) => setExpenseForm({...expenseForm, expenseType: v})}>
+                          <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="freight">Ocean/Air Freight</SelectItem>
+                            <SelectItem value="duty">Customs Duty</SelectItem>
+                            <SelectItem value="clearing">Clearing Agent Fees</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Vendor (AP Link)</Label>
+                        <Select value={expenseForm.vendorId} onValueChange={(v) => setExpenseForm({...expenseForm, vendorId: v})}>
+                          <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select Vendor" /></SelectTrigger>
+                          <SelectContent>
+                            {vendorsData?.map((v: any) => (
+                              <SelectItem key={v._id} value={v._id}>{v.name} ({v.code})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Bill Amount (ETB)</Label>
+                          <Input type="number" className="rounded-xl" value={expenseForm.amount || ""} onChange={(e) => setExpenseForm({...expenseForm, amount: Number(e.target.value)})} placeholder="0.00" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Bill Reference Number</Label>
+                          <Input className="rounded-xl" value={expenseForm.billNumber} onChange={(e) => setExpenseForm({...expenseForm, billNumber: e.target.value})} placeholder="e.g. INV-1002" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Bill Date</Label>
+                          <Input type="date" className="rounded-xl" value={expenseForm.billDate} onChange={(e) => setExpenseForm({...expenseForm, billDate: e.target.value})} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Due Date</Label>
+                          <Input type="date" className="rounded-xl" value={expenseForm.dueDate} onChange={(e) => setExpenseForm({...expenseForm, dueDate: e.target.value})} />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Notes / Details</Label>
+                        <Textarea className="rounded-xl resize-none min-h-[80px]" value={expenseForm.notes} onChange={(e) => setExpenseForm({...expenseForm, notes: e.target.value})} placeholder="Additional expense notes..." />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsExpenseDialogOpen(false)} className="rounded-xl">Cancel</Button>
+                      <Button onClick={() => logExpenseMut.mutate(expenseForm)} disabled={logExpenseMut.isPending} className="rounded-xl bg-primary text-white">
+                        {logExpenseMut.isPending && <RefreshCw className="h-4 w-4 animate-spin mr-2" />} Log Expense
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {formData.expenses?.length > 0 ? (
+                <div className="rounded-2xl border border-border/40 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/10">
+                        <TableHead>Bill Number</TableHead>
+                        <TableHead>Vendor</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {formData.expenses.map((bill: any) => (
+                        <TableRow key={bill._id}>
+                          <TableCell className="font-semibold text-foreground">{bill.billNumber}</TableCell>
+                          <TableCell>{bill.vendor?.name || "—"}</TableCell>
+                          <TableCell>
+                            <Badge variant={bill.status === 'Paid' ? 'success' : 'outline'} className="rounded-full">
+                              {bill.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{formatDate(bill.dueDate)}</TableCell>
+                          <TableCell className="text-right font-bold text-foreground">{bill.amount?.toFixed(2)} ETB</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center p-8 bg-muted/5 rounded-2xl border border-dashed border-border/60 text-muted-foreground">
+                  <CreditCard className="h-8 w-8 mx-auto opacity-30 mb-2" />
+                  <p className="text-sm">No expenses or vendor bills have been logged against this shipment yet.</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Stock Receipts from Inventory */}
+        <Card className="rounded-3xl shadow-sm border-border/40 flex flex-col">
+          <CardHeader className="border-b bg-muted/10 p-5">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="h-5 w-5 text-emerald-500" />
+              Stock Receipts
+            </CardTitle>
+            <CardDescription>Real-time stock movements logged under Purchase Order receipts.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 flex-1 flex flex-col justify-center">
+            {formData.dynamicReceipts?.length > 0 ? (
+              <div className="divide-y divide-border/40 max-h-[380px] overflow-y-auto w-full">
+                {formData.dynamicReceipts.map((rcpt: any) => (
+                  <div key={rcpt._id} className="p-4 flex flex-col gap-1 hover:bg-muted/5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-foreground text-sm">{rcpt.product?.name || "Product"}</span>
+                      <Badge variant="success" className="rounded-full bg-emerald-500/10 text-emerald-600 border-emerald-500/20 font-bold">
+                        +{rcpt.delta} {rcpt.product?.unit || "units"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+                      <span>SKU: {rcpt.product?.sku || "—"}</span>
+                      <span>{formatDate(rcpt.createdAt)}</span>
+                    </div>
+                    {rcpt.lotNumber && (
+                      <span className="text-[10px] bg-muted px-2 py-0.5 rounded-md font-mono self-start mt-1">Lot: {rcpt.lotNumber}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-12 text-muted-foreground my-auto">
+                <RefreshCw className="h-8 w-8 mx-auto opacity-30 mb-2 animate-pulse" />
+                <p className="text-sm">Waiting for inventory receipts...</p>
+                <p className="text-xs mt-1 text-muted-foreground/80">Intake can be completed on the linked Purchase Order screen.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

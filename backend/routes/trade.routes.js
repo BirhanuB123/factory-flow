@@ -10,5 +10,6 @@ router.get('/', tradeController.getTradeShipments);
 router.get('/:id', tradeController.getTradeShipmentById);
 router.put('/:id', tradeController.updateTradeShipment);
 router.delete('/:id', tradeController.deleteTradeShipment);
+router.post('/:id/expenses', tradeController.logExpense);
 
 module.exports = router;

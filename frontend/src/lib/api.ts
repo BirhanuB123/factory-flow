@@ -1829,6 +1829,13 @@ export const billingApi = {
   },
 };
 
+export const hrEmployeesApi = {
+  list: async () => {
+    const response = await api.get('/hr/employees');
+    return response.data;
+  }
+};
+
 export const tradeApi = {
   getAll: async () => {
     const response = await api.get('/trade');
@@ -1848,6 +1855,18 @@ export const tradeApi = {
   },
   delete: async (id: string) => {
     const response = await api.delete(`/trade/${id}`);
+    return response.data;
+  },
+  logExpense: async (id: string, data: {
+    expenseType: 'freight' | 'duty' | 'clearing';
+    amount: number;
+    vendorId: string;
+    billNumber?: string;
+    billDate?: string;
+    dueDate?: string;
+    notes?: string;
+  }) => {
+    const response = await api.post(`/trade/${id}/expenses`, data);
     return response.data;
   },
 };

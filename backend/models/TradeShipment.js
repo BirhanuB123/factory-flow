@@ -72,6 +72,19 @@ const TradeShipmentSchema = new mongoose.Schema({
     ref: 'Order',
     default: null,
   },
+  clearingAgent: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Employee',
+    default: null,
+  },
+  expenses: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'VendorBill',
+  }],
+  receipts: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'StockMovement',
+  }],
   containerDetails: [ContainerSchema],
   documents: {
     commercialInvoice: { type: Boolean, default: false },

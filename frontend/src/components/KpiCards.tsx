@@ -201,7 +201,7 @@ export function KpiCards() {
           key={kpi.label}
           role="link"
           tabIndex={0}
-          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border/60 bg-card shadow-erp-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-erp focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="group relative cursor-pointer overflow-hidden rounded-2xl border-none bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           onClick={() => navigate(kpi.href)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -210,7 +210,6 @@ export function KpiCards() {
             }
           }}
         >
-          <div className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-b ${kpi.bg}`} />
           <CardContent className="relative p-6">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">

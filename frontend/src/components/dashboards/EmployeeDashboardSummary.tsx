@@ -95,9 +95,8 @@ export function EmployeeDashboardSummary() {
         ].map((stat, idx) => (
           <Card
             key={idx}
-            className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+            className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
           >
-            <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
             <CardContent className="flex items-center gap-4 p-5">
               <div
                 className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
@@ -115,7 +114,7 @@ export function EmployeeDashboardSummary() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="group overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all hover:shadow-lg">
+        <Card className="group overflow-hidden rounded-2xl border-0 bg-card shadow-sm transition-all hover:shadow-md">
           <CardContent className="flex flex-col items-center justify-center p-8 text-center h-full">
             <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 text-primary group-hover:scale-110 transition-transform">
               <Clock className="h-8 w-8" />
@@ -130,7 +129,7 @@ export function EmployeeDashboardSummary() {
           </CardContent>
         </Card>
 
-        <Card className="group overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all hover:shadow-lg">
+        <Card className="group overflow-hidden rounded-2xl border-0 bg-card shadow-sm transition-all hover:shadow-md">
           <CardContent className="flex flex-col items-center justify-center p-8 text-center h-full">
             <div className="h-16 w-16 bg-amber-500/10 rounded-full flex items-center justify-center mb-4 text-amber-600 group-hover:scale-110 transition-transform">
               <Calendar className="h-8 w-8" />
@@ -145,7 +144,7 @@ export function EmployeeDashboardSummary() {
           </CardContent>
         </Card>
 
-        <Card className="group overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all hover:shadow-lg">
+        <Card className="group overflow-hidden rounded-2xl border-0 bg-card shadow-sm transition-all hover:shadow-md">
           <CardContent className="flex flex-col items-center justify-center p-8 text-center h-full">
             <div className="h-16 w-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4 text-emerald-600 group-hover:scale-110 transition-transform">
               <CheckCircle2 className="h-8 w-8" />

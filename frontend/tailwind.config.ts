@@ -83,8 +83,8 @@ export default {
         "2xl": "1.375rem",
       },
       boxShadow: {
-        erp: "0 4px 24px -4px rgba(15, 23, 42, 0.07), 0 2px 8px -2px rgba(15, 23, 42, 0.04)",
-        "erp-sm": "0 2px 12px -2px rgba(15, 23, 42, 0.06)",
+        erp: "0 8px 32px -4px rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.02)",
+        "erp-sm": "0 4px 16px -2px rgba(15, 23, 42, 0.03)",
       },
       keyframes: {
         "accordion-down": {

@@ -239,16 +239,16 @@ export function AppSidebar() {
             aria-hidden
             style={{ width: collapsed ? 36 : 40, height: collapsed ? 36 : 40 }}
           >
-            <img
+            {/* <img
               src="/favicon.png"
               alt="Integra Logo"
               className="h-full w-full object-contain"
-            />
+            /> */}
           </div>
 
           {!collapsed && (
             <div className="flex min-w-0 flex-col">
-              <span 
+              <span
                 className="text-lg font-bold tracking-tight text-sidebar-foreground truncate"
                 title={user?.tenantSubscription?.displayName || "Integra"}
               >
@@ -341,7 +341,7 @@ export function AppSidebar() {
                         to={item.url!}
                         end
                         className="text-sidebar-foreground/80 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground"
-                        activeClassName="!bg-sidebar-accent !text-[hsl(221,83%,70%)] !font-semibold"
+                        activeClassName="!bg-sidebar-accent/50 !text-sidebar-primary !font-semibold"
                       >
                         <item.icon
                           className={[

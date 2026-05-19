@@ -144,7 +144,7 @@ export function DashboardCharts() {
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card className="rounded-2xl border-0 bg-card shadow-erp">
+      <Card className="rounded-2xl border-0 bg-card shadow-sm">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-2">
           <CardTitle className="text-base font-bold text-foreground">{t("charts.assetValue")}</CardTitle>
           <Select value={sortBy} onValueChange={setSortBy}>
@@ -242,7 +242,7 @@ export function DashboardCharts() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border-0 bg-card shadow-erp">
+      <Card className="rounded-2xl border-0 bg-card shadow-sm">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-2">
           <CardTitle className="text-base font-bold text-foreground">{t("charts.stockByCategory")}</CardTitle>
           <Select value={barSortBy} onValueChange={setBarSortBy}>

@@ -41,7 +41,7 @@ export function ProcurementDashboardSummary() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="rounded-2xl border-0 bg-card shadow-erp overflow-hidden">
+        <Card className="rounded-2xl border-0 bg-card shadow-sm overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -55,7 +55,7 @@ export function ProcurementDashboardSummary() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 bg-card shadow-erp overflow-hidden">
+        <Card className="rounded-2xl border-0 bg-card shadow-sm overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
@@ -69,7 +69,7 @@ export function ProcurementDashboardSummary() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 bg-card shadow-erp overflow-hidden">
+        <Card className="rounded-2xl border-0 bg-card shadow-sm overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
@@ -83,7 +83,7 @@ export function ProcurementDashboardSummary() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 bg-card shadow-erp overflow-hidden">
+        <Card className="rounded-2xl border-0 bg-card shadow-sm overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
@@ -99,7 +99,7 @@ export function ProcurementDashboardSummary() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="rounded-2xl border-0 bg-card shadow-erp overflow-hidden">
+        <Card className="rounded-2xl border-0 bg-card shadow-sm overflow-hidden">
           <CardContent className="p-8">
             <h3 className="text-sm font-bold uppercase tracking-widest text-[#1a2744] mb-6">Recent Sourcing Activity</h3>
             <div className="space-y-4">
@@ -122,7 +122,7 @@ export function ProcurementDashboardSummary() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 bg-card shadow-erp overflow-hidden bg-gradient-to-br from-primary/[0.02] to-transparent">
+        <Card className="rounded-2xl border-0 bg-card shadow-sm overflow-hidden">
           <CardContent className="p-8">
             <div className="flex items-center gap-3 mb-6">
                 <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">

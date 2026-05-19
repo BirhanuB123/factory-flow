@@ -153,7 +153,7 @@ export function DashboardFeedsCalendar() {
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <Card className="rounded-2xl border-0 bg-card shadow-erp">
+      <Card className="rounded-2xl border-0 bg-card shadow-sm">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-2">
           <CardTitle className="text-base font-bold text-foreground">{t("feeds.title")}</CardTitle>
           <div className="flex rounded-full bg-muted/50 p-0.5">
@@ -218,7 +218,7 @@ export function DashboardFeedsCalendar() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border-0 bg-card shadow-erp">
+      <Card className="rounded-2xl border-0 bg-card shadow-sm">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base font-bold text-foreground">{t("feeds.alerts")}</CardTitle>
           <p className="text-center text-sm font-semibold text-muted-foreground sm:flex-1">{monthLabel}</p>

@@ -10,8 +10,8 @@
   }
 
   :root {
-    /* Light ERP shell — soft blue-gray canvas */
-    --background: 228 45% 97%;
+    /* Light ERP shell — soft off-white canvas */
+    --background: 0 0% 98%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -44,14 +44,14 @@
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
-    --border: 228 24% 88%;
-    --input: 228 24% 90%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
     --ring: 221 83% 53%;
 
     --radius: 1.125rem;
 
-    /* Blue-black sidebar for premium look */
-    --sidebar-background: 222 47% 11%;
+    /* Sidebar for premium look */
+    --sidebar-background: 222 47% 14%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;

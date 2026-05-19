@@ -109,9 +109,8 @@ const Index = () => {
 
   return (
     <div className="space-y-6 pb-8 animate-in fade-in duration-500">
-      <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card shadow-erp">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(var(--card)),hsl(var(--secondary)/0.62)_50%,hsl(var(--accent)/0.72))]" />
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-emerald-500 to-amber-500" />
+      <div className="relative overflow-hidden rounded-3xl bg-card shadow-erp">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-emerald-400" />
         <div className="relative grid gap-6 p-6 lg:grid-cols-[1fr_360px] lg:p-7">
           <div className="min-w-0">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-primary">
@@ -155,7 +154,7 @@ const Index = () => {
                   bg: "bg-amber-500/10",
                 },
               ].map((item) => (
-                <div key={item.label} className="rounded-2xl border border-border/55 bg-background/78 p-4 shadow-erp-sm backdrop-blur">
+                <div key={item.label} className="rounded-2xl bg-card p-5 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{item.label}</p>
@@ -171,7 +170,7 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border/60 bg-background/80 p-5 shadow-erp-sm backdrop-blur">
+          <div className="rounded-2xl bg-card p-6 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current role</p>
@@ -183,11 +182,11 @@ const Index = () => {
               </div>
             </div>
             <div className="mt-5 space-y-3">
-              <div className="flex items-center justify-between rounded-xl bg-secondary/45 px-4 py-3">
+              <div className="flex items-center justify-between rounded-xl bg-secondary/30 px-4 py-3">
                 <span className="text-sm font-semibold text-muted-foreground">Operational scope</span>
                 <span className="font-black">{isSuperAdmin ? "All tenants" : "Tenant"}</span>
               </div>
-              <div className="flex items-center justify-between rounded-xl bg-secondary/45 px-4 py-3">
+              <div className="flex items-center justify-between rounded-xl bg-secondary/30 px-4 py-3">
                 <span className="text-sm font-semibold text-muted-foreground">Modules enabled</span>
                 <span className="font-black">{enabledModuleCount}</span>
               </div>
@@ -227,7 +226,7 @@ const Index = () => {
       </div>
 
       {tenantSubscription && user?.platformRole !== "super_admin" && (
-        <Card className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/[0.08] via-card to-card shadow-erp">
+        <Card className="rounded-2xl border-none shadow-erp-sm">
           <CardContent className="pt-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-2">
@@ -293,7 +292,7 @@ const Index = () => {
         </Card>
       )}
       {user?.platformRole !== "super_admin" && (
-        <Card className="rounded-2xl border border-border/60 bg-card shadow-erp-sm">
+        <Card className="rounded-2xl border-none shadow-erp-sm">
           <CardContent className="pt-5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
@@ -324,7 +323,7 @@ const Index = () => {
 
       {user?.platformRole === "super_admin" || user?.role === "Admin" ? (
         <Tabs defaultValue="operations" className="space-y-6">
-          <TabsList className="h-auto w-full justify-start gap-2 rounded-2xl border border-border/60 bg-card p-2 shadow-erp-sm flex-wrap">
+          <TabsList className="h-auto w-full justify-start gap-2 rounded-2xl border-none bg-card p-2 shadow-erp-sm flex-wrap">
             <TabsTrigger
               value="operations"
               className="rounded-xl px-4 py-2.5 font-bold text-muted-foreground hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"

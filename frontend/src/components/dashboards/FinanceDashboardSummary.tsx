@@ -102,10 +102,7 @@ export function FinanceDashboardSummary() {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-3xl border border-blue-200/70 bg-card shadow-erp">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_10%,hsl(var(--primary)/0.18),transparent_30%),radial-gradient(circle_at_88%_0%,hsl(var(--erp-emerald)/0.18),transparent_28%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--secondary)/0.58))]" />
-        <div className="absolute -bottom-12 right-8 h-32 w-32 rounded-full border border-primary/15" />
-        <div className="absolute -bottom-20 right-24 h-44 w-44 rounded-full border border-emerald-500/15" />
+      <div className="relative overflow-hidden rounded-3xl bg-card shadow-erp">
         <div className="relative grid gap-5 p-6 lg:grid-cols-[1fr_340px] lg:p-7">
           <div className="min-w-0">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-primary">
@@ -172,7 +169,7 @@ export function FinanceDashboardSummary() {
               ].map((item) => (
                 <Card
                   key={item.label}
-                  className={`group overflow-hidden rounded-2xl border bg-background/78 shadow-erp-sm backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:shadow-erp ${item.border}`}
+                  className={`group overflow-hidden rounded-2xl border-none bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md`}
                 >
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between gap-3">
@@ -194,7 +191,7 @@ export function FinanceDashboardSummary() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border/60 bg-background/76 p-5 shadow-erp-sm backdrop-blur">
+          <div className="rounded-2xl bg-card p-6 shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Collection pulse</p>
@@ -225,11 +222,11 @@ export function FinanceDashboardSummary() {
               </div>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="rounded-xl bg-secondary/45 p-3">
+              <div className="rounded-xl bg-secondary/20 p-3">
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Overdue</p>
                 <p className="mt-1 text-xl font-black text-rose-600">{metrics.overdueCount}</p>
               </div>
-              <div className="rounded-xl bg-secondary/45 p-3">
+              <div className="rounded-xl bg-secondary/20 p-3">
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Last 5 paid</p>
                 <p className="mt-1 truncate text-xl font-black">{format(metrics.recentRevenue)}</p>
               </div>
@@ -239,7 +236,7 @@ export function FinanceDashboardSummary() {
       </div>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <Card className="overflow-hidden rounded-2xl border border-amber-500/20 bg-card shadow-erp-sm">
+        <Card className="overflow-hidden rounded-2xl border-none shadow-erp-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -262,7 +259,7 @@ export function FinanceDashboardSummary() {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden rounded-2xl border border-emerald-500/20 bg-card shadow-erp-sm">
+        <Card className="overflow-hidden rounded-2xl border-none shadow-erp-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -292,7 +289,7 @@ export function FinanceDashboardSummary() {
           { label: "Expense control", value: `${metrics.expenseRatio}%`, detail: "expenses against revenue", icon: ArrowDownRight, tone: "text-amber-600", bg: "bg-amber-500/10" },
           { label: "Review queue", value: String(metrics.pendingCount + metrics.overdueCount), detail: "pending and overdue items", icon: Sparkles, tone: "text-primary", bg: "bg-primary/10" },
         ].map((item) => (
-          <div key={item.label} className="flex items-center gap-4 rounded-2xl border border-border/60 bg-card p-4 shadow-erp-sm">
+          <div key={item.label} className="flex items-center gap-4 rounded-2xl border-none bg-card p-5 shadow-sm">
             <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${item.bg}`}>
               <item.icon className={`h-5 w-5 ${item.tone}`} />
             </div>

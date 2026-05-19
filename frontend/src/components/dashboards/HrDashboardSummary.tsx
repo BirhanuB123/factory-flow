@@ -104,7 +104,7 @@ export function HrDashboardSummary() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="rounded-2xl border-0 bg-card shadow-erp overflow-hidden">
+        <Card className="rounded-2xl border-0 bg-card shadow-sm overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
@@ -127,7 +127,7 @@ export function HrDashboardSummary() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-0 bg-card shadow-erp overflow-hidden">
+        <Card className="rounded-2xl border-0 bg-card shadow-sm overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600">

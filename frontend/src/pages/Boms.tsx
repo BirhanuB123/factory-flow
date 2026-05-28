@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  Search, Plus, FileStack, Eye, Copy, Layers, DollarSign, Hash, Trash2,
+  Search, Plus, FileStack, Eye, Copy, Layers, DollarSign, Hash, Trash2, GitBranch,
 } from "lucide-react";
 import { useLocale } from "@/contexts/LocaleContext";
 
@@ -257,51 +257,58 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
       {!embedded && (
         <>
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.boms.title")}</h1>
-              <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.boms.subtitle")}</p>
-            </div>
-
-            <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
-              <div className="text-right">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
-                <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{activeCount}</p>
-              </div>
-              <div className="h-8 w-px bg-border/70" />
-              <div className="text-right">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Draft</p>
-                <p className="text-sm font-semibold text-foreground">{draftCount}</p>
-              </div>
-              <div className="h-8 w-px bg-border/70" />
-              <div className="text-right">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Archived</p>
-                <p className="text-sm font-semibold text-muted-foreground">{archivedCount}</p>
+            <div className="w-full overflow-hidden rounded-[18px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(190_75%_34%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
+              <div className="p-5 sm:p-7">
+                <div className="mb-4 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.2em] text-white/55">
+                  <FileStack className="h-4 w-4" />
+                  Engineering control center
+                </div>
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <h1 className="text-4xl font-black tracking-tight sm:text-5xl">{t("pages.boms.title")}</h1>
+                    <p className="mt-3 max-w-3xl text-base font-semibold leading-7 text-white/60 sm:text-lg">
+                      {t("pages.boms.subtitle")}
+                    </p>
+                  </div>
+                  <div className="grid min-w-full grid-cols-3 overflow-hidden rounded-[16px] border border-white/15 bg-white/10 text-center shadow-2xl shadow-black/10 backdrop-blur lg:min-w-[430px]">
+                    {[
+                      { label: "Active", value: activeCount, tone: "text-emerald-300" },
+                      { label: "Draft", value: draftCount, tone: "text-amber-300" },
+                      { label: "Archived", value: archivedCount, tone: "text-sky-200" },
+                    ].map((item) => (
+                      <div key={item.label} className="border-r border-white/10 p-4 last:border-r-0">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">{item.label}</p>
+                        <p className={`mt-2 text-2xl font-black tracking-tight ${item.tone}`}>{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: "Total BOMs", value: bomsData.length, icon: FileStack, color: "text-primary", bg: "bg-primary/10" },
-              { label: "Active", value: activeCount, icon: Layers, color: "text-success", bg: "bg-success/10" },
-              { label: "Total components", value: totalComponents, icon: Hash, color: "text-warning", bg: "bg-warning/10" },
-              { label: "Avg BOM cost", value: `${symbol}${avgCost.toFixed(2)}`, icon: DollarSign, color: "text-info", bg: "bg-info/10" },
+              { label: "Total BOMs", value: bomsData.length, sub: "Engineering records", icon: FileStack, color: "text-primary", bg: "bg-primary/10", accent: "from-primary to-cyan-400" },
+              { label: "Active", value: activeCount, sub: "Released to production", icon: Layers, color: "text-emerald-600", bg: "bg-emerald-500/10", accent: "from-emerald-500 to-teal-400" },
+              { label: "Components", value: totalComponents, sub: "Across all structures", icon: Hash, color: "text-amber-600", bg: "bg-amber-500/10", accent: "from-amber-400 to-rose-500" },
+              { label: "Avg BOM cost", value: `${symbol}${avgCost.toFixed(2)}`, sub: "Estimated material cost", icon: DollarSign, color: "text-violet-600", bg: "bg-violet-500/10", accent: "from-violet-500 to-blue-500" },
             ].map((stat, idx) => (
               <Card
                 key={idx}
-                className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+                className="group relative overflow-hidden rounded-[12px] border border-border/70 bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
               >
-                <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
-                <CardContent className="flex items-center gap-4 p-5">
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
-                  >
-                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                <div className={`h-1 bg-gradient-to-r ${stat.accent}`} />
+                <CardContent className="p-6">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
+                      <p className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">{stat.label}</p>
+                    </div>
+                    <div className={`h-9 w-9 rounded-full ${stat.bg}`} />
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                    <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
-                  </div>
+                  <p className="text-4xl font-black tracking-tight text-foreground">{stat.value}</p>
+                  <p className="mt-2 text-sm font-medium text-muted-foreground">{stat.sub}</p>
                 </CardContent>
               </Card>
             ))}
@@ -310,11 +317,12 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
       )}
 
       {/* Search & filters — matches jobs / production pattern */}
-      <Card className="rounded-2xl border-0 bg-card shadow-erp">
+      <Card className="overflow-hidden rounded-[16px] border border-border/70 bg-card shadow-sm">
+        <div className="h-1 bg-gradient-to-r from-primary via-cyan-400 to-emerald-400" />
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="flex flex-col gap-4 border-b border-border/50 pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-bold tracking-tight text-[#1a2744]">
+              <h2 className="text-lg font-black tracking-tight text-foreground">
                 {embedded ? "BOM library" : "Search & filters"}
               </h2>
               <p className="mt-0.5 text-sm text-muted-foreground">
@@ -322,7 +330,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
               </p>
             </div>
             <Button
-              className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+              className="h-10 gap-2 rounded-[12px] bg-primary px-5 font-black text-primary-foreground shadow-sm hover:bg-primary/90"
               onClick={() => {
                 resetForm();
                 setFormOpen(true);
@@ -337,21 +345,21 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
               <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
               <Input
                 placeholder="Search specs, part numbers, or system IDs..."
-                className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-10 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
+                className="h-11 rounded-[12px] border-border/60 bg-muted/30 pl-10 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-1 rounded-full border border-border/60 bg-muted/40 p-1">
+            <div className="flex flex-wrap items-center gap-1 rounded-[14px] border border-border/60 bg-muted/30 p-1">
               {(["All", "Active", "Draft", "Archived"] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setStatusFilter(s)}
-                  className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+                  className={`rounded-[11px] px-4 py-2 text-xs font-black transition-all ${
                     statusFilter === s
                       ? "bg-primary text-primary-foreground shadow-sm"
-                      : "border border-transparent bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                      : "border border-transparent bg-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   }`}
                 >
                   {s}
@@ -363,27 +371,37 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
       </Card>
 
       {/* BOM register */}
-      <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+      <Card className="overflow-hidden rounded-[16px] border border-border/70 bg-card shadow-sm">
         <CardHeader className="border-b border-border/50 bg-muted/20 pb-4 pt-5">
-          <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">BOM register</CardTitle>
-          <p className="text-sm font-medium text-muted-foreground">
-            Click a row for components, routing, output SKU, and effectivity
-          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
+                <GitBranch className="h-5 w-5 text-primary" />
+                BOM register
+              </CardTitle>
+              <p className="mt-1 text-sm font-medium text-muted-foreground">
+                Click a row for components, routing, output SKU, and effectivity
+              </p>
+            </div>
+            <Badge variant="secondary" className="w-fit rounded-[10px] px-3 py-1 text-[10px] font-black uppercase tracking-widest">
+              {filtered.length} visible
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/25">
                 <TableRow className="border-border/40 hover:bg-transparent">
-                  <TableHead className="h-12 pl-6 text-xs font-bold text-foreground">System ID</TableHead>
-                  <TableHead className="h-12 text-xs font-bold text-foreground">Product name</TableHead>
-                  <TableHead className="hidden h-12 text-xs font-bold text-foreground sm:table-cell">Output SKU</TableHead>
-                  <TableHead className="hidden h-12 text-xs font-bold text-foreground md:table-cell">Part #</TableHead>
-                  <TableHead className="hidden h-12 text-center text-xs font-bold text-foreground lg:table-cell">Version</TableHead>
-                  <TableHead className="h-12 text-center text-xs font-bold text-foreground">Components</TableHead>
-                  <TableHead className="hidden h-12 text-right text-xs font-bold text-foreground lg:table-cell">Est. cost</TableHead>
-                  <TableHead className="h-12 text-xs font-bold text-foreground">Lifecycle</TableHead>
-                  <TableHead className="h-12 w-[80px] pr-6 text-xs font-bold text-foreground" />
+                  <TableHead className="h-12 pl-6 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">System ID</TableHead>
+                  <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Product name</TableHead>
+                  <TableHead className="hidden h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground sm:table-cell">Output SKU</TableHead>
+                  <TableHead className="hidden h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground md:table-cell">Part #</TableHead>
+                  <TableHead className="hidden h-12 text-center text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground lg:table-cell">Version</TableHead>
+                  <TableHead className="h-12 text-center text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Components</TableHead>
+                  <TableHead className="hidden h-12 text-right text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground lg:table-cell">Est. cost</TableHead>
+                  <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Lifecycle</TableHead>
+                  <TableHead className="h-12 w-[80px] pr-6 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -403,7 +421,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                   filtered.map((bom) => (
                     <TableRow
                       key={bom._id}
-                      className="group/row cursor-pointer border-border/40 transition-colors hover:bg-muted/35"
+                      className="group/row cursor-pointer border-border/40 transition-colors hover:bg-primary/[0.03]"
                       onClick={() => setSelectedBom(bom)}
                     >
                       <TableCell className="pl-6 font-mono text-[10px] font-medium text-muted-foreground opacity-60 transition-opacity group-hover/row:opacity-100">
@@ -421,7 +439,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                         {bom.partNumber}
                       </TableCell>
                       <TableCell className="hidden text-center lg:table-cell">
-                        <Badge variant="outline" className="rounded-md border-primary/30 px-2 text-[10px] font-semibold uppercase">
+                         <Badge variant="outline" className="rounded-[8px] border-primary/30 px-2 text-[10px] font-black uppercase">
                           {bom.revision}
                         </Badge>
                       </TableCell>
@@ -431,7 +449,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                         {calcBomCost(bom.components).toFixed(2)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant[bom.status]} className="rounded-md px-2 py-0 text-[10px] font-semibold uppercase tracking-tight">
+                        <Badge variant={statusVariant[bom.status]} className="rounded-[8px] px-2 py-0 text-[10px] font-black uppercase tracking-tight">
                           {bom.status}
                         </Badge>
                       </TableCell>
@@ -439,7 +457,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-full opacity-0 transition-all group-hover/row:opacity-100 hover:bg-primary/10 hover:text-primary"
+                          className="h-8 w-8 rounded-[10px] border border-border/60 bg-card opacity-100 shadow-sm transition-colors hover:bg-primary hover:text-primary-foreground sm:opacity-0 sm:group-hover/row:opacity-100"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedBom(bom);
@@ -459,37 +477,61 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedBom} onOpenChange={(open) => !open && setSelectedBom(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 shadow-erp sm:max-w-2xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-[22px] border border-border/60 p-0 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.75)] sm:max-w-4xl">
+          <div className="mx-5 mt-5 rounded-[18px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(190_75%_34%))] p-5 text-white shadow-[0_20px_54px_-34px_rgba(15,23,42,0.75)]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-[#1a2744]">
-              <FileStack className="h-5 w-5 shrink-0 text-primary" />
+            <div className="mb-3 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/55">
+              <FileStack className="h-3.5 w-3.5" />
+              BOM engineering record
+            </div>
+            <DialogTitle className="flex flex-wrap items-center gap-3 text-2xl font-black tracking-tight text-white">
               {selectedBom?.name}
+              {selectedBom && (
+                <Badge variant={statusVariant[selectedBom.status]} className="rounded-[10px] text-[10px] font-black uppercase">
+                  {selectedBom.status}
+                </Badge>
+              )}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-white/60">
               {selectedBom?.partNumber} · {selectedBom?.revision} · {selectedBom?._id}
             </DialogDescription>
           </DialogHeader>
           {selectedBom && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground text-xs">Status</p>
-                  <Badge variant={statusVariant[selectedBom.status]}>{selectedBom.status}</Badge>
+            <div className="mt-5 grid grid-cols-3 overflow-hidden rounded-[16px] border border-white/15 bg-white/10 text-center shadow-2xl shadow-black/10 backdrop-blur">
+              {[
+                { label: "Components", value: selectedBom.components.length },
+                { label: "Routing", value: selectedBom.routing?.length || 0 },
+                { label: "Cost", value: `${symbol}${calcBomCost(selectedBom.components).toFixed(2)}` },
+              ].map((item, index) => (
+                <div key={item.label} className={`px-3 py-3 ${index > 0 ? "border-l border-white/10" : ""}`}>
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/45">{item.label}</p>
+                  <p className="mt-1 truncate font-mono text-sm font-black text-white">{item.value}</p>
                 </div>
-                <div>
+              ))}
+            </div>
+          )}
+          </div>
+          {selectedBom && (
+            <div className="space-y-5 p-5">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                <div className="rounded-[14px] border border-border/60 bg-card p-4 shadow-sm">
+                  <p className="text-muted-foreground text-xs">Status</p>
+                  <Badge variant={statusVariant[selectedBom.status]} className="rounded-[8px] text-[10px] font-black uppercase">{selectedBom.status}</Badge>
+                </div>
+                <div className="rounded-[14px] border border-border/60 bg-card p-4 shadow-sm">
                   <p className="text-muted-foreground text-xs">Created</p>
                   <p className="font-medium text-foreground">{new Date(selectedBom.createdAt).toLocaleDateString()}</p>
                 </div>
-                <div>
+                <div className="rounded-[14px] border border-border/60 bg-card p-4 shadow-sm">
                   <p className="text-muted-foreground text-xs">Last Updated</p>
                   <p className="font-medium text-foreground">{new Date(selectedBom.updatedAt).toLocaleDateString()}</p>
                 </div>
               </div>
 
               {/* Components Table */}
-              <div>
-                <h4 className="text-sm font-semibold text-foreground mb-2">Components</h4>
-                <div className="overflow-hidden rounded-xl border border-border/60">
+              <div className="rounded-[16px] border border-border/60 bg-card p-4 shadow-sm">
+                <h4 className="mb-3 text-sm font-black uppercase tracking-[0.14em] text-foreground">Components</h4>
+                <div className="overflow-hidden rounded-[14px] border border-border/60">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -526,14 +568,14 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
               </div>
 
               {selectedBom.notes && (
-                <div>
+                <div className="rounded-[14px] border border-border/60 bg-muted/20 p-4">
                   <p className="text-muted-foreground text-xs mb-1">Notes</p>
                   <p className="text-sm text-foreground">{selectedBom.notes}</p>
                 </div>
               )}
 
-              <div className="border-t pt-4 space-y-3">
-                <h4 className="text-sm font-semibold text-foreground">Finished good & effectivity</h4>
+              <div className="space-y-3 rounded-[16px] border border-border/60 bg-card p-4 shadow-sm">
+                <h4 className="text-sm font-black uppercase tracking-[0.14em] text-foreground">Finished good & effectivity</h4>
                 <p className="text-xs text-muted-foreground">
                   Required for production completion: stock is consumed from components and added to the output SKU.
                 </p>
@@ -544,7 +586,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                       value={editOutputProductId || "__none__"}
                       onValueChange={(v) => setEditOutputProductId(v === "__none__" ? "" : v)}
                     >
-                      <SelectTrigger><SelectValue placeholder="Select finished good" /></SelectTrigger>
+                      <SelectTrigger className="h-10 rounded-[12px] border-border/60 bg-muted/30"><SelectValue placeholder="Select finished good" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">— Not set —</SelectItem>
                         {(products as { _id: string; name: string; sku: string }[]).map((prod) => (
@@ -560,6 +602,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                       <Label className="text-xs">Effective from</Label>
                       <Input
                         type="date"
+                        className="h-10 rounded-[12px] border-border/60 bg-muted/30"
                         value={editEffectiveFrom}
                         onChange={(e) => setEditEffectiveFrom(e.target.value)}
                       />
@@ -568,6 +611,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                       <Label className="text-xs">Effective to</Label>
                       <Input
                         type="date"
+                        className="h-10 rounded-[12px] border-border/60 bg-muted/30"
                         value={editEffectiveTo}
                         onChange={(e) => setEditEffectiveTo(e.target.value)}
                       />
@@ -576,7 +620,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                 </div>
                 <Button
                   size="sm"
-                  className="rounded-full"
+                  className="rounded-[12px] font-black"
                   disabled={!editOutputProductId || updateBomMutation.isPending}
                   onClick={() =>
                     selectedBom &&
@@ -598,17 +642,17 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                 </Button>
               </div>
 
-              <div className="border-t pt-4 space-y-2">
-                <h4 className="text-sm font-semibold text-foreground">Routing (shop floor / MRP lead)</h4>
+              <div className="space-y-2 rounded-[16px] border border-border/60 bg-card p-4 shadow-sm">
+                <h4 className="text-sm font-black uppercase tracking-[0.14em] text-foreground">Routing (shop floor / MRP lead)</h4>
                 <p className="text-xs text-muted-foreground">
                   Operations appear on job traveler; leadTimeDays rolls into MRP explosion critical path.
                 </p>
                 <div className="space-y-2 max-h-56 overflow-y-auto text-[10px]">
                   {editRouting.map((row, i) => (
-                    <div key={i} className="flex flex-wrap gap-1 items-center border rounded-md p-2 bg-muted/20">
+                    <div key={i} className="flex flex-wrap items-center gap-1 rounded-[12px] border border-border/60 bg-muted/20 p-2">
                       <span className="text-muted-foreground w-4">{i + 1}</span>
                       <Input
-                        className="h-8 w-14"
+                        className="h-8 w-14 rounded-[9px] border-border/60 bg-card"
                         type="number"
                         title="Seq"
                         value={row.sequence}
@@ -619,7 +663,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                         }
                       />
                       <Input
-                        className="h-8 w-16 font-mono"
+                        className="h-8 w-16 rounded-[9px] border-border/60 bg-card font-mono"
                         placeholder="code"
                         value={row.code}
                         onChange={(e) =>
@@ -627,7 +671,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                         }
                       />
                       <Input
-                        className="h-8 flex-1 min-w-[100px]"
+                        className="h-8 min-w-[100px] flex-1 rounded-[9px] border-border/60 bg-card"
                         placeholder="Operation name"
                         value={row.name}
                         onChange={(e) =>
@@ -635,7 +679,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                         }
                       />
                       <Input
-                        className="h-8 w-20 font-mono"
+                        className="h-8 w-20 rounded-[9px] border-border/60 bg-card font-mono"
                         placeholder="WC"
                         value={row.workCenterCode}
                         onChange={(e) =>
@@ -645,7 +689,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                         }
                       />
                       <Input
-                        className="h-8 w-14"
+                        className="h-8 w-14 rounded-[9px] border-border/60 bg-card"
                         type="number"
                         title="Setup min"
                         value={row.setupMinutes}
@@ -658,7 +702,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                         }
                       />
                       <Input
-                        className="h-8 w-14"
+                        className="h-8 w-14 rounded-[9px] border-border/60 bg-card"
                         type="number"
                         title="Run min/u"
                         value={row.runMinutesPerUnit}
@@ -671,7 +715,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                         }
                       />
                       <Input
-                        className="h-8 w-14"
+                        className="h-8 w-14 rounded-[9px] border-border/60 bg-card"
                         type="number"
                         title="Lead days"
                         value={row.leadTimeDays}
@@ -687,7 +731,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 text-destructive"
+                        className="h-8 w-8 rounded-[9px] p-0 text-destructive"
                         onClick={() => setEditRouting((p) => p.filter((_, j) => j !== i))}
                       >
                         ×
@@ -700,7 +744,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="rounded-full"
+                    className="rounded-[12px]"
                     onClick={() =>
                       setEditRouting((p) => [
                         ...p,
@@ -720,7 +764,7 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
                   </Button>
                   <Button
                     size="sm"
-                    className="rounded-full"
+                    className="rounded-[12px] font-black"
                     disabled={updateBomMutation.isPending || !selectedBom}
                     onClick={() =>
                       selectedBom &&
@@ -736,11 +780,11 @@ export default function Boms({ embedded = false }: { embedded?: boolean }) {
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="border-t border-border/60 bg-muted/10 p-5">
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5 rounded-full"
+              className="gap-1.5 rounded-[12px] font-black"
               onClick={() => selectedBom && openForDuplicate(selectedBom)}
             >
               <Copy className="h-3.5 w-3.5" /> Duplicate BOM

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Outlet } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Outlet, useLocation } from "react-router-dom";
 import * as React from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
@@ -111,7 +111,7 @@ function SidebarResizeHandle({
       aria-valuenow={Math.round(valuePx)}
       tabIndex={0}
       className={[
-        "relative h-svh w-2 shrink-0",
+        "relative h-svh w-2 shrink-0 bg-sidebar border-r border-sidebar-border",
         "cursor-col-resize",
         "group/sidebar-resizer",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
@@ -181,6 +181,8 @@ const Layout = () => {
     typeof window !== "undefined" ? window.innerWidth : 1280,
   );
 
+  const loc = useLocation();
+
   const maxSidebarPx = maxSidebarPxForViewport(viewportWidth);
 
   const [sidebarWidthPx, setSidebarWidthPx] = React.useState(() => {
@@ -219,11 +221,12 @@ const Layout = () => {
         } as React.CSSProperties
       }
     >
-      <div className="flex min-h-svh w-full min-w-0">
+      <div className="flex h-svh w-full min-w-0 overflow-hidden">
         <AppSidebar />
         <SidebarResizeHandle maxPx={maxSidebarPx} valuePx={sidebarWidthPx} onChange={setSidebarWidthPx} />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <DashboardHeader />
+          {/* Hide the top header on the profile page to allow a focused profile view */}
+          {!loc.pathname.startsWith("/profile") && <DashboardHeader />}
           <OfflineQueueBanner />
           <AnnouncementBanner />
           <main className="min-h-0 min-w-0 flex-1 overflow-auto bg-background p-3 sm:p-4 lg:p-6">
@@ -291,7 +294,7 @@ const App = () => {
                             <Route path="/purchase-orders" element={<PurchaseOrders />} />
                           </Route>
                         </Route>
-                        <Route element={<TenantModuleRoute moduleKey="hr" moduleLabel="HR & payroll" />}>
+                        <Route element={<TenantModuleRoute moduleKey="hr" moduleLabel="HRM" />}>
                           <Route element={<ProtectedRoute requiredPermissions={[PERMS.HR_FULL]} />}>
                             <Route path="/hr" element={<Hr />} />
                           </Route>

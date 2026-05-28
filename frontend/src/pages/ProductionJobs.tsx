@@ -93,7 +93,6 @@ import {
   Search,
   Filter,
   Calendar,
-  Clock,
   Wrench,
   User,
   Package,
@@ -108,6 +107,7 @@ import {
   Timer,
   Layers,
   ClipboardCheck,
+  Factory,
 } from "lucide-react";
 
 const ITEMS_PER_PAGE = 8;
@@ -394,6 +394,11 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
       scheduled: list.filter((j) => j.status === "Scheduled").length,
       completed: list.filter((j) => j.status === "Completed").length,
       openPipeline: list.filter((j) => j.status !== "Completed" && j.status !== "Cancelled").length,
+      highPriority: list.filter((j) => j.priority === "High" || j.priority === "Urgent").length,
+      reserved: list.filter((j) => j.materialsReserved).length,
+      avgProgress: list.length
+        ? Math.round(list.reduce((sum, j) => sum + (Number(j.progress) || 0), 0) / list.length)
+        : 0,
       dueWithinWeek: list.filter((j) => {
         if (j.status === "Completed" || j.status === "Cancelled") return false;
         const t = new Date(j.dueDate).getTime();
@@ -408,7 +413,35 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
     >
       {!embedded && (
         <>
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div className="overflow-hidden rounded-[18px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(190_75%_34%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
+            <div className="p-5 sm:p-7">
+              <div className="mb-4 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.2em] text-white/55">
+                <Factory className="h-4 w-4" />
+                Shop floor control center
+              </div>
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <h1 className="text-4xl font-black tracking-tight sm:text-5xl">{t("pages.jobs.title")}</h1>
+                  <p className="mt-3 max-w-3xl text-base font-semibold leading-7 text-white/60 sm:text-lg">
+                    {t("pages.jobs.subtitle")}
+                  </p>
+                </div>
+                <div className="grid min-w-full grid-cols-3 overflow-hidden rounded-[16px] border border-white/15 bg-white/10 text-center shadow-2xl shadow-black/10 backdrop-blur lg:min-w-[430px]">
+                  {[
+                    { label: "Open", value: jobStats.openPipeline, tone: "text-emerald-300" },
+                    { label: "Due soon", value: jobStats.dueWithinWeek, tone: "text-amber-300" },
+                    { label: "Avg progress", value: `${jobStats.avgProgress}%`, tone: "text-sky-200" },
+                  ].map((item) => (
+                    <div key={item.label} className="border-r border-white/10 p-4 last:border-r-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">{item.label}</p>
+                      <p className={`mt-2 text-2xl font-black tracking-tight ${item.tone}`}>{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="hidden">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.jobs.title")}</h1>
               <p className="mt-1 text-sm font-medium text-muted-foreground">{t("pages.jobs.subtitle")}</p>
@@ -437,46 +470,54 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                 label: "Total jobs",
                 value: jobStats.total,
                 icon: Layers,
+                sub: "Production orders",
                 color: "text-primary",
+                accent: "from-primary to-cyan-400",
                 bg: "bg-primary/10",
               },
               {
                 label: "In progress",
                 value: jobStats.inProgress,
                 icon: Wrench,
+                sub: "Active on floor",
                 color: "text-[hsl(152,69%,36%)]",
+                accent: "from-emerald-500 to-teal-400",
                 bg: "bg-[hsl(152,69%,42%)]/10",
               },
               {
-                label: "Scheduled",
-                value: jobStats.scheduled,
-                icon: Clock,
-                color: "text-[hsl(221,83%,53%)]",
-                bg: "bg-primary/10",
+                label: "Priority queue",
+                value: jobStats.highPriority,
+                icon: Timer,
+                sub: "High or urgent",
+                color: "text-amber-600",
+                accent: "from-amber-400 to-rose-500",
+                bg: "bg-amber-500/10",
               },
               {
-                label: "Completed",
-                value: jobStats.completed,
-                icon: CheckCircle2,
-                color: "text-muted-foreground",
-                bg: "bg-muted",
+                label: "Materials ready",
+                value: jobStats.reserved,
+                icon: ClipboardCheck,
+                sub: "BOM reserved",
+                color: "text-violet-600",
+                accent: "from-violet-500 to-blue-500",
+                bg: "bg-violet-500/10",
               },
             ].map((stat, idx) => (
               <Card
                 key={idx}
-                className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+                className="group relative overflow-hidden rounded-[12px] border border-border/70 bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
               >
-                <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
-                <CardContent className="flex items-center gap-4 p-5">
-                  <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
-                  >
-                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                <div className={`h-1 bg-gradient-to-r ${stat.accent}`} />
+                <CardContent className="p-6">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
+                      <p className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">{stat.label}</p>
+                    </div>
+                    <div className={`h-9 w-9 rounded-full ${stat.bg}`} />
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                    <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
-                  </div>
+                  <p className="text-4xl font-black tracking-tight text-foreground">{stat.value}</p>
+                  <p className="mt-2 text-sm font-medium text-muted-foreground">{stat.sub}</p>
                 </CardContent>
               </Card>
             ))}
@@ -488,18 +529,19 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
       {embedded ? <ProductionMetrics /> : null}
 
       {/* Control Bar */}
-      <Card className="rounded-2xl border-0 bg-card shadow-erp">
+      <Card className="overflow-hidden rounded-[16px] border border-border/70 bg-card shadow-sm">
+        <div className="h-1 bg-gradient-to-r from-primary via-cyan-400 to-emerald-400" />
         <CardContent className="space-y-4 p-4 sm:p-5">
           {!embedded ? (
             <div className="flex flex-col gap-4 border-b border-border/50 pb-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-bold tracking-tight text-[#1a2744]">Search & filters</h2>
-                <p className="mt-0.5 text-sm text-muted-foreground">Status chips, saved views, and export</p>
+                <h2 className="text-lg font-black tracking-tight text-foreground">Job controls</h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">Find work, filter the floor, and create jobs faster</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
-                  className="h-10 gap-2 rounded-full border-primary/20 shadow-erp-sm"
+                  className="h-10 gap-2 rounded-[12px] border-border/70 shadow-sm"
                   onClick={() =>
                     downloadReportCsv("/reports/export/production", `production-${Date.now()}.csv`).catch(() =>
                       toast.error("Export failed")
@@ -510,7 +552,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   Export CSV
                 </Button>
                 <Button
-                  className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+                  className="h-10 gap-2 rounded-[12px] bg-primary px-5 font-black text-primary-foreground shadow-sm hover:bg-primary/90"
                   onClick={() => setNewJobOpen(true)}
                 >
                   <Plus className="h-4 w-4" />
@@ -526,7 +568,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
-                  className="h-10 gap-2 rounded-full border-primary/20 shadow-erp-sm"
+                  className="h-10 gap-2 rounded-[12px] border-border/70 shadow-sm"
                   onClick={() =>
                     downloadReportCsv("/reports/export/production", `production-${Date.now()}.csv`).catch(() =>
                       toast.error("Export failed")
@@ -537,7 +579,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   Export CSV
                 </Button>
                 <Button
-                  className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+                  className="h-10 gap-2 rounded-[12px] bg-primary px-5 font-black text-primary-foreground shadow-sm hover:bg-primary/90"
                   onClick={() => setNewJobOpen(true)}
                 >
                   <Plus className="h-4 w-4" />
@@ -553,10 +595,10 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                 setStatusFilter("all");
                 setPage(1);
               }}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold transition-all ${
+              className={`inline-flex items-center gap-1.5 rounded-[12px] border px-4 py-2 text-xs font-black transition-all ${
                 statusFilter === "all"
                   ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                  : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                  : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
               }`}
             >
               All Jobs
@@ -568,22 +610,22 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   setStatusFilter(statusFilter === status ? "all" : status);
                   setPage(1);
                 }}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-xs font-semibold transition-all ${
+                className={`inline-flex items-center gap-1.5 rounded-[12px] border px-4 py-2 text-xs font-black transition-all ${
                   statusFilter === status
                     ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                    : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                    : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
                 {status}
-                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${statusFilter === status ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground"}`}>
+                <span className={`rounded-[8px] px-1.5 py-0.5 text-[10px] ${statusFilter === status ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground"}`}>
                   {count}
                 </span>
               </button>
             ))}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-border/50">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex flex-col gap-3 border-t border-border/50 pt-2 sm:flex-row">
+            <div className="relative max-w-lg flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search jobs, clients, parts…"
@@ -592,7 +634,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-9 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
+                className="h-11 rounded-[12px] border-border/60 bg-muted/30 pl-9 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
               />
             </div>
             <div className="flex flex-col gap-2 w-full sm:w-auto">
@@ -606,7 +648,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   setPage(1);
                 }}
               />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Select
                 value={statusFilter}
                 onValueChange={(v) => {
@@ -614,7 +656,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="h-10 w-[160px] rounded-full border-border/60 bg-muted/40">
+                <SelectTrigger className="h-11 w-[160px] rounded-[12px] border-border/60 bg-muted/30">
                   <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
@@ -634,7 +676,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="h-10 w-[140px] rounded-full border-border/60 bg-muted/40">
+                <SelectTrigger className="h-11 w-[150px] rounded-[12px] border-border/60 bg-muted/30">
                   <SelectValue placeholder="Priority" />
                 </SelectTrigger>
                 <SelectContent>
@@ -652,28 +694,38 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
       </Card>
 
       {/* Jobs Table */}
-      <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+      <Card className="overflow-hidden rounded-[16px] border border-border/70 bg-card shadow-sm">
         <CardHeader className="border-b border-border/50 bg-muted/20 pb-4 pt-5">
-          <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">Job register</CardTitle>
-          <p className="text-sm font-medium text-muted-foreground">Open a row for shop-floor operations and materials</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
+                <Wrench className="h-5 w-5 text-primary" />
+                Job register
+              </CardTitle>
+              <p className="mt-1 text-sm font-medium text-muted-foreground">Open a row for shop-floor operations and materials</p>
+            </div>
+            <Badge variant="secondary" className="w-fit rounded-[10px] px-3 py-1 text-[10px] font-black uppercase tracking-widest">
+              {filtered.length} visible
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader className="bg-muted/25">
                 <TableRow className="border-border/40 hover:bg-transparent">
-                  <TableHead className="h-12 pl-6 text-xs font-bold text-foreground">
+                  <TableHead className="h-12 pl-6 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">
                     Job ID
                   </TableHead>
-                  <TableHead className="h-12 text-xs font-bold text-foreground">Client</TableHead>
-                  <TableHead className="h-12 text-xs font-bold text-foreground">Part Name</TableHead>
-                  <TableHead className="h-12 text-xs font-bold text-foreground">Machine</TableHead>
-                  <TableHead className="h-12 text-xs font-bold text-foreground">Priority</TableHead>
-                  <TableHead className="h-12 text-xs font-bold text-foreground">Qty</TableHead>
-                  <TableHead className="h-12 text-xs font-bold text-foreground">Due Date</TableHead>
-                  <TableHead className="h-12 text-xs font-bold text-foreground">Status</TableHead>
-                  <TableHead className="h-12 text-xs font-bold text-foreground">Progress</TableHead>
-                  <TableHead className="h-12 pr-6 text-xs font-bold text-foreground">Actions</TableHead>
+                  <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Client</TableHead>
+                  <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Part Name</TableHead>
+                  <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Machine</TableHead>
+                  <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Priority</TableHead>
+                  <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Qty</TableHead>
+                  <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Due Date</TableHead>
+                  <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</TableHead>
+                  <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Progress</TableHead>
+                  <TableHead className="h-12 pr-6 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -693,7 +745,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   paginated.map((job) => (
                     <TableRow
                       key={job._id}
-                      className="cursor-pointer transition-colors hover:bg-muted/40 border-border/40 group"
+                      className="group cursor-pointer border-border/40 transition-colors hover:bg-primary/[0.03]"
                       onClick={async () => {
                         try {
                           const full = await productionApi.getOne(job._id);
@@ -710,7 +762,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                       <TableCell className="text-[13px] font-bold">{job.bom?.name}</TableCell>
                       <TableCell className="text-[13px] font-medium text-muted-foreground">Standard Op</TableCell>
                       <TableCell>
-                        <Badge variant={priorityVariant[job.priority]} className="text-[10px] font-black uppercase tracking-tight py-0 px-2 rounded-md">
+                        <Badge variant={priorityVariant[job.priority]} className="rounded-[8px] px-2 py-0 text-[10px] font-black uppercase tracking-tight">
                           {job.priority}
                         </Badge>
                       </TableCell>
@@ -718,7 +770,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                       <TableCell className="text-[13px] font-medium text-muted-foreground">{new Date(job.dueDate).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-0.5">
-                          <Badge variant={statusVariant[job.status]} className="text-[10px] font-black uppercase tracking-tight py-0 px-2 rounded-md w-fit">
+                          <Badge variant={statusVariant[job.status]} className="w-fit rounded-[8px] px-2 py-0 text-[10px] font-black uppercase tracking-tight">
                             {job.status}
                           </Badge>
                           {job.status === "Completed" && job.inventoryPosted && (
@@ -730,7 +782,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3 min-w-[120px]">
-                          <Progress value={job.progress || 0} className="h-1.5 flex-1 bg-muted" />
+                          <Progress value={job.progress || 0} className="h-2 flex-1 bg-muted" />
                           <span className="text-[11px] font-mono font-bold text-muted-foreground w-8 text-right">
                             {job.progress || 0}%
                           </span>
@@ -740,7 +792,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="h-8 w-8 rounded-[10px] border border-border/60 bg-card opacity-100 shadow-sm transition-colors hover:bg-primary hover:text-primary-foreground sm:opacity-0 sm:group-hover:opacity-100"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedJob(job);
@@ -793,24 +845,42 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
 
       {/* Job Detail Dialog */}
       <Dialog open={!!selectedJob} onOpenChange={() => setSelectedJob(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border border-border/60 shadow-erp sm:max-w-3xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto rounded-[22px] border border-border/60 p-0 shadow-[0_24px_70px_-42px_rgba(15,23,42,0.75)] sm:max-w-4xl">
           {selectedJob && (
             <>
+              <div className="mx-5 mt-5 rounded-[18px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(190_75%_34%))] p-5 text-white shadow-[0_20px_54px_-34px_rgba(15,23,42,0.75)]">
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
+                <div className="mb-3 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-white/55">
+                  <Factory className="h-3.5 w-3.5" />
+                  Production job detail
+                </div>
+                <DialogTitle className="flex flex-wrap items-center gap-3 text-2xl font-black tracking-tight text-white">
                   <span className="font-mono">{selectedJob.jobId}</span>
-                  <Badge variant={statusVariant[selectedJob.status]} className="text-[11px]">
+                  <Badge variant={statusVariant[selectedJob.status]} className="rounded-[10px] text-[10px] font-black uppercase">
                     {selectedJob.status}
                   </Badge>
                 </DialogTitle>
                 <DialogDescription>{selectedJob.bom?.name} · {selectedJob.bom?.partNumber}</DialogDescription>
               </DialogHeader>
 
-              <div className="flex flex-wrap gap-2 border-b py-2">
+              <div className="mt-5 grid grid-cols-3 overflow-hidden rounded-[16px] border border-white/15 bg-white/10 text-center shadow-2xl shadow-black/10 backdrop-blur">
+                {[
+                  { label: "Qty", value: `${selectedJob.quantity}` },
+                  { label: "Progress", value: `${selectedJob.progress || 0}%` },
+                  { label: "Priority", value: selectedJob.priority },
+                ].map((item, index) => (
+                  <div key={item.label} className={`px-3 py-3 ${index > 0 ? "border-l border-white/10" : ""}`}>
+                    <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/45">{item.label}</p>
+                    <p className="mt-1 truncate font-mono text-sm font-black text-white">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-2">
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="h-9 gap-1 rounded-full border-primary/20"
+                  variant="secondary"
+                  className="h-9 gap-1 rounded-[12px] bg-white text-primary hover:bg-white/90"
                   disabled={syncOpsMut.isPending}
                   onClick={() => syncOpsMut.mutate(selectedJob._id)}
                 >
@@ -820,8 +890,8 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                 {selectedJob.travelerToken && (
                   <Button
                     size="sm"
-                    variant="secondary"
-                    className="h-9 gap-1 rounded-full"
+                    variant="outline"
+                    className="h-9 gap-1 rounded-[12px] border-white/20 bg-white/10 text-white hover:bg-white/15 hover:text-white"
                     onClick={() =>
                       window.open(
                         `${travelerBase}/api/production/traveler/${selectedJob.travelerToken}.html`,
@@ -835,18 +905,19 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   </Button>
                 )}
               </div>
+              </div>
 
-              <div className="space-y-3 py-3">
+              <div className="space-y-5 p-5">
                 <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Shop floor — operations</p>
                 {!selectedJob.operations?.length ? (
                   <p className="text-sm text-muted-foreground">
                     No operations yet. Add routing to the BOM, then <strong>Sync ops from BOM</strong>.
                   </p>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-border/60">
+                  <div className="overflow-x-auto rounded-[16px] border border-border/60 bg-card shadow-sm">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="bg-muted/50 border-b">
+                        <tr className="border-b bg-muted/40">
                           <th className="text-left p-2">#</th>
                           <th className="text-left p-2">Op</th>
                           <th className="text-left p-2">WC</th>
@@ -867,9 +938,9 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                             <td className="p-2">{op.workCenterCode || "—"}</td>
                             <td className="p-2">
                                {(op as any).qualityRequired ? (
-                                 <Badge 
+                              <Badge 
                                   variant={(op as any).qualityStatus === 'passed' ? 'success' : (op as any).qualityStatus === 'failed' ? 'destructive' : 'warning'}
-                                  className="text-[9px] px-1.5 cursor-pointer"
+                                   className="cursor-pointer rounded-[8px] px-1.5 text-[9px] font-black uppercase"
                                   onClick={() => {
                                     setQcType('in_process');
                                     setQcOpIndex(i);
@@ -881,7 +952,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                                ) : "—"}
                              </td>
                              <td className="p-2">
-                              <Badge variant="outline" className="text-[10px]">
+                               <Badge variant="outline" className="rounded-[8px] text-[10px] font-black uppercase">
                                 {op.status}
                               </Badge>
                             </td>
@@ -895,7 +966,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-7 px-2"
+                                    className="h-7 rounded-[9px] px-2"
                                     disabled={shopFloorMut.isPending}
                                     onClick={() =>
                                       shopFloorMut.mutate({
@@ -910,7 +981,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-7 px-2"
+                                    className="h-7 rounded-[9px] px-2"
                                     disabled={shopFloorMut.isPending}
                                     onClick={() =>
                                       shopFloorMut.mutate({
@@ -925,7 +996,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-7 px-2"
+                                    className="h-7 rounded-[9px] px-2"
                                     title="Log time"
                                     disabled={shopFloorMut.isPending}
                                     onClick={() =>
@@ -943,7 +1014,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 px-2 text-[10px]"
+                                className="h-7 rounded-[9px] px-2 text-[10px] font-black"
                                 disabled={shopFloorMut.isPending}
                                 onClick={() =>
                                   shopFloorMut.mutate({
@@ -966,7 +1037,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   <div>
                     <Label className="text-[10px]">Log time (min)</Label>
                     <Input
-                      className="h-8 w-20 mt-0.5"
+                      className="mt-0.5 h-9 w-24 rounded-[12px] border-border/70 bg-muted/30"
                       value={opMinutes}
                       onChange={(e) => setOpMinutes(e.target.value)}
                     />
@@ -974,7 +1045,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   <div className="flex-1 min-w-[120px]">
                     <Label className="text-[10px]">Note</Label>
                     <Input
-                      className="h-8 mt-0.5"
+                      className="mt-0.5 h-9 rounded-[12px] border-border/70 bg-muted/30"
                       value={opNote}
                       onChange={(e) => setOpNote(e.target.value)}
                       placeholder="optional"
@@ -983,7 +1054,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   <div>
                     <Label className="text-[10px]">Scrap qty</Label>
                     <Input
-                      className="h-8 w-16 mt-0.5"
+                      className="mt-0.5 h-9 w-20 rounded-[12px] border-border/70 bg-muted/30"
                       value={scrapIn}
                       onChange={(e) => setScrapIn(e.target.value)}
                     />
@@ -991,14 +1062,14 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   <div>
                     <Label className="text-[10px]">Rework</Label>
                     <Input
-                      className="h-8 w-16 mt-0.5"
+                      className="mt-0.5 h-9 w-20 rounded-[12px] border-border/70 bg-muted/30"
                       value={reworkIn}
                       onChange={(e) => setReworkIn(e.target.value)}
                     />
                   </div>
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-border/40 mt-4">
+                <div className="mt-4 space-y-4 rounded-[18px] border border-border/60 bg-card p-4 shadow-sm">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2">
                        <Package className="h-3.5 w-3.5" />
@@ -1008,7 +1079,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                   
                   {/* Issued Transactions List */}
                   {((selectedJob as any).materialTransactions?.length || 0) > 0 ? (
-                    <div className="rounded-xl border border-border/40 overflow-hidden bg-muted/10">
+                     <div className="overflow-hidden rounded-[14px] border border-border/60 bg-muted/10">
                       <table className="w-full text-[11px]">
                         <thead className="bg-muted/50 border-b">
                           <tr>
@@ -1053,14 +1124,14 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                       </table>
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-dashed border-border/60 p-6 text-center">
+                    <div className="rounded-[16px] border border-dashed border-border/70 bg-muted/10 p-8 text-center">
                       <Package className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
                       <p className="text-xs text-muted-foreground">No materials issued to this job yet.</p>
                     </div>
                   )}
 
                   {/* Issuance Form */}
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4">
+                  <div className="space-y-4 rounded-[16px] border border-primary/20 bg-primary/5 p-4">
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                       <p className="text-[10px] font-black uppercase text-primary tracking-widest">Issue Resource from Stock</p>
@@ -1074,7 +1145,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                           setIssueLot("");
                           setIssueSerial("");
                         }}>
-                          <SelectTrigger className="h-9 rounded-lg bg-card border-border/60">
+                          <SelectTrigger className="h-10 rounded-[12px] border-border/60 bg-card">
                             <SelectValue placeholder="Resource to issue..." />
                           </SelectTrigger>
                           <SelectContent className="max-h-60 overflow-y-auto">
@@ -1095,7 +1166,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                         <div className="flex items-center gap-2">
                           <Input 
                             type="number" 
-                            className="h-9 rounded-lg bg-card border-border/60 font-mono" 
+                            className="h-10 rounded-[12px] border-border/60 bg-card font-mono" 
                             value={issueQty} 
                             onChange={(e) => setIssueQty(parseFloat(e.target.value) || 0)} 
                           />
@@ -1114,7 +1185,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                       if (!showBatch && !showSerial) return null;
 
                       return (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/40 p-3 rounded-lg border border-primary/10 animate-in fade-in slide-in-from-top-2">
+                        <div className="grid grid-cols-1 gap-4 rounded-[14px] border border-primary/10 bg-background/60 p-3 animate-in fade-in slide-in-from-top-2 sm:grid-cols-2">
                           {showBatch && (
                             <div className="space-y-1.5">
                               <Label className="text-[10px] font-bold ml-1">Identify Lot / Batch</Label>
@@ -1142,7 +1213,7 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                     })()}
 
                     <Button 
-                      className="w-full h-10 rounded-xl font-black uppercase text-[10px] tracking-widest gap-2 shadow-sm"
+                      className="h-11 w-full rounded-[14px] font-black uppercase tracking-widest shadow-sm"
                       disabled={!issueProductId || issueQty <= 0 || issueMaterialMut.isPending}
                       onClick={() => {
                         const pObj = products.find((p: any) => p._id === issueProductId);
@@ -1172,20 +1243,20 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 py-4">
-                <div className="space-y-1">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-[14px] border border-border/60 bg-card p-4 shadow-sm">
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <User className="h-3 w-3" /> Assigned To
                   </p>
                   <p className="text-sm font-medium">{selectedJob.assignedTo || "Unassigned"}</p>
                 </div>
-                <div className="space-y-1">
+                <div className="rounded-[14px] border border-border/60 bg-card p-4 shadow-sm">
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <Package className="h-3 w-3" /> Quantity
                   </p>
                   <p className="text-sm font-medium">{selectedJob.quantity} pcs</p>
                 </div>
-                <div className="space-y-1">
+                <div className="rounded-[14px] border border-border/60 bg-card p-4 shadow-sm">
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <Calendar className="h-3 w-3" /> Due Date
                   </p>
@@ -1194,31 +1265,31 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
               </div>
 
               {selectedJob.notes && (
-                <div className="space-y-1">
+                <div className="rounded-[14px] border border-border/60 bg-card p-4 shadow-sm">
                   <p className="text-xs text-muted-foreground">Notes</p>
                   <p className="text-sm">{selectedJob.notes}</p>
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-2 rounded-[16px] border border-border/60 bg-card p-4 shadow-sm">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Progress</span>
                   <span className="font-mono font-medium">{selectedJob.progress || 0}%</span>
                 </div>
-                <Progress value={selectedJob.progress || 0} className="h-2.5" />
+                <Progress value={selectedJob.progress || 0} className="h-3" />
               </div>
 
               {["Scheduled", "In Progress", "On Hold"].includes(selectedJob.status) && (
-                <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground border-t">
+                <div className="flex items-center gap-2 rounded-[16px] border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">
                   {selectedJob.materialsReserved ? (
-                    <Badge variant="secondary" className="text-[10px]">Materials reserved</Badge>
+                    <Badge variant="secondary" className="rounded-[10px] text-[10px] font-black uppercase">Materials reserved</Badge>
                   ) : (
                     <span>Allocate BOM components so other orders see lower ATP.</span>
                   )}
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="ml-auto h-8"
+                    className="ml-auto h-9 rounded-[12px] font-bold"
                     disabled={reserveMaterialsMutation.isPending}
                     onClick={() => reserveMaterialsMutation.mutate(selectedJob._id)}
                   >
@@ -1227,16 +1298,16 @@ const ProductionJobs = ({ embedded = false }: { embedded?: boolean }) => {
                 </div>
               )}
 
-              <DialogFooter className="gap-2 sm:gap-0">
-                <Button variant="outline" className="rounded-full" onClick={() => setSelectedJob(null)}>
+              <DialogFooter className="gap-2 border-t border-border/60 bg-muted/10 p-5 sm:gap-2">
+                <Button variant="outline" className="rounded-[12px]" onClick={() => setSelectedJob(null)}>
                   Close
                 </Button>
-                 <Button className="rounded-full" onClick={() => setUpdateStatusJob(selectedJob)}>
+                 <Button className="rounded-[12px] font-black" onClick={() => setUpdateStatusJob(selectedJob)}>
                    Update status
                  </Button>
                  <Button 
                    variant="outline" 
-                   className="rounded-full border-emerald-500/50 text-emerald-600 hover:bg-emerald-50"
+                    className="rounded-[12px] border-emerald-500/50 font-black text-emerald-600 hover:bg-emerald-50"
                    onClick={() => {
                      setQcType('final');
                      setQcOpIndex(undefined);

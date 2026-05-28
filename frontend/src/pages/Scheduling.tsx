@@ -21,10 +21,14 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Calendar, 
+  Factory,
   Info,
+  Layers,
   Maximize2,
   Minimize2,
-  Loader2
+  Loader2,
+  Timer,
+  Wrench
 } from "lucide-react";
 import {
   Tooltip,
@@ -79,6 +83,18 @@ export default function Scheduling() {
     return jobs.filter((j: any) => j.status === 'Scheduled' || j.status === 'In Progress');
   }, [jobs]);
 
+  const scheduleStats = useMemo(() => {
+    const list = activeJobs as any[];
+    const now = new Date();
+    return {
+      active: list.length,
+      workCenters: workCenters.length,
+      inProgress: list.filter((j) => j.status === "In Progress").length,
+      overdue: list.filter((j) => new Date(j.dueDate) < now && j.status !== "Completed").length,
+      highPriority: list.filter((j) => j.priority === "High" || j.priority === "Urgent").length,
+    };
+  }, [activeJobs, workCenters]);
+
   const getJobStyle = (job: any) => {
     const start = new Date(job.plannedStartDate || job.createdAt);
     const end = new Date(job.dueDate);
@@ -114,46 +130,48 @@ export default function Scheduling() {
   const allWorkCenters = [...workCenters, { code: 'UNASSIGNED', name: t('scheduling.unassigned') }];
 
   return (
-    <div className="flex flex-col h-full space-y-6 pb-6 animate-in fade-in duration-1000">
-      {/* High-Tech Header */}
-      <div className="relative overflow-hidden rounded-[2rem] bg-white p-8 shadow-erp-sm border border-white/40">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-primary/5 blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-48 w-48 rounded-full bg-blue-500/5 blur-2xl" />
-        
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center shadow-inner">
-              <Calendar className="h-7 w-7 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-black tracking-tight text-[#1a2744] uppercase italic">
+    <div className="flex h-full flex-col space-y-6 pb-6 animate-in fade-in duration-500">
+      <div className="overflow-hidden rounded-[18px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(190_75%_34%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
+        <div className="p-5 sm:p-7">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div className="min-w-0">
+              <div className="mb-4 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.2em] text-white/55">
+                <Factory className="h-4 w-4" />
+                Manufacturing orchestration
+              </div>
+              <h1 className="text-4xl font-black tracking-tight sm:text-5xl">
                 {t("scheduling.title")}
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60">
-                  Manufacturing Orchestration
-                </p>
-                <div className="h-1 w-1 rounded-full bg-primary/40" />
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-                  {format(viewStartDate, 'MMMM yyyy')}
-                </p>
+              <p className="mt-3 max-w-3xl text-base font-semibold leading-7 text-white/60 sm:text-lg">
+                Plan work-center load, drag jobs across dates, and keep active production aligned to capacity.
+              </p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: "Active jobs", value: scheduleStats.active, tone: "text-emerald-300" },
+                  { label: "Work centers", value: scheduleStats.workCenters, tone: "text-sky-200" },
+                  { label: "Overdue", value: scheduleStats.overdue, tone: scheduleStats.overdue > 0 ? "text-rose-300" : "text-white" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-[16px] border border-white/20 bg-white/[0.08] p-4 backdrop-blur">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">{item.label}</p>
+                    <p className={`mt-2 text-3xl font-black tracking-tight ${item.tone}`}>{item.value}</p>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center bg-muted/30 p-1 rounded-full border border-muted-foreground/5 backdrop-blur-sm">
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center rounded-[14px] border border-white/15 bg-white/10 p-1 backdrop-blur">
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-9 w-9 rounded-full hover:bg-white transition-all active:scale-90"
+                className="h-9 w-9 rounded-[12px] text-white hover:bg-white/15 hover:text-white transition-all active:scale-90"
                 onClick={() => setViewStartDate(subDays(viewStartDate, 7))}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button 
                 variant="ghost" 
-                className="h-9 px-6 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-white transition-all active:scale-95"
+                className="h-9 rounded-[12px] px-6 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white hover:text-primary transition-all active:scale-95"
                 onClick={() => setViewStartDate(startOfDay(new Date()))}
               >
                 {t("scheduling.today")}
@@ -161,21 +179,21 @@ export default function Scheduling() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-9 w-9 rounded-full hover:bg-white transition-all active:scale-90"
+                className="h-9 w-9 rounded-[12px] text-white hover:bg-white/15 hover:text-white transition-all active:scale-90"
                 onClick={() => setViewStartDate(addDays(viewStartDate, 7))}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
 
-            <div className="flex items-center bg-[#1a2744] p-1 rounded-full shadow-erp-sm border border-white/10">
+            <div className="flex items-center rounded-[14px] border border-white/15 bg-white/10 p-1 shadow-sm">
               {[7, 14, 30].map(val => (
                 <Button 
                   key={val}
                   variant="none" 
                   size="sm" 
                   onClick={() => setDaysCount(val)}
-                  className={`h-8 px-5 rounded-full text-[10px] font-black transition-all ${daysCount === val ? 'bg-white text-[#1a2744] shadow-sm' : 'text-white/60 hover:text-white'}`}
+                  className={`h-8 rounded-[11px] px-5 text-[10px] font-black transition-all ${daysCount === val ? 'bg-white text-primary shadow-sm' : 'text-white/60 hover:text-white'}`}
                 >
                   {val}D
                 </Button>
@@ -184,16 +202,48 @@ export default function Scheduling() {
           </div>
         </div>
       </div>
+      </div>
 
-      <Card className="flex-1 overflow-hidden border-none shadow-erp-lg bg-white/40 backdrop-blur-xl rounded-[2.5rem] border border-white/60">
-        <div className="relative flex flex-col h-full overflow-hidden" ref={containerRef}>
-          {/* Futuristic Timeline Header */}
-          <div className="flex border-b border-white/60 bg-white/60 sticky top-0 z-30 backdrop-blur-md">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: "In progress", value: scheduleStats.inProgress, sub: "Running now", icon: Wrench, tone: "text-emerald-600", accent: "from-emerald-500 to-teal-400" },
+          { label: "High priority", value: scheduleStats.highPriority, sub: "Needs attention", icon: Timer, tone: "text-amber-600", accent: "from-amber-400 to-rose-500" },
+          { label: "Timeline view", value: `${daysCount}d`, sub: format(viewStartDate, "MMM yyyy"), icon: Calendar, tone: "text-primary", accent: "from-primary to-cyan-400" },
+          { label: "Capacity rows", value: allWorkCenters.length, sub: "Including unassigned", icon: Layers, tone: "text-violet-600", accent: "from-violet-500 to-blue-500" },
+        ].map((stat) => (
+          <Card key={stat.label} className="overflow-hidden rounded-[12px] border border-border/70 bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+            <div className={`h-1 bg-gradient-to-r ${stat.accent}`} />
+            <CardContent className="p-6">
+              <div className="mb-3 flex items-center gap-2">
+                <stat.icon className={`h-3.5 w-3.5 ${stat.tone}`} />
+                <h3 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">{stat.label}</h3>
+              </div>
+              <p className="text-4xl font-black tracking-tight text-foreground">{stat.value}</p>
+              <p className="mt-2 text-sm font-medium text-muted-foreground">{stat.sub}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="flex-1 overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
+        <div className="h-1 bg-gradient-to-r from-primary via-cyan-400 to-emerald-400" />
+        <div className="relative flex h-full flex-col overflow-hidden" ref={containerRef}>
+          <div className="flex items-center justify-between gap-3 border-b border-border/60 bg-muted/20 px-5 py-4">
+            <div>
+              <h2 className="text-lg font-black tracking-tight text-foreground">Capacity timeline</h2>
+              <p className="text-sm font-medium text-muted-foreground">Drag job bars to reschedule dates or move work centers.</p>
+            </div>
+            <Badge variant="secondary" className="rounded-[10px] px-3 py-1 text-[10px] font-black uppercase tracking-widest">
+              {format(viewStartDate, "MMM d")} - {format(addDays(viewStartDate, daysCount - 1), "MMM d")}
+            </Badge>
+          </div>
+
+          <div className="sticky top-0 z-30 flex border-b border-border/60 bg-card/95 backdrop-blur-md">
             <div 
               style={{ width: SIDEBAR_WIDTH }} 
-              className="shrink-0 border-r border-white/60 p-6 flex items-center"
+              className="flex shrink-0 items-center border-r border-border/60 p-5"
             >
-              <span className="font-black text-[10px] uppercase tracking-[0.3em] text-[#1a2744] opacity-40">
+              <span className="text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground">
                 {t("scheduling.workCenter")}
               </span>
             </div>
@@ -202,13 +252,13 @@ export default function Scheduling() {
                 <div 
                   key={day.toISOString()} 
                   style={{ width: DAY_WIDTH }}
-                  className={`shrink-0 border-r border-white/20 p-4 text-center flex flex-col justify-center transition-colors ${isToday(day) ? 'bg-primary/5' : ''}`}
+                  className={`flex shrink-0 flex-col justify-center border-r border-border/40 p-4 text-center transition-colors ${isToday(day) ? 'bg-primary/5' : ''}`}
                 >
-                  <span className={`text-[9px] font-black uppercase tracking-widest mb-1 ${isToday(day) ? 'text-primary' : 'text-muted-foreground opacity-60'}`}>
+                  <span className={`mb-1 text-[9px] font-black uppercase tracking-widest ${isToday(day) ? 'text-primary' : 'text-muted-foreground'}`}>
                     {format(day, 'EEE')}
                   </span>
                   <div className="relative inline-flex flex-col items-center">
-                    <span className={`text-xl font-black leading-none tracking-tighter ${isToday(day) ? 'text-primary' : 'text-[#1a2744]'}`}>
+                    <span className={`text-xl font-black leading-none ${isToday(day) ? 'text-primary' : 'text-foreground'}`}>
                       {format(day, 'd')}
                     </span>
                     {isToday(day) && (
@@ -226,18 +276,18 @@ export default function Scheduling() {
               {/* Sidebar Rows */}
               <div 
                 style={{ width: SIDEBAR_WIDTH }} 
-                className="shrink-0 border-r border-white/60 bg-white/20 sticky left-0 z-20 backdrop-blur-md"
+                className="sticky left-0 z-20 shrink-0 border-r border-border/60 bg-card/95 backdrop-blur-md"
               >
                 {allWorkCenters.map((wc: any) => (
                   <div 
                     key={wc.code} 
                     style={{ height: ROW_HEIGHT }}
-                    className="border-b border-white/60 p-6 flex flex-col justify-center group hover:bg-white/40 transition-all cursor-default"
+                    className="group flex cursor-default flex-col justify-center border-b border-border/50 p-5 transition-all hover:bg-muted/40"
                   >
-                    <div className="font-black text-xs tracking-tight text-[#1a2744] group-hover:text-primary transition-colors uppercase">
+                    <div className="text-xs font-black uppercase tracking-tight text-foreground transition-colors group-hover:text-primary">
                       {wc.name}
                     </div>
-                    <div className="text-[9px] font-black opacity-30 uppercase tracking-[0.2em] mt-1">
+                    <div className="mt-1 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">
                       {wc.code}
                     </div>
                   </div>
@@ -252,7 +302,7 @@ export default function Scheduling() {
                     <div 
                       key={day.toISOString()} 
                       style={{ width: DAY_WIDTH }} 
-                      className={`h-full border-r border-white/10 ${isToday(day) ? 'bg-primary/[0.01]' : ''}`} 
+                      className={`h-full border-r border-border/30 ${isToday(day) ? 'bg-primary/[0.03]' : ''}`} 
                     />
                   ))}
                 </div>
@@ -262,9 +312,9 @@ export default function Scheduling() {
                   <div 
                     key={wc.code} 
                     style={{ height: ROW_HEIGHT }}
-                    className="border-b border-white/20 w-full relative group/row"
+                    className="group/row relative w-full border-b border-border/40"
                   >
-                    <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover/row:opacity-100 transition-opacity pointer-events-none" />
+                    <div className="pointer-events-none absolute inset-0 bg-primary/[0.03] opacity-0 transition-opacity group-hover/row:opacity-100" />
                     
                     {/* Jobs in this work center */}
                     {activeJobs.filter((j: any) => (j.workCenterCode || 'UNASSIGNED') === wc.code).map((job: any) => {
@@ -311,11 +361,11 @@ export default function Scheduling() {
                                   }}
                                   whileHover={{ scale: 1.01, zIndex: 50, rotateX: 2, rotateY: 2 }}
                                   whileDrag={{ scale: 1.05, opacity: 0.9, cursor: 'grabbing', zIndex: 100, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}
-                                  className={`rounded-2xl border p-3 flex flex-col justify-between overflow-hidden group/card
-                                    ${job.status === 'In Progress' ? 'bg-emerald-500/20 border-emerald-500/40' : 'bg-blue-500/20 border-blue-500/40'}
-                                    ${job.priority === 'Urgent' ? 'ring-2 ring-rose-500 ring-offset-2 shadow-[0_0_15px_rgba(244,63,94,0.3)]' : 'shadow-erp-md'}
+                                  className={`group/card flex flex-col justify-between overflow-hidden rounded-[14px] border p-3
+                                    ${job.status === 'In Progress' ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-primary/35 bg-primary/10'}
+                                    ${job.priority === 'Urgent' ? 'ring-2 ring-rose-500 ring-offset-2 shadow-[0_16px_35px_-24px_rgba(244,63,94,0.6)]' : 'shadow-sm'}
                                     ${isOverdue ? 'border-rose-500/60' : ''}
-                                    backdrop-blur-md transition-shadow
+                                    backdrop-blur-md transition-shadow hover:shadow-lg
                                   `}
                                 >
                                   {/* Progress Glow Background */}
@@ -329,21 +379,21 @@ export default function Scheduling() {
                                         <div className={`h-1.5 w-1.5 rounded-full ${job.status === 'In Progress' ? 'bg-emerald-500 animate-pulse' : 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'}`} />
                                         <span className="text-[9px] font-black uppercase tracking-tighter opacity-60 truncate">{job.jobId}</span>
                                       </div>
-                                      <span className="text-[11px] font-black truncate leading-tight text-[#1a2744] uppercase tracking-tighter">
+                                      <span className="truncate text-[11px] font-black uppercase leading-tight text-foreground">
                                         {job.bom?.product?.name || 'Untitled Process'}
                                       </span>
                                     </div>
                                     <div className="flex flex-col items-end shrink-0">
-                                      <span className="text-[10px] font-black text-[#1a2744] leading-none">{job.quantity}</span>
-                                      <span className="text-[7px] font-black uppercase opacity-40">Units</span>
+                                      <span className="text-[10px] font-black leading-none text-foreground">{job.quantity}</span>
+                                      <span className="text-[7px] font-black uppercase text-muted-foreground">Units</span>
                                     </div>
                                   </div>
-                                  
-                                  <div className="flex items-end justify-between mt-auto relative pt-2 border-t border-black/5">
+                                   
+                                  <div className="relative mt-auto flex items-end justify-between border-t border-border/30 pt-2">
                                       <div className="flex items-center gap-1">
-                                        <div className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-widest ${
+                                        <div className={`rounded-[7px] px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest ${
                                           job.priority === 'Urgent' ? 'bg-rose-500 text-white' : 
-                                          job.priority === 'High' ? 'bg-amber-500 text-white' : 'bg-white/50 text-[#1a2744]'
+                                          job.priority === 'High' ? 'bg-amber-500 text-white' : 'bg-card text-foreground'
                                         }`}>
                                           {job.priority}
                                         </div>
@@ -357,23 +407,23 @@ export default function Scheduling() {
                                   </div>
                                 </motion.div>
                               </TooltipTrigger>
-                              <TooltipContent side="top" className="p-0 overflow-hidden border-none shadow-erp-xl rounded-2xl bg-white min-w-[240px]">
+                              <TooltipContent side="top" className="min-w-[260px] overflow-hidden rounded-[16px] border border-border/70 bg-card p-0 shadow-xl">
                                 <div className={`h-1.5 w-full ${job.priority === 'Urgent' ? 'bg-rose-500' : 'bg-primary'}`} />
                                 <div className="p-4 space-y-3">
                                   <div className="flex items-center justify-between">
                                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{job.jobId}</span>
-                                    <Badge variant={job.priority === 'Urgent' ? 'destructive' : 'secondary'} className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
+                                    <Badge variant={job.priority === 'Urgent' ? 'destructive' : 'secondary'} className="rounded-[9px] px-2 py-0.5 text-[9px] font-black uppercase">
                                       {job.status}
                                     </Badge>
                                   </div>
-                                  <h4 className="text-sm font-black text-[#1a2744] leading-tight">{job.bom?.product?.name}</h4>
+                                  <h4 className="text-sm font-black leading-tight text-foreground">{job.bom?.product?.name}</h4>
                                   
                                   <div className="grid grid-cols-2 gap-3 pt-2">
-                                    <div className="p-2 rounded-xl bg-muted/30">
+                                    <div className="rounded-[12px] bg-muted/30 p-2">
                                       <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1">Start Phase</p>
                                       <p className="text-[10px] font-bold">{format(new Date(job.plannedStartDate || job.createdAt), 'MMM d, yyyy')}</p>
                                     </div>
-                                    <div className="p-2 rounded-xl bg-muted/30">
+                                    <div className="rounded-[12px] bg-muted/30 p-2">
                                       <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1">Deadline</p>
                                       <p className="text-[10px] font-bold text-rose-600">{format(new Date(job.dueDate), 'MMM d, yyyy')}</p>
                                     </div>
@@ -391,9 +441,9 @@ export default function Scheduling() {
           </div>
 
           {rescheduleMut.isPending && (
-            <div className="absolute bottom-6 right-6 bg-[#1a2744] text-white px-6 py-3 rounded-full shadow-erp-xl flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] animate-in slide-in-from-bottom-10 fade-in duration-500 z-50">
+            <div className="absolute bottom-6 right-6 z-50 flex animate-in items-center gap-3 rounded-[14px] bg-foreground px-6 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-background shadow-xl fade-in slide-in-from-bottom-10 duration-500">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              Synchronizing Ledger...
+              Updating schedule...
             </div>
           )}
         </div>

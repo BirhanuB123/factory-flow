@@ -1,19 +1,19 @@
-import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { useLocale } from '@/contexts/LocaleContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
-import { Building2, Shield } from 'lucide-react';
-import { LoadingLogo } from '@/components/ui/LoadingLogo';
-
-import { getApiBaseUrl } from '@/lib/apiBase';
+import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { useLocale } from "@/contexts/LocaleContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { Activity, ArrowRight, Building2, CheckCircle2, Eye, EyeOff, Factory, LockKeyhole, Mail, Shield, Sparkles } from "lucide-react";
+import { LoadingLogo } from "@/components/ui/LoadingLogo";
+import { getApiBaseUrl } from "@/lib/apiBase";
 
 export default function Login() {
-  const [emailOrId, setEmailOrId] = useState('');
-  const [password, setPassword] = useState('');
+  const [emailOrId, setEmailOrId] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { t } = useLocale();
@@ -24,8 +24,9 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!emailOrId || !password) {
-      toast.error(t('auth.errorFillAll'));
+      toast.error(t("auth.errorFillAll"));
       return;
     }
 
@@ -33,192 +34,201 @@ export default function Login() {
 
     const apiBase = getApiBaseUrl();
     if (import.meta.env.PROD && /localhost|127\.0\.0\.1/.test(apiBase)) {
-      toast.error(t('auth.errorApiNotConfigured'));
+      toast.error(t("auth.errorApiNotConfigured"));
       setIsLoading(false);
       return;
     }
 
     try {
       const response = await fetch(`${apiBase}/auth/login`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: emailOrId.includes('@') ? emailOrId : undefined,
-          employeeId: !emailOrId.includes('@') ? emailOrId : undefined,
-          password
+          email: emailOrId.includes("@") ? emailOrId : undefined,
+          employeeId: !emailOrId.includes("@") ? emailOrId : undefined,
+          password,
         }),
       });
 
       const raw = await response.text();
       let data: Record<string, unknown> = {};
+
       if (raw) {
         try {
           data = JSON.parse(raw) as Record<string, unknown>;
         } catch {
-          toast.error(t('auth.errorBadApiResponse'));
+          toast.error(t("auth.errorBadApiResponse"));
           return;
         }
       }
 
       if (response.ok) {
-        toast.success(t('auth.successLogin'));
+        toast.success(t("auth.successLogin"));
         login(data, data.token as string);
         if ((data as { mustChangePassword?: boolean }).mustChangePassword) {
-          navigate('/account/change-password', { replace: true });
+          navigate("/account/change-password", { replace: true });
         } else {
           navigate(from, { replace: true });
         }
       } else {
-        toast.error((data.message as string) || t('auth.errorInvalid'));
+        toast.error((data.message as string) || t("auth.errorInvalid"));
       }
     } catch (error) {
-      console.error('Login error:', error);
-      toast.error(t('auth.errorNetwork'));
+      console.error("Login error:", error);
+      toast.error(t("auth.errorNetwork"));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background">
-      {/* Left: hero (desktop) */}
-      <div className="relative hidden lg:flex lg:w-[62.5%] h-full flex-col justify-end overflow-hidden px-12 py-14 xl:px-16 xl:py-16 text-white">
-        <div className="absolute inset-0 bg-primary/15 z-10" aria-hidden />
-        <img
-          //src="/login-bg.png"
-          src="/erp-login2.png"
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-[12s] ease-out hover:scale-105"
-        />
-        {/* Layered scrims for readable type on any photo */}
-        <div
-          className="absolute inset-0 z-20 bg-gradient-to-t from-background via-background/75 to-transparent"
-          aria-hidden
-        />
-        <div
-          className="absolute inset-0 z-[21] bg-gradient-to-r from-black/55 via-black/25 to-transparent"
-          aria-hidden
-        />
-
-        <div className="relative z-30 mb-6 max-w-xl animate-in fade-in slide-in-from-bottom-6 duration-1000 fill-mode-both delay-200">
-          <div className="mb-6 inline-flex rounded-2xl border border-white/15 bg-white/10 p-3.5 shadow-lg backdrop-blur-md">
-            <Building2 className="h-9 w-9 text-white" aria-hidden />
-          </div>
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
-            {t("auth.heroKicker")}
-          </p>
-          <h2 className="mb-5 text-4xl font-extrabold leading-[1.1] tracking-tight text-white drop-shadow-md xl:text-[2.65rem]">
-            {t("auth.heroTitle")}
-          </h2>
-          <p className="max-w-md text-base font-medium leading-relaxed text-white/88 xl:text-lg">
-            {t("auth.heroSubtitle")}
-          </p>
-        </div>
-      </div>
-
-      {/* Right: sign-in */}
-      <div className="relative z-30 flex h-full w-full flex-col overflow-y-auto bg-gradient-to-b from-card via-card to-muted/30 lg:w-[37.5%] lg:border-l lg:border-border/50">
-        <div className="flex min-h-full flex-col items-center justify-center px-5 py-8 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
-          <div
-            className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent lg:hidden"
-            aria-hidden
-          />
-
-          <div className="w-full max-w-[400px] animate-in fade-in zoom-in-95 duration-700 fill-mode-both">
-            <div className="mb-8 sm:mb-12 flex justify-center">
-              <img
-                src="/integra-logo.png"
-                alt="Integra logo"
-                className="h-auto w-full max-w-[320px] sm:max-w-[380px] object-contain"
-              />
+    <div className="min-h-screen overflow-hidden bg-[linear-gradient(135deg,hsl(222_47%_9%),hsl(221_68%_18%)_46%,hsl(190_75%_30%))]">
+      <div className="grid min-h-screen lg:grid-cols-[1.08fr_0.92fr]">
+        <section className="relative hidden overflow-hidden p-8 text-white lg:flex lg:flex-col lg:justify-between xl:p-12">
+          <img src="/erp-login2.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-28" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(8,18,38,0.98),rgba(17,39,79,0.86)_48%,rgba(9,112,129,0.78))]" aria-hidden />
+          <div className="relative z-10 flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[16px] border border-white/15 bg-white/10 backdrop-blur">
+              <Factory className="h-6 w-6" aria-hidden />
             </div>
-            <div className="rounded-2xl border border-border/80 bg-card/95 p-6 shadow-[0_4px_28px_-6px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.04] sm:p-8 dark:ring-white/[0.06]">
-              <div className="mb-6 sm:mb-8 flex flex-col items-center space-y-2 sm:space-y-3 text-center lg:items-start lg:text-left">
-              <div className="mb-1 flex lg:hidden">
-                <div className="rounded-2xl border border-primary/20 bg-primary/10 p-3.5 shadow-sm">
-                  <Building2 className="h-9 w-9 text-primary" aria-hidden />
+            <div>
+              <p className="text-lg font-black tracking-tight justify-center">INTEGRA</p>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/50">ERP System</p>
+            </div>
+          </div>
+
+          <div className="relative z-10 max-w-3xl">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-white/70 backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden />
+              {t("auth.heroKicker")}
+            </div>
+            <h2 className="max-w-2xl text-5xl font-black leading-[0.98] tracking-tight text-white xl:text-6xl">
+              {t("auth.heroTitle")}
+            </h2>
+            <p className="mt-5 max-w-xl text-lg font-semibold leading-8 text-white/68">
+              {t("auth.heroSubtitle")}
+            </p>
+
+            
+          </div>
+
+          
+        </section>
+
+        <section className="relative flex min-h-screen items-center justify-center bg-background/96 px-5 py-8 sm:px-8 lg:bg-card/95">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400" aria-hidden />
+          <div className="w-full max-w-[460px]">
+            <div className="mb-8 flex justify-center">
+              <img src="/integra-logo.png" alt="Integra logo" className="h-auto w-full max-w-[340px] object-contain" />
+            </div>
+
+            <div className="overflow-hidden rounded-[24px] border border-border/70 bg-background shadow-[0_24px_70px_-46px_rgba(15,23,42,0.65)]">
+              <div className="h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400" />
+              <div className="p-6 sm:p-8">
+                <div className="mb-7">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-primary">
+                    <Shield className="h-3.5 w-3.5" aria-hidden />
+                    Secure access
+                  </div>
+                  <h1 className="text-4xl font-black tracking-tight text-foreground">Welcome back</h1>
+                  <p className="mt-2 text-sm font-medium leading-6 text-muted-foreground">
+                    Sign in with your email or employee ID to open your workspace dashboard.
+                  </p>
                 </div>
-              </div>
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">
-                  {t("auth.brandKicker")}
+
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="emailOrId" className="text-sm font-bold">
+                      {t("auth.emailOrId")}
+                    </Label>
+                    <div className="relative">
+                      <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                      <Input
+                        id="emailOrId"
+                        name="username"
+                        autoComplete="username"
+                        placeholder="Enter your email or employee ID"
+                        value={emailOrId}
+                        onChange={(e) => setEmailOrId(e.target.value)}
+                        required
+                        className="h-12 rounded-[12px] border-border/70 bg-muted/30 pl-10 text-base shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/30"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm font-bold">
+                      {t("auth.password")}
+                    </Label>
+                    <div className="relative">
+                      <LockKeyhole className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                      <Input
+                        id="password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="h-12 rounded-[12px] border-border/70 bg-muted/30 pl-10 pr-11 text-base shadow-sm transition-all placeholder:text-muted-foreground/50 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/30"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        onClick={() => setShowPassword((value) => !value)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="h-12 w-full rounded-[12px] text-base font-black shadow-md transition-all hover:shadow-lg hover:shadow-primary/15"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <LoadingLogo size={20} />
+                        {t("auth.signingIn")}
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        {t("auth.signIn")}
+                        <ArrowRight className="h-4 w-4" aria-hidden />
+                      </span>
+                    )}
+                  </Button>
+                </form>
+
+                <div className="mt-6 rounded-[16px] border border-border/70 bg-muted/25 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-primary/10 text-primary">
+                      <Building2 className="h-4 w-4" aria-hidden />
+                    </div>
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
+                        Fastest path to work
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                        Login opens the dashboard and role-based actions for your team.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">
+                  <Shield className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+                  <span>{t("auth.sessionNote")}</span>
                 </p>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                  {t("auth.signIn")}
-                </h1>
               </div>
-              <p className="text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-                {t("auth.signInHint")}
-              </p>
             </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-5">
-                <div className="space-y-2 group">
-                  <Label
-                    htmlFor="emailOrId"
-                    className="text-sm font-medium transition-colors group-focus-within:text-primary"
-                  >
-                    {t("auth.emailOrId")}
-                  </Label>
-                  <Input
-                    id="emailOrId"
-                    name="username"
-                    autoComplete="username"
-                    placeholder=""
-                    value={emailOrId}
-                    onChange={(e) => setEmailOrId(e.target.value)}
-                    required
-                    className="h-12 border-muted-foreground/20 bg-muted/25 text-base shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/40"
-                  />
-                </div>
-
-                <div className="space-y-2 group">
-                  <Label
-                    htmlFor="password"
-                    className="text-sm font-medium transition-colors group-focus-within:text-primary"
-                  >
-                    {t("auth.password")}
-                  </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    placeholder=""
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="h-12 border-muted-foreground/20 bg-muted/25 text-base shadow-sm transition-all placeholder:text-muted-foreground/50 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/40"
-                  />
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                className="h-12 w-full text-base font-semibold shadow-md transition-all hover:shadow-lg hover:shadow-primary/15"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <LoadingLogo size={20} />
-                    {t("auth.signingIn")}
-                  </span>
-                ) : (
-                  t("auth.signIn")
-                )}
-              </Button>
-            </form>
           </div>
-
-          <p className="mt-6 flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">
-            <Shield className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-            <span>{t("auth.sessionNote")}</span>
-          </p>
-        </div>
-        </div>
+        </section>
       </div>
     </div>
   );

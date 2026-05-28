@@ -30,6 +30,7 @@ import {
   AlertCircle,
   Receipt,
   ShipWheel,
+  Sparkles,
 } from "lucide-react";
 import { ModuleDashboardLayout } from "@/components/ModuleDashboardLayout";
 import { useLocale } from "@/contexts/LocaleContext";
@@ -406,37 +407,126 @@ export default function PurchaseOrders() {
       title={t("pages.purchasing.title")}
       description={t("pages.purchasing.subtitle")}
       icon={Truck}
-      actions={
-        can(PERM.create) ? (
-          <Button
-            className="h-11 rounded-xl font-black uppercase text-xs gap-2"
-            onClick={() => {
-              resetForm();
-              setFormOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4" /> {t("pages.purchasing.newPo")}
-          </Button>
-        ) : null
-      }
-      healthStats={[
-        {
-          label: t("pages.purchasing.openPos"),
-          value: String(procurementStats.openCount),
-        },
-        {
-          label: t("pages.purchasing.draftPos"),
-          value: String(procurementStats.draftCount),
-        },
-        {
-          label: t("pages.purchasing.toReceive"),
-          value: String(procurementStats.toReceiveCount),
-        },
-      ]}
+      showHeader={false}
     >
       <div className="space-y-6">
+        <div className="overflow-hidden rounded-[18px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(180_65%_28%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
+          <div className="flex flex-col gap-5 border-b border-white/10 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="h-10 w-1.5 shrink-0 rounded-full bg-cyan-300 shadow-[0_0_24px_rgba(103,232,249,0.55)]" />
+                <h1 className="text-3xl font-black uppercase italic leading-none tracking-tight text-white sm:text-4xl">
+                  {t("pages.purchasing.title")}
+                </h1>
+                <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-white/12 text-white ring-1 ring-white/15">
+                  <Truck className="h-5 w-5 stroke-[2.5]" aria-hidden />
+                </div>
+              </div>
+              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-white/70 sm:ml-5">
+                {t("pages.purchasing.subtitle")}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="grid grid-cols-3 overflow-hidden rounded-[18px] border border-white/15 bg-white/10 shadow-2xl shadow-black/10 backdrop-blur sm:min-w-[360px]">
+                {[
+                  { label: t("pages.purchasing.openPos"), value: String(procurementStats.openCount) },
+                  { label: t("pages.purchasing.draftPos"), value: String(procurementStats.draftCount) },
+                  { label: t("pages.purchasing.toReceive"), value: String(procurementStats.toReceiveCount) },
+                ].map((stat, index) => (
+                  <div key={stat.label} className={`px-4 py-3 text-center ${index > 0 ? "border-l border-white/10" : ""}`}>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/45">{stat.label}</p>
+                    <p className="mt-1 font-mono text-lg font-black tracking-tight text-white">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {can(PERM.create) ? (
+                <Button
+                  className="h-11 rounded-[12px] bg-white text-primary shadow-sm hover:bg-white/90"
+                  onClick={() => {
+                    resetForm();
+                    setFormOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4" /> {t("pages.purchasing.newPo")}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1fr_360px]">
+            <div className="min-w-0">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white/90">
+                <Sparkles className="h-3.5 w-3.5" />
+                Procurement control center
+              </div>
+              <h2 className="text-2xl font-black tracking-tight sm:text-3xl">Supplier flow, receipts, and landed costs in one view</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
+                Track commitments, approve purchase orders, receive stock, and monitor import exposure without leaving procurement.
+              </p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: "Open POs", value: String(procurementStats.openCount), icon: FileText },
+                  { label: "To receive", value: String(procurementStats.toReceiveCount), icon: Package },
+                  { label: "Imports", value: String(procurementStats.importCount), icon: ShipWheel },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-[14px] border border-white/15 bg-white/[0.09] p-4 backdrop-blur">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-white/60">{item.label}</p>
+                        <p className="mt-1 text-xl font-black tracking-tight text-white">{item.value}</p>
+                      </div>
+                      <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-white/12">
+                        <item.icon className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[16px] border border-white/15 bg-white/[0.09] p-5 backdrop-blur">
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Committed value</p>
+              <p className="mt-1 truncate text-3xl font-black tracking-tight text-white">{format(procurementStats.totalFunctional)}</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-white/68">Functional value across all purchase orders.</p>
+              <div className="mt-5 space-y-3">
+                <div>
+                  <div className="mb-2 flex items-center justify-between text-xs font-bold text-white/68">
+                    <span>Received</span>
+                    <span>{procurementStats.receivedCount}</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-white/15">
+                    <div
+                      className="h-full rounded-full bg-emerald-400"
+                      style={{
+                        width: `${purchaseOrders.length ? Math.max(8, (procurementStats.receivedCount / purchaseOrders.length) * 100) : 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-2 flex items-center justify-between text-xs font-bold text-white/68">
+                    <span>Draft queue</span>
+                    <span>{procurementStats.draftCount}</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-white/15">
+                    <div
+                      className="h-full rounded-full bg-amber-400"
+                      style={{
+                        width: `${purchaseOrders.length ? Math.max(8, (procurementStats.draftCount / purchaseOrders.length) * 100) : 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <Card className="overflow-hidden border-border/60 bg-card/80 shadow-sm">
+          <Card className="group relative overflow-hidden rounded-[16px] border-border/60 bg-card/95 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -448,14 +538,15 @@ export default function PurchaseOrders() {
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">Functional value across all POs</p>
                 </div>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-primary/10 text-primary ring-1 ring-primary/10">
                   <Receipt className="h-5 w-5" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden border-border/60 bg-card/80 shadow-sm">
+          <Card className="group relative overflow-hidden rounded-[16px] border-border/60 bg-card/95 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -465,14 +556,15 @@ export default function PurchaseOrders() {
                   <p className="mt-2 text-2xl font-black tracking-tight">{procurementStats.toReceiveCount}</p>
                   <p className="mt-1 text-xs text-muted-foreground">Approved or partially received</p>
                 </div>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/10">
                   <Package className="h-5 w-5" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden border-border/60 bg-card/80 shadow-sm">
+          <Card className="group relative overflow-hidden rounded-[16px] border-border/60 bg-card/95 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 via-orange-400 to-rose-400" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -482,14 +574,15 @@ export default function PurchaseOrders() {
                   <p className="mt-2 text-2xl font-black tracking-tight">{procurementStats.draftCount}</p>
                   <p className="mt-1 text-xs text-muted-foreground">Need review and approval</p>
                 </div>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/10">
                   <Clock className="h-5 w-5" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden border-border/60 bg-card/80 shadow-sm">
+          <Card className="group relative overflow-hidden rounded-[16px] border-border/60 bg-card/95 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-500 via-blue-400 to-indigo-400" />
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -499,7 +592,7 @@ export default function PurchaseOrders() {
                   <p className="mt-2 text-2xl font-black tracking-tight">{procurementStats.importCount}</p>
                   <p className="mt-1 text-xs text-muted-foreground">Import POs still open</p>
                 </div>
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-sky-500/10 text-sky-600 ring-1 ring-sky-500/10">
                   <ShipWheel className="h-5 w-5" />
                 </div>
               </div>
@@ -507,11 +600,15 @@ export default function PurchaseOrders() {
           </Card>
         </div>
 
-        <Card className="overflow-hidden border-border/60 bg-card/80 shadow-sm">
+        <Card className="overflow-hidden rounded-[18px] border-border/60 bg-card shadow-sm">
+          <div className="h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400" />
           <CardHeader className="border-b bg-muted/20 p-4 sm:p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
-                <CardTitle className="flex items-center gap-2 text-base font-black uppercase tracking-wide">
+                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                  Supplier execution
+                </p>
+                <CardTitle className="flex items-center gap-2 text-lg font-black tracking-tight">
                   <FileText className="h-5 w-5 text-primary" /> Purchase orders
                 </CardTitle>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -525,11 +622,11 @@ export default function PurchaseOrders() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search PO, supplier, SKU"
-                    className="h-10 pl-9"
+                    className="h-10 rounded-[12px] pl-9"
                   />
                 </div>
                 <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as POStatusFilter)}>
-                  <SelectTrigger className="h-10 sm:w-44">
+                  <SelectTrigger className="h-10 rounded-[12px] sm:w-44">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -549,12 +646,12 @@ export default function PurchaseOrders() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/10 hover:bg-muted/10">
-                    <TableHead className="min-w-[210px] pl-5">Purchase order</TableHead>
-                    <TableHead className="min-w-[180px]">Supplier</TableHead>
-                    <TableHead className="min-w-[190px]">Progress</TableHead>
-                    <TableHead className="min-w-[150px] text-right">Value</TableHead>
-                    <TableHead className="min-w-[210px]">Status</TableHead>
-                    <TableHead className="min-w-[150px] pr-5 text-right">Actions</TableHead>
+                    <TableHead className="min-w-[210px] pl-5 text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Purchase order</TableHead>
+                    <TableHead className="min-w-[180px] text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Supplier</TableHead>
+                    <TableHead className="min-w-[190px] text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Progress</TableHead>
+                    <TableHead className="min-w-[150px] text-right text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Value</TableHead>
+                    <TableHead className="min-w-[210px] text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</TableHead>
+                    <TableHead className="min-w-[150px] pr-5 text-right text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -571,7 +668,7 @@ export default function PurchaseOrders() {
                     <TableRow>
                       <TableCell colSpan={6} className="py-16 text-center">
                         <div className="mx-auto max-w-md space-y-4 text-muted-foreground">
-                          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[14px] bg-primary/10 text-primary ring-1 ring-primary/10">
                             <FileText className="h-6 w-6" />
                           </div>
                           <div className="space-y-1">
@@ -583,15 +680,15 @@ export default function PurchaseOrders() {
                             </p>
                           </div>
                           <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                            <Button asChild variant="outline" size="sm" className="h-9">
+                            <Button asChild variant="outline" size="sm" className="h-9 rounded-[10px]">
                               <Link to="/inventory">Inventory / SKUs</Link>
                             </Button>
                             {canPickVendor && (
-                              <Button asChild variant="outline" size="sm" className="h-9">
+                              <Button asChild variant="outline" size="sm" className="h-9 rounded-[10px]">
                                 <Link to="/finance">Finance & vendors</Link>
                               </Button>
                             )}
-                            <Button asChild variant="secondary" size="sm" className="h-9">
+                            <Button asChild variant="secondary" size="sm" className="h-9 rounded-[10px]">
                               <Link to="/sme-bundle">SME workflow</Link>
                             </Button>
                           </div>
@@ -623,18 +720,18 @@ export default function PurchaseOrders() {
                       return (
                         <TableRow
                           key={po._id}
-                          className="cursor-pointer align-top hover:bg-muted/30"
+                          className="cursor-pointer align-top transition-colors hover:bg-muted/35"
                           onClick={() => setSelected(po)}
                         >
                           <TableCell className="pl-5">
                             <div className="space-y-1">
                               <div className="font-mono text-sm font-black text-foreground">{po.poNumber}</div>
                               <div className="flex flex-wrap gap-1">
-                                <Badge variant="outline" className="rounded-md text-[10px] font-black uppercase">
+                                <Badge variant="outline" className="rounded-[10px] text-[10px] font-black uppercase">
                                   {po.lines?.length ?? 0} lines
                                 </Badge>
                                 {po.supplyType === "import" && (
-                                  <Badge className="rounded-md bg-sky-600 text-[10px] font-black uppercase">
+                                  <Badge className="rounded-[10px] bg-sky-600 text-[10px] font-black uppercase">
                                     Import
                                   </Badge>
                                 )}
@@ -654,7 +751,7 @@ export default function PurchaseOrders() {
                                 <span className="font-mono font-black">{progress}%</span>
                               </div>
                               <div className="h-2 overflow-hidden rounded-full bg-muted">
-                                <div className="h-full rounded-full bg-primary" style={{ width: `${progress}%` }} />
+                                <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-400" style={{ width: `${progress}%` }} />
                               </div>
                             </div>
                           </TableCell>
@@ -671,12 +768,12 @@ export default function PurchaseOrders() {
                             <div className="flex flex-wrap gap-1.5">
                               <Badge
                                 variant="outline"
-                                className={`rounded-md text-[10px] font-black uppercase ${statusBadgeClass(po.status)}`}
+                                className={`rounded-[10px] text-[10px] font-black uppercase ${statusBadgeClass(po.status)}`}
                               >
                                 {statusLabel(po.status)}
                               </Badge>
                               {(po.landedCostPoolTotal ?? 0) > 0 && (
-                                <Badge variant="secondary" className="rounded-md text-[10px] font-mono">
+                                <Badge variant="secondary" className="rounded-[10px] text-[10px] font-mono">
                                   Landed {format(po.landedCostPoolTotal ?? 0)}
                                 </Badge>
                               )}
@@ -688,14 +785,14 @@ export default function PurchaseOrders() {
                                 <Button
                                   size="sm"
                                   variant="secondary"
-                                  className="h-8 gap-1.5"
+                                  className="h-8 rounded-[10px] gap-1.5"
                                   onClick={() => approveMut.mutate(po._id)}
                                 >
                                   <CheckCircle className="h-3.5 w-3.5" /> Approve
                                 </Button>
                               )}
                               {["approved", "partial_received"].includes(po.status) && can(PERM.receive) && (
-                                <Button size="sm" className="h-8 gap-1.5" onClick={() => openReceive(po)}>
+                                <Button size="sm" className="h-8 rounded-[10px] gap-1.5" onClick={() => openReceive(po)}>
                                   <Package className="h-3.5 w-3.5" /> Receive
                                 </Button>
                               )}

@@ -82,10 +82,12 @@ export function LocationsTab() {
 
   return (
     <div className="space-y-6">
-      <Card className="rounded-2xl border-0 shadow-erp">
+      <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
+        <div className="h-1 bg-gradient-to-r from-primary/75 to-cyan-400/70" />
         <CardHeader className="flex flex-row items-center justify-between border-b border-border/50 bg-muted/20 pb-4 pt-5">
           <div>
-            <CardTitle className="flex items-center gap-2 text-lg font-bold tracking-tight text-[#1a2744]">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Storage map</p>
+            <CardTitle className="mt-1 flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
               <MapPin className="h-5 w-5 text-primary" />
               Storage Locations
             </CardTitle>
@@ -93,7 +95,7 @@ export function LocationsTab() {
           </div>
           {can("inventory:post") && (
             <Button
-              className="rounded-full gap-2"
+              className="rounded-[12px] gap-2 bg-primary text-primary-foreground font-bold hover:bg-primary/90 text-xs h-10 px-5 shadow-sm"
               onClick={() => {
                 resetForm();
                 setIsModalOpen(true);
@@ -106,10 +108,10 @@ export function LocationsTab() {
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-muted/25">
-              <TableRow>
-                <TableHead className="pl-6 font-bold">Name</TableHead>
-                <TableHead className="font-bold">Type</TableHead>
-                <TableHead className="text-right pr-6 font-bold">Actions</TableHead>
+              <TableRow className="border-border/40 hover:bg-transparent">
+                <TableHead className="pl-6 text-[10px] font-black uppercase tracking-wider text-muted-foreground/80">Name</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80">Type</TableHead>
+                <TableHead className="text-right pr-6 text-[10px] font-black uppercase tracking-wider text-muted-foreground/80">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -123,10 +125,10 @@ export function LocationsTab() {
                 </TableRow>
               ) : (
                 locations.map((loc: any) => (
-                  <TableRow key={loc._id} className="group hover:bg-muted/30 transition-colors">
-                    <TableCell className="pl-6 font-medium text-[#1a2744]">{loc.name}</TableCell>
+                  <TableRow key={loc._id} className="group border-border/40 transition-colors hover:bg-muted/30">
+                    <TableCell className="pl-6 font-bold text-foreground">{loc.name}</TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold text-foreground/80 bg-muted/50">
+                      <span className="inline-flex items-center rounded-md border border-slate-500/20 bg-slate-500/10 px-2.5 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300 shadow-sm uppercase tracking-wider">
                         {loc.type}
                       </span>
                     </TableCell>

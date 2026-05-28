@@ -12,12 +12,16 @@ import {
   YAxis,
 } from "recharts";
 import {
+  Activity,
   BarChart3,
   CalendarRange,
+  CheckCircle2,
   Download,
   Factory,
   Package,
   ShoppingCart,
+  Sparkles,
+  TrendingUp,
   Truck,
   Users,
 } from "lucide-react";
@@ -31,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
@@ -100,6 +105,10 @@ export default function Reports() {
 
   const showSalesKpis = data != null ? data.sales : salesEnabled(user);
   const chartData = useMemo(() => data?.series ?? [], [data?.series]);
+  const periodLabel = PERIOD_META[period].label;
+  const periodWindowLabel = data?.window
+    ? `${new Date(data.window.start).toLocaleDateString()} - ${new Date(data.window.end).toLocaleDateString()}`
+    : PERIOD_META[period].hint;
 
   const kpiSections = useMemo(() => {
     if (!data) return { period: [] as KpiCard[], lifetime: [] as KpiCard[] };
@@ -198,6 +207,12 @@ export default function Reports() {
     return { period: periodCards, lifetime: lifetimeCards };
   }, [data, currency]);
 
+  const healthStats = [
+    { label: "Period", value: periodLabel, accent: "text-primary" },
+    { label: "Data points", value: String(chartData.length), accent: "text-emerald-600" },
+    { label: "Modules", value: data ? String([data.sales, data.finance, data.manufacturing, data.procurement, data.inventory, data.shipments].filter(Boolean).length) : "0" },
+  ];
+
   const errMsg =
     error && typeof error === "object" && "response" in error
       ? String((error as { response?: { data?: { message?: string } } }).response?.data?.message || "")
@@ -218,10 +233,11 @@ export default function Reports() {
       title={t("pages.reports.title")}
       description={t("pages.reports.subtitle")}
       icon={BarChart3}
+      healthStats={healthStats}
       actions={
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2 rounded-xl">
+            <Button variant="outline" size="sm" className="gap-2 rounded-[12px] border-border/70 bg-card/80 shadow-sm">
               <Download className="h-4 w-4" />
               {t("pages.reports.exportCsv")}
             </Button>
@@ -242,7 +258,73 @@ export default function Reports() {
         </DropdownMenu>
       }
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="overflow-hidden rounded-[18px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(180_65%_28%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
+        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1fr_420px]">
+          <div className="min-w-0">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white/90">
+              <Sparkles className="h-3.5 w-3.5" />
+              Reporting control center
+            </div>
+            <h2 className="text-2xl font-black tracking-tight sm:text-3xl">Business reports made easier to scan</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
+              Review sales, finance, operations, procurement, and inventory trends from one clean reporting view.
+            </p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              {[
+                { label: "Current range", value: periodLabel, icon: CalendarRange },
+                { label: "Chart points", value: String(chartData.length), icon: Activity },
+                { label: "Available exports", value: "5 CSV", icon: Download },
+              ].map((item) => (
+                <div key={item.label} className="rounded-[14px] border border-white/15 bg-white/[0.09] p-4 backdrop-blur">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-white/60">{item.label}</p>
+                      <p className="mt-1 text-xl font-black tracking-tight text-white">{item.value}</p>
+                    </div>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-white/12">
+                      <item.icon className="h-5 w-5 text-white" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[16px] border border-white/15 bg-white/[0.09] p-5 backdrop-blur">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Report period</p>
+                <p className="mt-1 text-xl font-black tracking-tight text-white">{periodLabel}</p>
+              </div>
+              <Badge variant="outline" className="border-white/20 bg-white/10 text-white">
+                {data?.timezone || "Local time"}
+              </Badge>
+            </div>
+            <p className="mt-2 text-xs font-semibold leading-5 text-white/68">{periodWindowLabel}</p>
+            <ToggleGroup
+              type="single"
+              value={period}
+              onValueChange={(v) => {
+                if (v) setPeriod(v as ReportPeriod);
+              }}
+              className="mt-5 flex-wrap justify-start rounded-[14px] border border-white/15 bg-white/10 p-1"
+            >
+              {(Object.keys(PERIOD_META) as ReportPeriod[]).map((p) => (
+                <ToggleGroupItem
+                  key={p}
+                  value={p}
+                  aria-label={PERIOD_META[p].label}
+                  className="rounded-[10px] px-3 text-xs font-bold text-white/72 data-[state=on]:bg-white data-[state=on]:text-slate-950 data-[state=on]:shadow-sm"
+                >
+                  {PERIOD_META[p].label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden">
         <div>
           <p className="text-sm font-medium text-muted-foreground">{PERIOD_META[period].hint}</p>
           {data?.window && (
@@ -290,18 +372,19 @@ export default function Reports() {
 
       {kpiSections.lifetime.length > 0 && (
         <div>
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">Lifetime totals</h2>
+          <h2 className="mb-3 text-xs font-black uppercase tracking-widest text-muted-foreground">Lifetime totals</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {isLoading
-              ? [1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-2xl" />)
+              ? [1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-[16px]" />)
               : kpiSections.lifetime.map((c) => (
-                  <Card key={c.title} className="rounded-2xl border-border/60 bg-muted/20 shadow-none">
+                  <Card key={c.title} className="group relative overflow-hidden rounded-[16px] border border-border/60 bg-card/95 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_-32px_rgba(15,23,42,0.55)]">
+                    <div className="h-1 bg-gradient-to-r from-primary/70 via-emerald-400/70 to-amber-400/70 opacity-0 transition-opacity group-hover:opacity-100" />
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">{c.title}</CardTitle>
+                      <CardTitle className="text-sm font-semibold text-muted-foreground">{c.title}</CardTitle>
                       <c.icon className={cn("h-4 w-4 text-muted-foreground", c.className)} aria-hidden />
                     </CardHeader>
                     <CardContent>
-                      <p className={cn("text-xl font-bold tracking-tight", c.className)}>{c.value}</p>
+                      <p className={cn("text-2xl font-black tracking-tight", c.className)}>{c.value}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -310,21 +393,24 @@ export default function Reports() {
       )}
 
       <div>
-        <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+        <h2 className="mb-3 text-xs font-black uppercase tracking-widest text-muted-foreground">
           This period ({PERIOD_META[period].label.toLowerCase()})
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {isLoading
-            ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)
+            ? Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-[16px]" />)
             : kpiSections.period.length > 0
               ? kpiSections.period.map((c) => (
-                  <Card key={c.title} className="rounded-2xl border-border/60 shadow-erp-sm">
+                  <Card key={c.title} className="group overflow-hidden rounded-[16px] border border-border/60 bg-card/95 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_-32px_rgba(15,23,42,0.55)]">
+                    <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-br from-primary/8 via-transparent to-emerald-500/8" />
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">{c.title}</CardTitle>
-                      <c.icon className={cn("h-4 w-4 text-muted-foreground", c.className)} aria-hidden />
+                      <CardTitle className="relative text-sm font-semibold text-muted-foreground">{c.title}</CardTitle>
+                      <div className="relative flex h-9 w-9 items-center justify-center rounded-[12px] bg-primary/10">
+                        <c.icon className={cn("h-4 w-4 text-primary", c.className)} aria-hidden />
+                      </div>
                     </CardHeader>
-                    <CardContent>
-                      <p className={cn("text-2xl font-bold tracking-tight", c.className)}>{c.value}</p>
+                    <CardContent className="relative">
+                      <p className={cn("text-2xl font-black tracking-tight", c.className)}>{c.value}</p>
                     </CardContent>
                   </Card>
                 ))
@@ -346,9 +432,14 @@ export default function Reports() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-1">
-        <Card className="rounded-2xl border-border/60 shadow-erp-sm">
+        <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
+          <div className="h-1 bg-gradient-to-r from-primary/75 to-cyan-400/70" />
           <CardHeader>
-            <CardTitle className="text-lg">Sales &amp; revenue</CardTitle>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Commercial report</p>
+            <CardTitle className="mt-1 flex items-center gap-2 text-lg font-black">
+              <ShoppingCart className="h-5 w-5 text-primary" />
+              Sales &amp; revenue
+            </CardTitle>
             <CardDescription>Order value and order count from your sales data.</CardDescription>
           </CardHeader>
           <CardContent className="h-[320px] w-full min-w-0 pt-2">
@@ -363,6 +454,7 @@ export default function Reports() {
                   : "No data points in this range."}
               </p>
             ) : (
+              <div className="h-full rounded-[14px] bg-gradient-to-b from-background/60 to-muted/20 p-2">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
                   data={chartData}
@@ -411,14 +503,20 @@ export default function Reports() {
                   />
                 </ComposedChart>
               </ResponsiveContainer>
+              </div>
             )}
           </CardContent>
         </Card>
 
         {(data?.finance || isLoading) && (
-          <Card className="rounded-2xl border-border/60 shadow-erp-sm">
+          <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
+            <div className="h-1 bg-gradient-to-r from-emerald-400/80 to-violet-500/70" />
             <CardHeader>
-              <CardTitle className="text-lg">Finance</CardTitle>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Finance report</p>
+              <CardTitle className="mt-1 flex items-center gap-2 text-lg font-black">
+                <TrendingUp className="h-5 w-5 text-emerald-600" />
+                Finance
+              </CardTitle>
               <CardDescription>Paid invoice revenue and expenses (including payroll journals) per bucket.</CardDescription>
             </CardHeader>
             <CardContent className="h-[320px] w-full min-w-0 pt-2">
@@ -429,6 +527,7 @@ export default function Reports() {
               ) : chartData.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No finance activity in this range.</p>
               ) : (
+                <div className="h-full rounded-[14px] bg-gradient-to-b from-background/60 to-muted/20 p-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
                     data={chartData}
@@ -473,15 +572,21 @@ export default function Reports() {
                     />
                   </ComposedChart>
                 </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
         )}
 
         {(data?.manufacturing || data?.procurement || data?.shipments || isLoading) && (
-          <Card className="rounded-2xl border-border/60 shadow-erp-sm">
+          <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
+            <div className="h-1 bg-gradient-to-r from-amber-400/80 to-primary/70" />
             <CardHeader>
-              <CardTitle className="text-lg">Operations</CardTitle>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Operations report</p>
+              <CardTitle className="mt-1 flex items-center gap-2 text-lg font-black">
+                <Factory className="h-5 w-5 text-amber-600" />
+                Operations
+              </CardTitle>
               <CardDescription>Production jobs, purchase orders, and shipments over time.</CardDescription>
             </CardHeader>
             <CardContent className="h-[320px] w-full min-w-0 pt-2">
@@ -492,6 +597,7 @@ export default function Reports() {
               ) : chartData.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No operations data in this range.</p>
               ) : (
+                <div className="h-full rounded-[14px] bg-gradient-to-b from-background/60 to-muted/20 p-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart
                     data={chartData}
@@ -578,6 +684,7 @@ export default function Reports() {
                     ) : null}
                   </ComposedChart>
                 </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>

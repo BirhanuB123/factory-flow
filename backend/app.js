@@ -58,6 +58,7 @@ const {
   getEmployees,
   createEmployee,
   updateEmployee,
+  inviteEmployee,
   getAttendance,
   logAttendance,
   reviewAttendanceOvertime,
@@ -546,6 +547,7 @@ app.get(
 app.get('/api/hr/employees', getEmployees);
 app.post('/api/hr/employees', createEmployee);
 app.put('/api/hr/employees/:id', updateEmployee);
+app.post('/api/hr/employees/:id/invite', inviteEmployee);
 app.get('/api/hr/attendance', getAttendance);
 app.post('/api/hr/attendance', logAttendance);
 app.patch('/api/hr/attendance/:id/overtime', reviewAttendanceOvertime);

@@ -32,14 +32,12 @@ import {
   Eye,
   Edit,
   Trash2,
-  DollarSign,
   History,
   Download,
   ChevronLeft,
   ChevronRight,
-  Layers,
-  CheckCircle2,
   MapPin,
+  Boxes,
 } from "lucide-react";
 import { InventoryMetrics } from "@/components/InventoryMetrics";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,13 +46,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InventoryAgingTab } from "@/components/inventory/InventoryAgingTab";
 import { LocationsTab } from "@/components/inventory/LocationsTab";
 import { Clock } from "lucide-react";
-type StockLevel = "In Stock" | "Low Stock" | "Out of Stock";
 
-const stockBadgeVariant: Record<StockLevel, "success" | "warning" | "destructive"> = {
-  "In Stock": "success",
-  "Low Stock": "warning",
-  "Out of Stock": "destructive",
-};
+// - [x] Restyle the filter card elements (glassmorphic search wrapper, availability chips, category selects) in `Inventory.tsx`
+// - [x] Elevate the Stock Register table aesthetics (Structured headings, custom glowing gradient quantity progress bars, glassmorphic badges) in `Inventory.tsx`
+// - [/] Harmonize details modal grid blocks in `Inventory.tsx`
+
+type StockLevel = "In Stock" | "Low Stock" | "Out of Stock";
 
 interface InventoryItem {
   _id: string;
@@ -329,7 +326,6 @@ export default function Inventory({
     (i: InventoryItem) => i.stock > 0 && i.stock <= i.reorderPoint
   ).length;
   const outStockTotal = inventoryData.filter((i: InventoryItem) => i.stock === 0).length;
-  const catTotal = new Set(inventoryData.map((i: InventoryItem) => i.category)).size;
   const inStockTotal = inventoryData.filter((i: InventoryItem) => getStockLevel(i) === "In Stock").length;
 
   const stockFilterOptions = [
@@ -345,23 +341,22 @@ export default function Inventory({
   };
 
   const inventoryFiltersCard = (
-    <Card className="rounded-2xl border-0 bg-card shadow-erp">
+    <Card className="overflow-hidden rounded-[12px] border border-border/70 bg-card shadow-sm">
       <CardContent className="space-y-4 p-4 sm:p-5">
         <div className="flex flex-col gap-4 border-b border-border/50 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-bold tracking-tight text-[#1a2744]">
-              {embedded ? "Stock library" : "Search & filters"}
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Inventory controls</p>
+            <h2 className="mt-1 text-lg font-black tracking-tight text-foreground">
+              {embedded ? "Stock library" : "Inventory filters"}
             </h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              {embedded
-                ? "Category, stock level, and SKU lookup"
-                : "Category, availability chips, saved views, and export"}
+              {embedded ? "Category, stock level, and SKU lookup" : "Search by name, SKU, location, and status"}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              className="h-10 gap-2 rounded-full border-primary/20 shadow-erp-sm"
+              className="h-10 gap-2 rounded-[12px] border-border/80 shadow-sm text-xs font-bold"
               onClick={() =>
                 downloadReportCsv("/reports/export/inventory", `inventory-${Date.now()}.csv`).catch(() =>
                   toast.error("Export failed")
@@ -369,10 +364,10 @@ export default function Inventory({
               }
             >
               <Download className="h-4 w-4" />
-              Export CSV
+              Export
             </Button>
             <Button
-              className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+              className="h-10 gap-2 rounded-[12px] bg-primary px-5 font-bold text-primary-foreground shadow-sm hover:bg-primary/90 text-xs"
               onClick={() => {
                 setEditingItem(null);
                 setFormValues({ ...defaultForm });
@@ -380,7 +375,7 @@ export default function Inventory({
               }}
             >
               <Plus className="h-4 w-4" />
-              Inbound material
+              Add item
             </Button>
           </div>
         </div>
@@ -389,8 +384,8 @@ export default function Inventory({
           <div className="group relative min-w-0 flex-1">
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
             <Input
-              placeholder="Search SKUs, names, or locations…"
-              className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-10 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
+              placeholder="Search by name, SKU, or location..."
+              className="h-12 rounded-[10px] border border-border/70 bg-card pl-10 text-base shadow-sm transition-all focus-visible:ring-2 focus-visible:ring-primary/20"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -405,12 +400,12 @@ export default function Inventory({
               setPage(1);
             }}
           >
-            <SelectTrigger className="h-10 w-full rounded-full border-border/60 bg-muted/40 lg:w-[200px]">
+            <SelectTrigger className="h-12 w-full rounded-[10px] border-border/70 bg-card text-base shadow-sm lg:w-[240px]">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
               {categories.map((c) => (
-                <SelectItem key={c} value={c}>
+                <SelectItem key={c} value={c} className="font-bold uppercase text-[10px]">
                   {c}
                 </SelectItem>
               ))}
@@ -418,10 +413,35 @@ export default function Inventory({
           </Select>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 p-1">
+        <div className="flex flex-wrap items-center gap-2">
           {stockFilterOptions.map(({ key, label }) => {
             const count = stockFilterCount(key);
             const active = stockFilter === key;
+            
+            const pillStyle = (() => {
+              if (!active) return "border border-transparent bg-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground";
+              switch (key) {
+                case "In Stock": return "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shadow-[0_2px_8px_rgba(16,185,129,0.08)]";
+                case "Low Stock": return "bg-amber-500/10 text-amber-600 border border-amber-500/20 shadow-[0_2px_8px_rgba(245,158,11,0.08)]";
+                case "Out of Stock": return "bg-rose-500/10 text-rose-600 border border-rose-500/20 shadow-[0_2px_8px_rgba(239,68,68,0.08)]";
+                case "All":
+                default:
+                  return "bg-slate-500/10 text-slate-700 dark:text-slate-300 border border-slate-500/20 shadow-[0_2px_8px_rgba(100,116,139,0.08)]";
+              }
+            })();
+
+            const badgeStyle = (() => {
+              if (!active) return "bg-muted/80 text-muted-foreground";
+              switch (key) {
+                case "In Stock": return "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300";
+                case "Low Stock": return "bg-amber-500/20 text-amber-700 dark:text-amber-300";
+                case "Out of Stock": return "bg-rose-500/20 text-rose-700 dark:text-rose-300";
+                case "All":
+                default:
+                  return "bg-slate-500/20 text-slate-700 dark:text-slate-300";
+              }
+            })();
+
             return (
               <button
                 key={key}
@@ -430,18 +450,10 @@ export default function Inventory({
                   setStockFilter(key);
                   setPage(1);
                 }}
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
-                  active
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "border border-transparent bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                }`}
+                className={`inline-flex items-center gap-2 rounded-[10px] px-4 py-2 text-xs font-bold transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] ${pillStyle}`}
               >
                 {label}
-                <span
-                  className={`rounded-full px-1.5 py-0.5 text-[10px] ${
-                    active ? "bg-primary-foreground/20" : "bg-background/80 text-muted-foreground"
-                  }`}
-                >
+                <span className={`rounded-full px-2 py-0.5 text-[9px] font-black tracking-tight ${badgeStyle}`}>
                   {count}
                 </span>
               </button>
@@ -464,11 +476,11 @@ export default function Inventory({
   );
 
   const inventoryRegisterCard = (
-    <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+    <Card className="overflow-hidden rounded-[12px] border border-border/70 bg-card shadow-sm">
       <CardHeader className="border-b border-border/50 bg-muted/20 pb-4 pt-5">
-        <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">Stock register</CardTitle>
+        <CardTitle className="text-lg font-black tracking-tight text-foreground">Stock register</CardTitle>
         <p className="text-sm font-medium text-muted-foreground">
-          Click a row for valuation, reorder, and edit — paginated for large catalogs
+          Click any row to view full details
         </p>
       </CardHeader>
       <CardContent className="p-0">
@@ -476,22 +488,21 @@ export default function Inventory({
           <Table>
             <TableHeader className="bg-muted/25">
               <TableRow className="border-border/40 hover:bg-transparent">
-                <TableHead className="h-12 pl-6 text-xs font-bold text-foreground">ID</TableHead>
-                <TableHead className="h-12 text-xs font-bold text-foreground">SKU / name</TableHead>
-                <TableHead className="hidden h-12 text-xs font-bold text-foreground md:table-cell">Category</TableHead>
-                <TableHead className="h-12 text-right text-xs font-bold text-foreground">Qty</TableHead>
-                <TableHead className="hidden h-12 text-right text-xs font-bold text-foreground lg:table-cell">
+                <TableHead className="h-12 pl-6 text-[10px] font-black uppercase tracking-wider text-muted-foreground/80">Item / SKU</TableHead>
+                <TableHead className="hidden h-12 text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 md:table-cell">Category</TableHead>
+                <TableHead className="h-12 text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground/80">Qty</TableHead>
+                <TableHead className="hidden h-12 text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 lg:table-cell">
                   Unit cost
                 </TableHead>
-                <TableHead className="h-12 text-xs font-bold text-foreground">Status</TableHead>
-                <TableHead className="hidden h-12 text-xs font-bold text-foreground lg:table-cell">Location</TableHead>
-                <TableHead className="h-12 w-[80px] pr-6 text-xs font-bold text-foreground" />
+                <TableHead className="h-12 text-[10px] font-black uppercase tracking-wider text-muted-foreground/80">Status</TableHead>
+                <TableHead className="hidden h-12 text-[10px] font-black uppercase tracking-wider text-muted-foreground/80 lg:table-cell">Location</TableHead>
+                <TableHead className="h-12 w-[80px] pr-6 text-[10px] font-black uppercase tracking-wider text-muted-foreground/80" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-20 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="py-20 text-center text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                       Loading inventory…
@@ -500,48 +511,56 @@ export default function Inventory({
                 </TableRow>
               ) : paginated.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-20 text-center font-medium text-muted-foreground">
+                  <TableCell colSpan={7} className="py-20 text-center font-medium text-muted-foreground">
                     No SKUs match the current filters.
                   </TableCell>
                 </TableRow>
               ) : (
                 paginated.map((item) => {
                   const status = getStockLevel(item);
+                  
+                  const statusPill = (() => {
+                    switch (status) {
+                      case "In Stock": return "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20";
+                      case "Low Stock": return "bg-amber-500/10 text-amber-600 border border-amber-500/20";
+                      case "Out of Stock": return "bg-rose-500/10 text-rose-600 border border-rose-500/20";
+                    }
+                  })();
+
+                  const progressColor = (() => {
+                    switch (status) {
+                      case "In Stock": return "bg-gradient-to-r from-emerald-400 to-emerald-600 shadow-[0_0_8px_rgba(16,185,129,0.35)]";
+                      case "Low Stock": return "bg-gradient-to-r from-amber-400 to-amber-600 shadow-[0_0_8px_rgba(245,158,11,0.35)]";
+                      case "Out of Stock": return "bg-gradient-to-r from-rose-400 to-rose-600 shadow-[0_0_8px_rgba(239,68,68,0.35)]";
+                    }
+                  })();
+
                   return (
                     <TableRow
                       key={item._id}
                       className="group/row cursor-pointer border-border/40 transition-colors hover:bg-muted/35"
                       onClick={() => setSelectedItem(item)}
                     >
-                      <TableCell className="pl-6 font-mono text-[10px] font-medium text-muted-foreground opacity-70 group-hover/row:opacity-100">
-                        {item._id.substring(item._id.length - 8).toUpperCase()}
-                      </TableCell>
-                      <TableCell>
+                      <TableCell className="pl-6">
                         <div className="flex flex-col">
-                          <span className="text-[13px] font-semibold tracking-tight text-foreground">{item.name}</span>
-                          <span className="text-[10px] font-medium text-muted-foreground">{item.sku}</span>
+                          <span className="text-base font-semibold tracking-tight text-foreground">{item.name}</span>
+                          <span className="font-mono text-xs font-semibold text-muted-foreground">{item.sku}</span>
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <Badge variant="outline" className="rounded-md border-border/60 px-2 text-[10px] font-medium">
+                          <span className="inline-flex items-center rounded-[7px] border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground">
                           {item.category}
-                        </Badge>
+                        </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex flex-col items-end gap-1">
-                          <div className="font-mono text-[13px] font-semibold">
+                        <div className="flex flex-col items-end gap-1.5">
+                          <div className="font-mono text-[13px] font-bold">
                             {item.stock}{" "}
                             <span className="text-[10px] font-normal text-muted-foreground">{item.unit}</span>
                           </div>
-                          <div className="h-1 w-16 overflow-hidden rounded-full bg-muted/40">
+                          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800 shadow-inner">
                             <div
-                              className={`h-full transition-all ${
-                                status === "Out of Stock"
-                                  ? "bg-rose-500"
-                                  : status === "Low Stock"
-                                    ? "bg-amber-500"
-                                    : "bg-emerald-500"
-                              }`}
+                              className={`h-full rounded-full transition-all duration-500 ${progressColor}`}
                               style={{
                                 width: `${Math.min(100, (item.stock / (item.reorderPoint * 2 || 100)) * 100)}%`,
                               }}
@@ -549,23 +568,23 @@ export default function Inventory({
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden text-right font-mono text-[13px] font-semibold text-[hsl(152,69%,36%)] lg:table-cell">
+                      <TableCell className="hidden text-right font-mono text-[13px] font-bold text-emerald-600 lg:table-cell">
                         {symbol}
                         {item.unitCost.toFixed(2)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={stockBadgeVariant[status]} className="rounded-md px-2 py-0 text-[10px] font-semibold">
+                        <span className={`inline-flex items-center rounded-[10px] px-2.5 py-0.5 text-[10px] font-bold ${statusPill}`}>
                           {status}
-                        </Badge>
+                        </span>
                       </TableCell>
-                      <TableCell className="hidden text-[11px] font-medium text-muted-foreground lg:table-cell">
+                      <TableCell className="hidden text-[11px] font-bold text-muted-foreground/80 lg:table-cell">
                         {item.location || "—"}
                       </TableCell>
                       <TableCell className="pr-6 text-right">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-full opacity-0 transition-all group-hover/row:opacity-100 hover:bg-primary/10 hover:text-primary"
+                            className="h-10 w-10 rounded-[12px] border border-border/70 opacity-0 transition-all group-hover/row:opacity-100 hover:bg-primary/10 hover:text-primary"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedItem(item);
@@ -592,19 +611,19 @@ export default function Inventory({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 rounded-full border-border/60 bg-card shadow-erp-sm"
+                className="h-9 w-9 rounded-[12px] border-border/60 bg-card shadow-sm"
                 disabled={page === 1}
                 onClick={() => setPage(page - 1)}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="flex items-center gap-1 rounded-full border border-border/60 bg-card px-3 py-1 font-mono text-xs font-bold shadow-erp-sm">
+              <div className="flex items-center gap-1 rounded-[12px] border border-border/60 bg-card px-3 py-1 font-mono text-xs font-bold shadow-sm">
                 {page} <span className="text-muted-foreground">/</span> {totalPages}
               </div>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 rounded-full border-border/60 bg-card shadow-erp-sm"
+                className="h-9 w-9 rounded-[12px] border-border/60 bg-card shadow-sm"
                 disabled={page === totalPages}
                 onClick={() => setPage(page + 1)}
               >
@@ -621,131 +640,65 @@ export default function Inventory({
 
   return (
     <>
-      <div className={`${embedded ? "space-y-6" : "space-y-8"} pb-8 animate-in fade-in duration-500`}>
+      <div className={`${embedded ? "space-y-6" : "relative -m-3 min-h-full space-y-6 overflow-hidden bg-[linear-gradient(180deg,hsl(var(--accent)/0.5),hsl(var(--background))_32rem)] p-3 sm:-m-4 sm:p-4 lg:-m-6 lg:p-6"} pb-8 animate-in fade-in duration-500`}>
         {!embedded && (
-          <>
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.inventory.title")}</h1>
-                <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.inventory.subtitle")}</p>
-              </div>
-
-              <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
-                <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">SKUs</p>
-                  <p className="text-sm font-semibold text-foreground">{inventoryData.length}</p>
+          <div className="overflow-hidden rounded-[18px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(190_75%_34%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
+            <div className="p-5 sm:p-7">
+              <div className="min-w-0">
+                <div className="mb-4 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.2em] text-white/55">
+                  <Boxes className="h-4 w-4" />
+                  Inventory control center
                 </div>
-                <div className="h-8 w-px bg-border/70" />
-                <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Categories</p>
-                  <p className="text-sm font-semibold text-muted-foreground">{catTotal}</p>
-                </div>
-                <div className="h-8 w-px bg-border/70" />
-                <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Alerts</p>
-                  <p
-                    className={`text-sm font-semibold ${
-                      outStockTotal > 0 ? "text-destructive" : lowStockTotal > 0 ? "text-amber-600" : "text-[hsl(152,69%,36%)]"
-                    }`}
-                  >
-                    {lowStockTotal} low · {outStockTotal} out
-                  </p>
+                <h1 className="text-4xl font-black tracking-tight sm:text-5xl">Stock Register</h1>
+                <p className="mt-3 max-w-3xl text-base font-semibold leading-7 text-white/60 sm:text-lg">
+                  Real-time visibility across all SKUs, lots, and warehouse locations
+                </p>
+                <div className="mt-7 grid gap-4 sm:grid-cols-3">
+                  {[
+                    { label: "In stock", value: String(inStockTotal), tone: "text-emerald-300" },
+                    { label: "At risk", value: String(atRiskTotal), tone: "text-amber-300" },
+                    { label: "SKUs tracked", value: String(inventoryData.length), tone: "text-sky-200" },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-[16px] border border-white/20 bg-white/[0.08] p-5 backdrop-blur">
+                      <p className="text-sm font-black uppercase tracking-[0.18em] text-white/45">{item.label}</p>
+                      <p className={`mt-2 text-3xl font-black tracking-tight ${item.tone}`}>{item.value}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                {
-                  label: "SKUs tracked",
-                  value: String(inventoryData.length),
-                  icon: Package,
-                  color: "text-primary",
-                  bg: "bg-primary/10",
-                },
-                {
-                  label: "Categories",
-                  value: String(catTotal),
-                  icon: Layers,
-                  color: "text-info",
-                  bg: "bg-info/10",
-                },
-                {
-                  label: "In stock",
-                  value: String(inStockTotal),
-                  icon: CheckCircle2,
-                  color: "text-success",
-                  bg: "bg-success/10",
-                },
-                {
-                  label: "At risk (low + out)",
-                  value: String(atRiskTotal),
-                  icon: AlertTriangle,
-                  color: outStockTotal > 0 ? "text-destructive" : lowStockTotal > 0 ? "text-warning" : "text-muted-foreground",
-                  bg: outStockTotal > 0 ? "bg-destructive/10" : lowStockTotal > 0 ? "bg-warning/10" : "bg-muted/40",
-                },
-              ].map((stat, idx) => (
-                <Card
-                  key={idx}
-                  className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
-                >
-                  <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
-                  <CardContent className="flex items-center gap-4 p-5">
-                    <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
-                    >
-                      <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                      <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </>
+          </div>
         )}
 
         <InventoryMetrics />
 
         {!embedded && stockAlerts.length > 0 && (
-          <Card className="overflow-hidden rounded-2xl border-0 border-l-4 border-l-amber-500/80 bg-card shadow-erp">
-            <CardHeader className="border-b border-border/50 bg-muted/20 pb-3">
+          <Card className="overflow-hidden rounded-[16px] border border-amber-500/30 bg-card shadow-sm">
+            <div className="h-1 bg-gradient-to-r from-amber-400/80 to-rose-500/70" />
+            <CardHeader className="border-b border-amber-500/20 bg-amber-50/80 pb-3 dark:bg-amber-500/10">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
-                <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">ATP ≤ reorder</CardTitle>
+                <CardTitle className="text-lg font-black tracking-tight text-amber-900 dark:text-amber-200">
+                  {stockAlerts.length} SKUs need restocking
+                </CardTitle>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Available = on hand − reserved (orders + job materials). Restock when at or below reorder point.
-              </p>
             </CardHeader>
             <CardContent className="p-4 sm:p-5">
               <div className="flex flex-wrap gap-2">
                 {stockAlerts.slice(0, 12).map((a) => (
                   <div
                     key={a.productId}
-                    className={`rounded-xl border px-3 py-2 text-xs shadow-erp-sm ${
+                    className={`rounded-[12px] border px-3 py-2 text-xs shadow-sm ${
                       a.severity === "critical"
-                        ? "border-destructive/40 bg-destructive/5"
+                        ? "border-destructive/40 bg-destructive/10 text-destructive"
                         : a.severity === "high"
-                          ? "border-amber-500/40 bg-amber-500/5"
-                          : "border-border/60 bg-muted/30"
+                          ? "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200"
+                          : "border-amber-500/30 bg-amber-500/5 text-amber-800 dark:text-amber-200"
                     }`}
                   >
                     <span className="font-mono font-semibold">{a.sku}</span>
-                    <span className="mx-1 text-muted-foreground">·</span>
-                    <span className="font-medium">ATP {a.available}</span>
-                    <span className="mx-1 text-muted-foreground">/</span>
-                    <span>OH {a.onHand}</span>
-                    {a.reserved > 0 && (
-                      <>
-                        <span className="mx-1 text-muted-foreground">·</span>
-                        <span>Res {a.reserved}</span>
-                      </>
-                    )}
-                    <span className="mx-1 text-muted-foreground">·</span>
-                    <span>ROP {a.reorderPoint}</span>
+                    <span className="mx-1 opacity-60">·</span>
+                    <span className="font-medium">{a.available} available</span>
                   </div>
                 ))}
               </div>
@@ -754,24 +707,24 @@ export default function Inventory({
         )}
 
         <Tabs defaultValue="register" className="space-y-6">
-          <TabsList className="w-full sm:w-auto flex flex-col sm:flex-row sm:items-center sm:justify-start gap-2 bg-transparent p-0 border-b border-border/50 rounded-none mb-6">
+          <TabsList className="h-auto w-full flex-wrap justify-start gap-2 rounded-[18px] border border-border/60 bg-card/90 p-2 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.45)] backdrop-blur">
             <TabsTrigger
               value="register"
-              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+              className="rounded-[12px] px-4 py-2.5 font-bold text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
               <Package className="mr-2 h-4 w-4" />
               Stock Register
             </TabsTrigger>
             <TabsTrigger
               value="aging"
-              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+              className="rounded-[12px] px-4 py-2.5 font-bold text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
               <Clock className="mr-2 h-4 w-4" />
               Inventory Aging
             </TabsTrigger>
             <TabsTrigger
               value="locations"
-              className="relative rounded-none border-b-2 border-transparent bg-transparent px-4 pb-3 pt-2 font-semibold text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground"
+              className="rounded-[12px] px-4 py-2.5 font-bold text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
             >
               <MapPin className="mr-2 h-4 w-4" />
               Locations
@@ -783,12 +736,14 @@ export default function Inventory({
             {inventoryRegisterCard}
 
             {!embedded && (
-              <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+              <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
+                <div className="h-1 bg-gradient-to-r from-amber-400/80 to-primary/70" />
                 <CardHeader className="flex flex-col gap-4 border-b border-border/50 bg-muted/20 pb-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Movement ledger</p>
                     <div className="flex items-center gap-2">
                       <History className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">Stock movements</CardTitle>
+                      <CardTitle className="text-lg font-black tracking-tight text-foreground">Stock movements</CardTitle>
                     </div>
                     <p className="mt-0.5 text-sm text-muted-foreground">
                       Receipts, issues, production completions, and adjustments
@@ -799,7 +754,7 @@ export default function Inventory({
                       value={movFilterProductId || "__all__"}
                       onValueChange={(v) => setMovFilterProductId(v === "__all__" ? "" : v)}
                     >
-                      <SelectTrigger className="h-10 w-full rounded-full border-border/60 bg-muted/40 sm:w-[220px]">
+                        <SelectTrigger className="h-10 w-full rounded-[12px] border-border/60 bg-muted/40 sm:w-[220px]">
                         <SelectValue placeholder="All SKUs" />
                       </SelectTrigger>
                       <SelectContent>
@@ -812,7 +767,7 @@ export default function Inventory({
                       </SelectContent>
                     </Select>
                     <Button
-                      className="h-10 rounded-full px-5 font-semibold shadow-sm"
+                      className="h-10 rounded-[12px] px-5 font-semibold shadow-sm"
                       disabled={!canPostInventory}
                       title={!canPostInventory ? "Warehouse / Admin only (inventory:post)" : undefined}
                       onClick={() => canPostInventory && setMovDialogOpen(true)}
@@ -910,41 +865,47 @@ export default function Inventory({
 
             {selectedItem && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-border/40">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Classification</p>
                   <p className="text-sm font-bold text-foreground italic">{selectedItem.category}</p>
                 </div>
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-border/40">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Availability</p>
-                  <Badge variant={stockBadgeVariant[getStockLevel(selectedItem)]} className="text-[10px] uppercase font-black">
-                    {getStockLevel(selectedItem)}
-                  </Badge>
+                  <div>
+                    <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-[10px] font-bold ${
+                      getStockLevel(selectedItem) === "In Stock" ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" :
+                      getStockLevel(selectedItem) === "Low Stock" ? "bg-amber-500/10 text-amber-600 border border-amber-500/20" :
+                      "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                    }`}>
+                      {getStockLevel(selectedItem)}
+                    </span>
+                  </div>
                 </div>
-                <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-border/40">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Inventory Loc</p>
                   <p className="text-sm font-bold text-foreground italic">{selectedItem.location || 'N/A'}</p>
                 </div>
                 
-                <div className="bg-gradient-to-br from-background to-white/5 rounded-2xl p-4 border border-white/5 col-span-1">
+                <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-border/40 col-span-1">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Current Balance</p>
                   <p className="text-xl font-black tracking-tighter italic text-foreground">
                     {selectedItem.stock} <span className="text-[10px] font-medium not-italic text-muted-foreground uppercase">{selectedItem.unit}</span>
                   </p>
                 </div>
-                <div className="bg-gradient-to-br from-background to-white/5 rounded-2xl p-4 border border-white/5 col-span-1">
+                <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-border/40 col-span-1">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Unit Valuation</p>
-                  <p className="text-xl font-black tracking-tighter italic text-emerald-500">
+                  <p className="text-xl font-black tracking-tighter italic text-emerald-600">
                     {symbol}{selectedItem.unitCost.toFixed(2)}
                   </p>
                 </div>
-                <div className="bg-gradient-to-br from-background to-white/5 rounded-2xl p-4 border border-white/5 col-span-1">
+                <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-border/40 col-span-1">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Exposure</p>
                   <p className="text-xl font-black tracking-tighter italic text-foreground">
                     {symbol}{(selectedItem.stock * selectedItem.unitCost).toLocaleString()}
                   </p>
                 </div>
                 
-                <div className="col-span-2 md:col-span-3 bg-white/2 rounded-2xl p-4 border border-white/5">
+                <div className="col-span-2 md:col-span-3 bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-border/40">
                   <div className="flex items-center gap-4">
                     <div className="h-10 w-10 bg-primary/5 rounded-xl flex items-center justify-center">
                       <TrendingDown className="h-5 w-5 text-primary/50" />
@@ -970,15 +931,15 @@ export default function Inventory({
                 </div>
 
                 {selectedItem.trackingMethod !== 'none' && (
-                  <div className="col-span-2 md:col-span-3 border-t border-white/5 pt-6 mt-2">
+                  <div className="col-span-2 md:col-span-3 border-t border-border/40 pt-6 mt-2">
                     <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-4">Live Balance by Lot/Serial</p>
-                    <div className="rounded-xl border border-white/5 overflow-hidden">
-                      <Table className="bg-white/2">
-                        <TableHeader className="bg-white/5">
-                          <TableRow className="border-white/5 hover:bg-transparent">
+                    <div className="rounded-xl border border-border/40 overflow-hidden">
+                      <Table className="bg-transparent">
+                        <TableHeader className="bg-muted/30">
+                          <TableRow className="border-border/40 hover:bg-transparent">
                             <TableHead className="h-9 text-[9px] font-black uppercase text-muted-foreground">Identifier</TableHead>
                             <TableHead className="h-9 text-right text-[9px] font-black uppercase text-muted-foreground">Qty</TableHead>
-                            <TableHead className="h-9 text-right text-[9px] font-black uppercase text-muted-foreground uppercase">Expires</TableHead>
+                            <TableHead className="h-9 text-right text-[9px] font-black uppercase text-muted-foreground">Expires</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -992,7 +953,7 @@ export default function Inventory({
                             </TableRow>
                           ) : (
                             lotBalances.map((lb: LotBalance) => (
-                              <TableRow key={lb._id} className="border-white/5 group/lot">
+                              <TableRow key={lb._id} className="border-border/40 group/lot">
                                 <TableCell className="py-2">
                                   <div className="flex flex-col">
                                     <span className="text-[11px] font-bold text-foreground">
@@ -1018,11 +979,11 @@ export default function Inventory({
               </div>
             )}
 
-            <DialogFooter className="gap-2 sm:gap-0 sm:justify-between pt-4 border-t border-white/5">
-              <Button variant="outline" className="gap-2 rounded-xl h-11 border-white/10 hover:bg-white/5 transition-all w-full sm:w-auto font-black italic uppercase text-xs" onClick={() => setDeleteTarget(selectedItem)}>
+            <DialogFooter className="gap-2 sm:gap-0 sm:justify-between pt-4 border-t border-border/60">
+              <Button variant="outline" className="gap-2 rounded-xl h-11 border-border/60 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 transition-all w-full sm:w-auto font-black italic uppercase text-xs" onClick={() => setDeleteTarget(selectedItem)}>
                 <Trash2 className="h-4 w-4 text-rose-500" /> Remove Resource
               </Button>
-              <Button className="gap-2 rounded-xl h-11 px-8 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 w-full sm:w-auto font-black italic uppercase text-xs" onClick={() => { setEditingItem(selectedItem); setFormOpen(true); }}>
+              <Button className="gap-2 rounded-xl h-11 px-8 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95 w-full sm:w-auto font-black italic uppercase text-xs bg-primary text-primary-foreground hover:bg-primary/95" onClick={() => { setEditingItem(selectedItem); setFormOpen(true); }}>
                 <Edit className="h-4 w-4" /> Adjust Parameters
               </Button>
             </DialogFooter>

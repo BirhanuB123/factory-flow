@@ -52,6 +52,10 @@ const tenantSchema = new mongoose.Schema(
       procurement: { type: Boolean, default: true },
       finance: { type: Boolean, default: true },
       hr: { type: Boolean, default: true },
+      crm: { type: Boolean, default: true },
+      pos: { type: Boolean, default: true },
+      global_trade: { type: Boolean, default: true },
+      analytics: { type: Boolean, default: true },
     },
     documentSettings: {
       logoUrl: { type: String, default: '' },

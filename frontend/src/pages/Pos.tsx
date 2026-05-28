@@ -17,7 +17,11 @@ import {
   Smartphone,
   Store,
   Printer,
-  History
+  History,
+  PackageCheck,
+  ReceiptText,
+  ScanLine,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -328,15 +332,44 @@ export default function Pos() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)] flex-col md:flex-row bg-background no-print">
+    <div className="flex h-[calc(100vh-64px)] flex-col overflow-hidden bg-[linear-gradient(180deg,hsl(var(--accent)/0.45),hsl(var(--background))_26rem)] no-print md:flex-row">
       {/* Product List Section */}
-      <div className="flex-1 p-4 flex flex-col gap-4 overflow-hidden border-r">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-1 flex-col gap-4 overflow-hidden border-r border-border/60 p-4">
+        <div className="overflow-hidden rounded-[18px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(190_75%_34%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
+          <div className="p-5">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+              <div className="min-w-0">
+                <div className="mb-3 inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-white/55">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  POS control center
+                </div>
+                <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Point of Sale</h1>
+                <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/65">
+                  Fast checkout, barcode search, live stock visibility, and session cash control.
+                </p>
+              </div>
+              <div className="grid grid-cols-3 overflow-hidden rounded-[16px] border border-white/15 bg-white/10 shadow-2xl shadow-black/10 backdrop-blur sm:min-w-[420px]">
+                {[
+                  { label: "Products", value: String(products.length) },
+                  { label: "Cart items", value: String(cart.reduce((sum, item) => sum + item.quantity, 0)) },
+                  { label: "Total", value: `ETB ${total.toLocaleString()}` },
+                ].map((stat, index) => (
+                  <div key={stat.label} className={`px-4 py-3 text-center ${index > 0 ? "border-l border-white/10" : ""}`}>
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">{stat.label}</p>
+                    <p className="mt-1 truncate font-mono text-base font-black tracking-tight text-white">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 rounded-[16px] border border-border/60 bg-card p-3 shadow-sm">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder={t("common.search")}
-              className="pl-10 h-11 text-lg rounded-xl"
+              placeholder="Search products, SKU, or scan barcode..."
+              className="h-12 rounded-[12px] border-border/70 bg-muted/30 pl-10 text-base shadow-sm focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/25"
               value={search}
               onChange={(e) => handleSearch(e.target.value)}
               autoFocus
@@ -345,12 +378,12 @@ export default function Pos() {
           <Button 
             variant="outline" 
             size="icon" 
-            className="h-11 w-11 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+            className="h-12 w-12 rounded-[12px] border-border/70 text-destructive shadow-sm hover:bg-destructive/10 hover:text-destructive"
             onClick={() => setShowCloseSession(true)}
           >
             <Store className="h-5 w-5" />
           </Button>
-          <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl">
+          <Button variant="outline" size="icon" className="h-12 w-12 rounded-[12px] border-border/70 shadow-sm">
             <History className="h-5 w-5" />
           </Button>
         </div>
@@ -360,19 +393,21 @@ export default function Pos() {
             {products.map((product) => (
               <Card
                 key={product._id}
-                className="cursor-pointer hover:border-primary transition-all active:scale-95 group overflow-hidden rounded-2xl"
+                className="group cursor-pointer overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg active:scale-[0.98]"
                 onClick={() => addToCart(product)}
               >
-                <div className="h-32 bg-muted/50 flex items-center justify-center text-muted-foreground group-hover:bg-primary/5 transition-colors">
-                  <Store className="h-12 w-12 opacity-20" />
+                <div className="flex h-32 items-center justify-center bg-[linear-gradient(135deg,hsl(var(--muted)),hsl(var(--accent)/0.55))] text-muted-foreground transition-colors group-hover:bg-primary/5">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-[16px] bg-background/70 text-primary shadow-sm">
+                    <PackageCheck className="h-7 w-7" />
+                  </div>
                 </div>
                 <CardHeader className="p-3">
-                  <CardTitle className="text-sm font-semibold truncate">{product.name}</CardTitle>
-                  <p className="text-xs text-muted-foreground">{product.sku}</p>
+                  <CardTitle className="truncate text-sm font-black tracking-tight">{product.name}</CardTitle>
+                  <p className="font-mono text-xs font-semibold text-muted-foreground">{product.sku}</p>
                 </CardHeader>
                 <CardContent className="p-3 pt-0 flex justify-between items-center">
-                  <span className="font-bold text-primary">ETB {product.price.toLocaleString()}</span>
-                  <Badge variant={product.stock > 0 ? "secondary" : "destructive"} className="text-[10px]">
+                  <span className="font-mono font-black text-primary">ETB {product.price.toLocaleString()}</span>
+                  <Badge variant={product.stock > 0 ? "secondary" : "destructive"} className="rounded-[10px] text-[10px] font-black">
                     {product.stock} {product.unit}
                   </Badge>
                 </CardContent>
@@ -383,30 +418,34 @@ export default function Pos() {
       </div>
 
       {/* Cart Section */}
-      <div className="w-full md:w-96 bg-muted/30 p-4 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            {t("pos.cart")}
-          </h2>
-          <Badge variant="outline" className="rounded-full px-3">{cart.length} items</Badge>
+      <div className="flex w-full flex-col gap-4 bg-card/85 p-4 shadow-[inset_1px_0_0_hsl(var(--border)/0.6)] md:w-[420px]">
+        <div className="overflow-hidden rounded-[18px] border border-border/60 bg-background shadow-sm">
+          <div className="h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400" />
+          <div className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Current sale</p>
+              <h2 className="mt-1 flex items-center gap-2 text-xl font-black tracking-tight">
+                <ShoppingCart className="h-5 w-5 text-primary" />
+                {t("pos.cart")}
+              </h2>
+            </div>
+            <Badge variant="outline" className="rounded-[12px] px-3 py-1 font-black">{cart.length} items</Badge>
+          </div>
         </div>
-
-        <Separator />
 
         <ScrollArea className="flex-1 -mx-2 px-2">
           <div className="flex flex-col gap-3 py-2">
             {cart.map((item) => (
-              <div key={item._id} className="flex gap-3 bg-card p-3 rounded-xl shadow-sm border">
+              <div key={item._id} className="flex gap-3 rounded-[14px] border border-border/60 bg-background p-3 shadow-sm">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{item.name}</p>
-                  <p className="text-xs text-muted-foreground">ETB {item.price.toLocaleString()}</p>
+                  <p className="truncate text-sm font-black tracking-tight">{item.name}</p>
+                  <p className="font-mono text-xs font-semibold text-muted-foreground">ETB {item.price.toLocaleString()}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 rounded-md"
+                    className="h-8 w-8 rounded-[10px]"
                     onClick={() => updateQuantity(item._id, -1)}
                   >
                     <Minus className="h-3 w-3" />
@@ -415,7 +454,7 @@ export default function Pos() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 rounded-md"
+                    className="h-8 w-8 rounded-[10px]"
                     onClick={() => updateQuantity(item._id, 1)}
                   >
                     <Plus className="h-3 w-3" />
@@ -423,7 +462,7 @@ export default function Pos() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    className="h-8 w-8 rounded-[10px] text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => removeFromCart(item._id)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -432,23 +471,23 @@ export default function Pos() {
               </div>
             ))}
             {cart.length === 0 && (
-              <div className="h-40 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                <ShoppingCart className="h-10 w-10 opacity-20" />
-                <p className="text-sm">Empty Cart</p>
+              <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-[16px] border border-dashed border-border/70 bg-background/70 text-muted-foreground">
+                <div className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-muted">
+                  <ScanLine className="h-6 w-6 opacity-60" />
+                </div>
+                <p className="text-sm font-semibold">Scan or tap products to begin</p>
               </div>
             )}
           </div>
         </ScrollArea>
 
-        <Separator />
-
-        <div className="space-y-4 bg-card p-3 rounded-xl border shadow-sm">
+        <div className="space-y-4 rounded-[16px] border border-border/60 bg-background p-4 shadow-sm">
           <div className="space-y-2">
             <label className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
               <UserIcon className="h-3 w-3" /> Customer
             </label>
             <Select value={selectedClient} onValueChange={setSelectedClient}>
-              <SelectTrigger className="h-9 rounded-lg">
+              <SelectTrigger className="h-10 rounded-[12px] border-border/70 bg-muted/30">
                 <SelectValue placeholder="Select Customer" />
               </SelectTrigger>
               <SelectContent>
@@ -466,7 +505,7 @@ export default function Pos() {
             </label>
             <Input 
               type="number" 
-              className="h-9 rounded-lg" 
+              className="h-10 rounded-[12px] border-border/70 bg-muted/30" 
               value={discountPercent} 
               onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
               placeholder="0"
@@ -474,7 +513,7 @@ export default function Pos() {
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-3 rounded-[18px] border border-border/60 bg-background p-4 shadow-sm">
           {discountPercent > 0 && (
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Subtotal</span>
@@ -489,13 +528,14 @@ export default function Pos() {
           )}
           <div className="flex justify-between text-lg font-bold pt-1">
             <span>{t("pos.total")}</span>
-            <span className="text-primary text-2xl">ETB {total.toLocaleString()}</span>
+            <span className="font-mono text-2xl font-black text-primary">ETB {total.toLocaleString()}</span>
           </div>
           <Button
-            className="w-full h-14 text-xl rounded-2xl shadow-lg mt-2"
+            className="mt-2 h-14 w-full rounded-[16px] text-xl font-black shadow-lg"
             disabled={cart.length === 0}
             onClick={() => setShowCheckout(true)}
           >
+            <ReceiptText className="h-5 w-5" />
             {t("pos.checkout")}
           </Button>
         </div>
@@ -503,9 +543,9 @@ export default function Pos() {
 
       {/* Checkout Dialog */}
       <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
-        <DialogContent className="sm:max-w-[425px] rounded-3xl">
+        <DialogContent className="sm:max-w-[425px] rounded-[22px]">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">{t("pos.pay")}</DialogTitle>
+            <DialogTitle className="text-2xl font-black">{t("pos.pay")}</DialogTitle>
           </DialogHeader>
           <div className="py-6 space-y-6">
             <div className="text-center space-y-1">
@@ -516,7 +556,7 @@ export default function Pos() {
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-                className="h-20 flex flex-col gap-2 rounded-2xl"
+                className="h-20 flex flex-col gap-2 rounded-[16px]"
                 onClick={() => setPaymentMethod('cash')}
               >
                 <Banknote className="h-6 w-6" />
@@ -524,7 +564,7 @@ export default function Pos() {
               </Button>
               <Button
                 variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                className="h-20 flex flex-col gap-2 rounded-2xl"
+                className="h-20 flex flex-col gap-2 rounded-[16px]"
                 onClick={() => setPaymentMethod('card')}
               >
                 <CreditCard className="h-6 w-6" />
@@ -532,7 +572,7 @@ export default function Pos() {
               </Button>
               <Button
                 variant={paymentMethod === 'mobile' ? 'default' : 'outline'}
-                className="h-20 flex flex-col gap-2 rounded-2xl"
+                className="h-20 flex flex-col gap-2 rounded-[16px]"
                 onClick={() => setPaymentMethod('mobile')}
               >
                 <Smartphone className="h-6 w-6" />
@@ -540,7 +580,7 @@ export default function Pos() {
               </Button>
               <Button
                 variant={paymentMethod === 'chapa' ? 'default' : 'outline'}
-                className="h-20 flex flex-col gap-2 rounded-2xl border-primary/20 hover:border-primary/50"
+                className="h-20 flex flex-col gap-2 rounded-[16px] border-primary/20 hover:border-primary/50"
                 onClick={() => setPaymentMethod('chapa')}
               >
                 <div className="relative">
@@ -557,14 +597,14 @@ export default function Pos() {
                   <label className="text-sm font-medium">{t("pos.tendered")}</label>
                   <Input
                     type="number"
-                    className="text-2xl h-14 text-center font-bold rounded-xl"
+                    className="h-14 rounded-[14px] text-center text-2xl font-bold"
                     value={amountTendered}
                     onChange={(e) => setAmountTendered(e.target.value)}
                     placeholder={total.toString()}
                   />
                 </div>
                 {Number(amountTendered) > total && (
-                  <div className="bg-primary/10 p-4 rounded-xl flex justify-between items-center">
+                  <div className="flex items-center justify-between rounded-[14px] bg-primary/10 p-4">
                     <span className="font-medium text-primary">{t("pos.change")}</span>
                     <span className="text-2xl font-black text-primary">ETB {change.toLocaleString()}</span>
                   </div>
@@ -573,8 +613,8 @@ export default function Pos() {
             )}
           </div>
           <DialogFooter className="gap-3 sm:gap-0">
-            <Button variant="outline" className="h-12 rounded-xl flex-1" onClick={() => setShowCheckout(false)}>{t("common.close")}</Button>
-            <Button className="h-12 rounded-xl flex-1" onClick={handleCheckout} disabled={loading}>
+            <Button variant="outline" className="h-12 flex-1 rounded-[14px]" onClick={() => setShowCheckout(false)}>{t("common.close")}</Button>
+            <Button className="h-12 flex-1 rounded-[14px] font-black" onClick={handleCheckout} disabled={loading}>
               {loading ? t("common.loading") : t("pos.pay")}
             </Button>
           </DialogFooter>

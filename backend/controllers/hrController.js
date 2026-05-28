@@ -7,8 +7,11 @@ const Department = require('../models/Department');
 const Position = require('../models/Position');
 const Notification = require('../models/Notification');
 const AttendanceCorrectionRequest = require('../models/AttendanceCorrectionRequest');
+const Tenant = require('../models/Tenant');
 const { byTenant } = require('../utils/tenantQuery');
 const { assertPayrollMonthEditable } = require('../utils/payrollMonthGuard');
+const { generateInviteRawToken, hashInviteToken } = require('../utils/inviteToken');
+const { sendTenantAdminInvite } = require('../services/inviteEmailService');
 
 const ANNUAL_LEAVE_ENTITLEMENT_BY_TYPE = Object.freeze({
   annual: 21,
@@ -275,7 +278,7 @@ const updateEmployee = asyncHandler(async (req, res) => {
   if (role !== undefined && !APP_ROLES.includes(role) && !accessRole) {
     set.jobTitle = role;
   }
-  if (req.user.role === 'Admin' && accessRole && APP_ROLES.includes(accessRole)) {
+  if ((req.user.role === 'Admin' || req.user.platformRole === 'super_admin') && accessRole && APP_ROLES.includes(accessRole)) {
     set.role = accessRole;
   }
   if (tinNumber !== undefined) set.tinNumber = String(tinNumber).trim();
@@ -886,10 +889,59 @@ const createPayroll = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc    Generate one-time invite token for an employee and optionally email it
+// @route   POST /api/hr/employees/:id/invite
+// @access  Private (Admin or hr_head or finance_head)
+const inviteEmployee = asyncHandler(async (req, res) => {
+  const employee = await Employee.findOne(byTenant(req, { _id: req.params.id }));
+  if (!employee) {
+    res.status(404);
+    throw new Error('Employee not found');
+  }
+
+  // Generate invite token
+  const INVITE_VALID_DAYS = Math.min(Math.max(parseInt(process.env.INVITE_TOKEN_VALID_DAYS, 10) || 7, 1), 30);
+  const inviteRawToken = generateInviteRawToken();
+  employee.passwordResetTokenHash = hashInviteToken(inviteRawToken);
+  employee.passwordResetExpires = new Date(Date.now() + INVITE_VALID_DAYS * 86400000);
+  await employee.save();
+
+  // Find tenant details for email subject/body
+  const tenant = await Tenant.findById(req.tenantId);
+  const tenantDisplayName = tenant ? tenant.displayName : '';
+
+  // Construct invite URL
+  const origin = req.headers.origin || process.env.APP_PUBLIC_URL || 'http://localhost:5173';
+  const inviteUrl = `${origin}/invite?token=${encodeURIComponent(inviteRawToken)}`;
+
+  let emailSent = false;
+  let emailError = null;
+
+  if (employee.email) {
+    const emailResult = await sendTenantAdminInvite({
+      to: employee.email,
+      employeeName: employee.name,
+      tenantDisplayName,
+      inviteUrl,
+    });
+    emailSent = emailResult.sent;
+    if (emailResult.error) emailError = emailResult.error;
+  }
+
+  res.json({
+    success: true,
+    inviteUrl,
+    emailSent,
+    emailError,
+    expiresAt: employee.passwordResetExpires,
+  });
+});
+
 module.exports = {
   getEmployees,
   createEmployee,
   updateEmployee,
+  inviteEmployee,
   getAttendance,
   logAttendance,
   reviewAttendanceOvertime,

@@ -220,18 +220,18 @@ export function DashboardHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex min-h-[4.25rem] min-w-0 shrink-0 items-center gap-2 border-b border-slate-200/60 bg-slate-50/90 px-3 py-2 backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-950/90 lg:gap-4 lg:px-6">
-      <SidebarTrigger className="shrink-0 text-slate-500 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:bg-slate-800/50 rounded-md" />
-      <div className="hidden md:block">
+    <header className="sticky top-0 z-50 flex min-h-[4.25rem] min-w-0 shrink-0 items-center gap-2 border-b border-sidebar-border bg-sidebar px-3 py-2 lg:gap-4 lg:px-6 text-sidebar-foreground">
+      <SidebarTrigger className="shrink-0 text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground rounded-md" />
+      <div className="hidden md:block text-sidebar-muted [&_a]:text-sidebar-foreground/80 [&_a:hover]:!text-sidebar-foreground [&_span[role=link]]:!text-sidebar-foreground">
         <DynamicBreadcrumbs />
       </div>
       <div className="relative flex min-w-0 flex-1 justify-center">
         <div className="relative w-full max-w-2xl flex items-center">
-          <div className="flex w-full items-center rounded-full bg-slate-100 px-2 py-1.5 dark:bg-slate-900 transition-shadow focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:bg-white dark:focus-within:bg-slate-950 shadow-sm border border-transparent focus-within:border-blue-500/10">
+          <div className="flex w-full items-center rounded-full bg-sidebar-accent/60 px-2 py-1.5 transition-shadow focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:bg-sidebar-accent shadow-sm border border-sidebar-border focus-within:border-blue-500/10">
             <Input
               ref={searchInputRef}
               placeholder={t("header.searchPlaceholder")}
-              className="h-8 flex-1 border-0 bg-transparent px-3 text-sm shadow-none focus-visible:ring-0 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              className="h-8 flex-1 border-0 bg-transparent px-3 text-sm shadow-none focus-visible:ring-0 text-sidebar-foreground placeholder:text-sidebar-muted/70"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchQuery.trim().length > 1 && setShowSearch(true)}
@@ -241,7 +241,7 @@ export function DashboardHeader() {
             />
             <div className="flex items-center gap-2 pr-1">
               <span
-                className="hidden items-center gap-0.5 rounded border border-slate-200/60 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-500 xl:inline-flex"
+                className="hidden items-center gap-0.5 rounded border border-sidebar-border bg-sidebar-accent/80 px-1.5 py-0.5 text-[10px] font-medium text-sidebar-muted shadow-sm xl:inline-flex"
                 aria-hidden
               >
                 <kbd className="font-sans">Ctrl</kbd>
@@ -307,51 +307,10 @@ export function DashboardHeader() {
         </div>
       </div>
 
-      <div className="hidden shrink-0 items-center gap-2 lg:flex">
-        <Button
-          variant="ghost"
-          className="rounded-full font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-100"
-          onClick={() => navigate("/production")}
-        >
-          {t("header.listOfAssets")}
-        </Button>
-        <Button
-          variant="outline"
-          className="rounded-full border-slate-200 px-5 font-medium text-slate-700 shadow-sm hover:bg-slate-100 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
-          onClick={() => navigate("/production")}
-        >
-          {t("header.addAsset")}
-        </Button>
-      </div>
-
       <div className="flex shrink-0 items-center gap-2 ml-2">
-        <ThemeToggle className="hover:bg-slate-200/50 dark:hover:bg-slate-800/50" />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40">
-              <Plus className="h-5 w-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 rounded-xl">
-            <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400">Quick Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer py-2 rounded-md" onClick={() => navigate("/orders")}>
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              <span>New Order</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer py-2 rounded-md" onClick={() => navigate("/production")}>
-              <Factory className="mr-2 h-4 w-4" />
-              <span>Start Job</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer py-2 rounded-md" onClick={() => navigate("/inventory")}>
-              <Package className="mr-2 h-4 w-4" />
-              <span>Add Stock</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-9 w-9 text-slate-500 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:bg-slate-800/50 rounded-full">
+            <Button variant="ghost" size="icon" className="relative h-9 w-9 text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 rounded-full">
               <Bell className="h-4.5 w-4.5" />
               {unreadCount > 0 && (
                 <span className="absolute right-2.5 top-2 flex h-2 w-2">
@@ -415,22 +374,22 @@ export function DashboardHeader() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex h-10 items-center gap-3 rounded-full p-1 pl-3 hover:bg-slate-200/50 dark:hover:bg-slate-800/50">
+            <Button variant="ghost" className="flex h-10 items-center gap-3 rounded-full p-1 pl-3 text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground">
               <div className="hidden text-right md:flex md:flex-col">
-                <span className="text-sm font-semibold leading-none text-slate-800 dark:text-slate-200">{user?.name || settings.displayName}</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                <span className="text-sm font-semibold leading-none text-sidebar-foreground">{user?.name || settings.displayName}</span>
+                <span className="text-[11px] text-sidebar-muted mt-0.5">
                   {user?.platformRole === "super_admin" ? "Platform Super Admin" : (user?.role || settings.role)}
                 </span>
               </div>
               <span className="relative inline-flex">
-                <Avatar className="h-9 w-9 border border-slate-200 shadow-sm dark:border-slate-700">
+                <Avatar className="h-9 w-9 border border-sidebar-border shadow-sm">
                   {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.name || "User"} className="object-cover" />}
-                  <AvatarFallback className="bg-slate-200 text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <AvatarFallback className="bg-sidebar-accent text-[11px] font-bold text-sidebar-foreground">
                     {getInitials(user?.name || settings.displayName || "User")}
                   </AvatarFallback>
                 </Avatar>
                 <span
-                  className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-slate-950"
+                  className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-sidebar"
                   title={t("header.online")}
                   aria-hidden
                 />

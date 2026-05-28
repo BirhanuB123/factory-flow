@@ -10,6 +10,10 @@ const MODULE_FLAG_KEYS = Object.freeze([
   'procurement',
   'finance',
   'hr',
+  'crm',
+  'pos',
+  'global_trade',
+  'analytics',
 ]);
 
 function defaultModuleFlagsObject() {

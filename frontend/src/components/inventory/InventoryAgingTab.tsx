@@ -37,12 +37,13 @@ export function InventoryAgingTab() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-[#1a2744]">Inventory Aging</h2>
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Aging analysis</p>
+          <h2 className="mt-1 text-xl font-black tracking-tight text-foreground">Inventory Aging</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             Identify slow-moving stock based on receipt date. Optimization candidate items are highlighted in red.
           </p>
         </div>
-        <div className="flex items-center gap-3 rounded-full border border-border/60 bg-card px-5 py-2.5 shadow-erp-sm">
+        <div className="flex items-center gap-3 rounded-[14px] border border-border/60 bg-card px-5 py-2.5 shadow-sm">
           <PackageOpen className="h-5 w-5 text-muted-foreground" />
           <div className="flex flex-col">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Stock Value</span>
@@ -56,7 +57,7 @@ export function InventoryAgingTab() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card, idx) => (
-          <Card key={idx} className="relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+          <Card key={idx} className="relative overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-[0_18px_45px_-32px_rgba(15,23,42,0.55)]">
             <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${card.bg}`} />
             <CardContent className="p-5">
               <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{card.label}</p>
@@ -69,9 +70,10 @@ export function InventoryAgingTab() {
         ))}
       </div>
 
-      <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+      <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
+        <div className="h-1 bg-gradient-to-r from-amber-400/80 to-primary/70" />
         <CardHeader className="border-b border-border/50 bg-muted/20 pb-4 pt-5">
-          <CardTitle className="flex items-center gap-2 text-lg font-bold tracking-tight text-[#1a2744]">
+          <CardTitle className="flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
             <Clock className="h-5 w-5 text-primary" />
             Aging Breakdown
           </CardTitle>
@@ -80,11 +82,11 @@ export function InventoryAgingTab() {
           <Table>
             <TableHeader className="bg-muted/25">
               <TableRow className="border-border/40 hover:bg-transparent">
-                <TableHead className="pl-6 text-xs font-bold text-foreground">Age Bucket</TableHead>
-                <TableHead className="text-xs font-bold text-foreground">SKU / Product</TableHead>
-                <TableHead className="text-right text-xs font-bold text-foreground">Days Old</TableHead>
-                <TableHead className="text-right text-xs font-bold text-foreground">Qty on Hand</TableHead>
-                <TableHead className="pr-6 text-right text-xs font-bold text-foreground">Extended Value</TableHead>
+                <TableHead className="pl-6 text-[10px] font-black uppercase tracking-wider text-muted-foreground/80">Age Bucket</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-wider text-muted-foreground/80">SKU / Product</TableHead>
+                <TableHead className="text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground/80">Days Old</TableHead>
+                <TableHead className="text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground/80">Qty on Hand</TableHead>
+                <TableHead className="pr-6 text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground/80">Extended Value</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -103,27 +105,32 @@ export function InventoryAgingTab() {
                   : "success";
 
                 return arr.map((item, idx) => (
-                  <TableRow key={`${bucketName}-${item._id}`} className="hover:bg-muted/30">
+                  <TableRow key={`${bucketName}-${item._id}`} className="hover:bg-muted/30 border-border/40">
                     {idx === 0 ? (
                       <TableCell rowSpan={arr.length} className="pl-6 align-top border-r border-border/40 bg-muted/5">
-                        <Badge variant={badgeColor} className="whitespace-nowrap font-semibold tracking-tight shadow-sm">
+                        <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-[10px] font-bold ${
+                          badgeColor === "destructive" ? "bg-rose-500/10 text-rose-600 border border-rose-500/20 shadow-sm" :
+                          badgeColor === "warning" ? "bg-amber-500/10 text-amber-600 border border-amber-500/20 shadow-sm" :
+                          badgeColor === "info" ? "bg-blue-500/10 text-blue-600 border border-blue-500/20 shadow-sm" :
+                          "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shadow-sm"
+                        }`}>
                           {label}
-                        </Badge>
+                        </span>
                       </TableCell>
                     ) : null}
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="text-[13px] font-semibold tracking-tight text-foreground">{item.name}</span>
-                        <span className="text-[10px] font-medium text-muted-foreground">{item.sku}</span>
+                        <span className="text-[13px] font-bold tracking-tight text-foreground">{item.name}</span>
+                        <span className="text-[10px] font-bold text-muted-foreground/80">{item.sku}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-mono text-[13px] font-semibold text-muted-foreground">
+                    <TableCell className="text-right font-mono text-[13px] font-bold text-muted-foreground">
                       {item.daysAge.toLocaleString()}d
                     </TableCell>
-                    <TableCell className="text-right font-mono text-[13px] font-bold">
+                    <TableCell className="text-right font-mono text-[13px] font-black">
                       {item.stock}
                     </TableCell>
-                    <TableCell className="pr-6 text-right font-mono text-[13px] font-semibold text-[#1a2744]">
+                    <TableCell className="pr-6 text-right font-mono text-[13px] font-bold text-[#1a2744]">
                       {symbol}{(item.extendedValue || 0).toFixed(2)}
                     </TableCell>
                   </TableRow>

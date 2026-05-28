@@ -153,15 +153,19 @@ export function DashboardFeedsCalendar() {
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <Card className="rounded-2xl border-0 bg-card shadow-sm">
+      <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
+        <div className="h-1 bg-gradient-to-r from-primary/70 to-cyan-400/70" />
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-2">
-          <CardTitle className="text-base font-bold text-foreground">{t("feeds.title")}</CardTitle>
-          <div className="flex rounded-full bg-muted/50 p-0.5">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Work queue</p>
+            <CardTitle className="mt-1 text-base font-black text-foreground">{t("feeds.title")}</CardTitle>
+          </div>
+          <div className="flex rounded-[12px] bg-muted/60 p-1">
             <button
               type="button"
               onClick={() => setFeedTab("checkout")}
               className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                "rounded-[9px] px-3 py-1.5 text-xs font-semibold transition-colors",
                 feedTab === "checkout" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
               )}
             >
@@ -171,7 +175,7 @@ export function DashboardFeedsCalendar() {
               type="button"
               onClick={() => setFeedTab("repair")}
               className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                "rounded-[9px] px-3 py-1.5 text-xs font-semibold transition-colors",
                 feedTab === "repair" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
               )}
             >
@@ -183,7 +187,7 @@ export function DashboardFeedsCalendar() {
           {!mfgEnabled ? (
             <p className="py-8 text-center text-sm text-muted-foreground">{t("feeds.enableMfg")}</p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-border/50">
+            <div className="overflow-x-auto rounded-[14px] border border-border/50 bg-background/50">
               <Table>
                 <TableHeader>
                   <TableRow className="border-border/60 hover:bg-transparent">
@@ -203,7 +207,7 @@ export function DashboardFeedsCalendar() {
                     rows.map((r, idx) => (
                       <TableRow
                         key={`${r.id}-${idx}`}
-                        className={cn("border-border/40", idx % 2 === 1 ? "bg-muted/30" : "bg-transparent")}
+                      className={cn("border-border/40 transition-colors hover:bg-muted/40", idx % 2 === 1 ? "bg-muted/20" : "bg-transparent")}
                       >
                         <TableCell className="text-sm font-medium">{r.id}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{r.desc}</TableCell>
@@ -218,12 +222,16 @@ export function DashboardFeedsCalendar() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border-0 bg-card shadow-sm">
+      <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
+        <div className="h-1 bg-gradient-to-r from-amber-400/75 to-emerald-400/75" />
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-base font-bold text-foreground">{t("feeds.alerts")}</CardTitle>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Calendar</p>
+            <CardTitle className="mt-1 text-base font-black text-foreground">{t("feeds.alerts")}</CardTitle>
+          </div>
           <p className="text-center text-sm font-semibold text-muted-foreground sm:flex-1">{monthLabel}</p>
           <Select value={calSort} onValueChange={setCalSort}>
-            <SelectTrigger className="h-9 w-[150px] rounded-full border-border/60 bg-muted/40 text-xs font-medium sm:ml-auto">
+            <SelectTrigger className="h-9 w-[150px] rounded-[12px] border-border/60 bg-muted/40 text-xs font-semibold sm:ml-auto">
               <SelectValue placeholder={t("charts.sortByPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
@@ -254,7 +262,7 @@ export function DashboardFeedsCalendar() {
                   </div>
                 ))}
               </div>
-              <div className="mt-1 space-y-1">
+              <div className="mt-1 space-y-1 rounded-[14px] bg-muted/20 p-2">
                 {calendarWeeks.map((week, wi) => (
                   <div key={wi} className="grid grid-cols-7 gap-1">
                     {week.map((cell, ci) => {
@@ -265,7 +273,7 @@ export function DashboardFeedsCalendar() {
                       return (
                         <div
                           key={ci}
-                          className="relative flex aspect-square items-center justify-center rounded-lg bg-muted/25 text-sm font-medium text-foreground"
+                          className="relative flex aspect-square items-center justify-center rounded-[10px] bg-background text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-accent"
                         >
                           {cell.day}
                           {mark ? (

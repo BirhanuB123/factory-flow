@@ -8,7 +8,7 @@ import {
   purchaseOrdersApi,
   type TenantModuleFlags,
 } from "@/lib/api";
-import { Globe, Sun, LayoutGrid, Wallet } from "lucide-react";
+import { ArrowUpRight, Boxes, Factory, PackageCheck, Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings } from "@/hooks/use-settings";
@@ -157,30 +157,30 @@ export function KpiCards() {
       value: mfgEnabled || invEnabled ? String(metrics.assetCount) : "—",
       ring: metrics.ring1,
       color: "hsl(221, 83%, 53%)",
-      icon: Globe,
+      icon: Factory,
       href: mfgEnabled ? "/production" : "/inventory",
       chip: "Assets",
-      bg: "from-blue-500/12 to-cyan-500/5",
+      bg: "from-blue-500/18 via-cyan-500/8 to-transparent",
     },
     {
       label: t("kpi.valueOfAssets"),
       value: invEnabled ? formatMoney(metrics.grossValue, cur) : "—",
       ring: metrics.ring2,
       color: "hsl(32, 95%, 52%)",
-      icon: Sun,
+      icon: Boxes,
       href: "/inventory",
       chip: "Inventory",
-      bg: "from-amber-500/14 to-orange-500/5",
+      bg: "from-amber-500/18 via-orange-500/8 to-transparent",
     },
     {
       label: t("kpi.netAssetsValue"),
       value: invEnabled ? formatMoney(metrics.netValue, cur) : "—",
       ring: metrics.ring3,
       color: "hsl(262, 83%, 58%)",
-      icon: LayoutGrid,
+      icon: PackageCheck,
       href: "/inventory",
       chip: "Net value",
-      bg: "from-violet-500/13 to-blue-500/5",
+      bg: "from-violet-500/17 via-blue-500/8 to-transparent",
     },
     {
       label: t("kpi.purchasesFY"),
@@ -190,7 +190,7 @@ export function KpiCards() {
       icon: Wallet,
       href: "/purchase-orders",
       chip: "Fiscal year",
-      bg: "from-emerald-500/14 to-teal-500/5",
+      bg: "from-emerald-500/18 via-teal-500/8 to-transparent",
     },
   ];
 
@@ -201,7 +201,7 @@ export function KpiCards() {
           key={kpi.label}
           role="link"
           tabIndex={0}
-          className="group relative cursor-pointer overflow-hidden rounded-2xl border-none bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="group relative cursor-pointer overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_-32px_rgba(15,23,42,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           onClick={() => navigate(kpi.href)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -210,11 +210,14 @@ export function KpiCards() {
             }
           }}
         >
-          <CardContent className="relative p-6">
+          <div className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-br ${kpi.bg}`} />
+          <CardContent className="relative p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{kpi.chip}</p>
-                <p className="mt-2 truncate text-3xl font-black tracking-tight text-foreground">{kpi.value}</p>
+                <div className="inline-flex items-center rounded-full border border-border/50 bg-background/70 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground shadow-sm">
+                  {kpi.chip}
+                </div>
+                <p className="mt-4 truncate text-3xl font-black tracking-tight text-foreground">{kpi.value}</p>
               </div>
               <div className="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center">
                 <StatRing pct={kpi.ring} color={kpi.color} size={72} stroke={5} />
@@ -228,11 +231,19 @@ export function KpiCards() {
             </div>
             <div className="mt-5 flex items-center justify-between gap-3 border-t border-border/50 pt-4">
               <p className="text-sm font-semibold text-muted-foreground">{kpi.label}</p>
-              <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
+              <div className="flex items-center gap-2">
+                <div className="hidden h-2 w-20 overflow-hidden rounded-full bg-muted sm:block">
+                  <div
+                    className="h-full rounded-full transition-all duration-700 group-hover:opacity-90"
+                    style={{ width: `${kpi.ring}%`, backgroundColor: kpi.color }}
+                  />
+                </div>
                 <div
-                  className="h-full rounded-full transition-all duration-700 group-hover:opacity-90"
-                  style={{ width: `${kpi.ring}%`, backgroundColor: kpi.color }}
-                />
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-background text-muted-foreground shadow-sm transition-colors group-hover:text-primary"
+                  aria-hidden
+                >
+                  <ArrowUpRight className="h-4 w-4" />
+                </div>
               </div>
             </div>
           </CardContent>

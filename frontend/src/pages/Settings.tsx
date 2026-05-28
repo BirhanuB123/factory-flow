@@ -1,7 +1,14 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
-import api, { auditApi, billingApi, ethiopiaTaxApi, type EthiopiaTaxSettings } from "@/lib/api";
+import api, {
+  auditApi,
+  billingApi,
+  ethiopiaTaxApi,
+  hrOrgApi,
+  hrEmployeesApi,
+  type EthiopiaTaxSettings,
+} from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +22,15 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Factory,
   User,
@@ -42,6 +58,11 @@ import {
   Tags,
   Hash,
   FileText,
+  Copy,
+  Search,
+  Mail,
+  Key,
+  Edit2,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -273,6 +294,173 @@ export default function Settings() {
         "Payment not yet completed";
       toast.error(message);
     },
+  });
+
+  // Access tab queries and mutations
+  const isAdmin = user?.role === "Admin" || user?.platformRole === "super_admin";
+
+  const { data: employees = [], refetch: refetchEmployees, isLoading: employeesLoading } = useQuery({
+    queryKey: ["settings-employees"],
+    queryFn: async () => {
+      const response = await api.get("/hr/employees");
+      return response.data as any[];
+    },
+    enabled: isAdmin,
+  });
+
+  const { data: departments = [] } = useQuery({
+    queryKey: ["settings-departments"],
+    queryFn: hrOrgApi.listDepartments,
+    enabled: isAdmin,
+  });
+
+  const { data: positions = [] } = useQuery({
+    queryKey: ["settings-positions"],
+    queryFn: async () => hrOrgApi.listPositions(),
+    enabled: isAdmin,
+  });
+
+  // State variables for user/role provisioning console
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState("");
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [isInviteDetailsOpen, setIsInviteDetailsOpen] = useState(false);
+
+  const [inviteResult, setInviteResult] = useState<{
+    inviteUrl: string;
+    emailSent: boolean;
+    emailError?: string;
+    employeeName: string;
+  } | null>(null);
+
+  const [newEmployee, setNewEmployee] = useState({
+    employeeId: "",
+    name: "",
+    position: "", // maps to jobTitle
+    accessRole: "employee",
+    department: "",
+    status: "Active" as "Active" | "On Leave" | "Offboarded",
+    email: "",
+    password: "",
+    departmentId: "",
+    positionId: "",
+    managerId: "",
+    salary: 0,
+  });
+
+  const [editingEmployee, setEditingEmployee] = useState<any | null>(null);
+
+  const handleAddEmployee = async () => {
+    if (!newEmployee.employeeId || !newEmployee.name || !newEmployee.position || !newEmployee.department || !newEmployee.password) {
+      toast.error("Please fill in all required fields, including employee ID, name, position, department, and password.");
+      return;
+    }
+
+    try {
+      const payload: Record<string, any> = {
+        employeeId: newEmployee.employeeId,
+        name: newEmployee.name,
+        department: newEmployee.department,
+        status: newEmployee.status,
+        email: newEmployee.email || undefined,
+        password: newEmployee.password,
+        role: newEmployee.position, // position is sent as "role"
+        departmentId: newEmployee.departmentId || undefined,
+        positionId: newEmployee.positionId || undefined,
+        manager: newEmployee.managerId || undefined,
+        salary: Number(newEmployee.salary) || 0,
+        accessRole: newEmployee.accessRole,
+      };
+
+      await api.post("/hr/employees", payload);
+      toast.success("Personnel record initialized successfully.");
+      setIsAddUserOpen(false);
+      refetchEmployees();
+      setNewEmployee({
+        employeeId: "",
+        name: "",
+        position: "",
+        accessRole: "employee",
+        department: "",
+        status: "Active",
+        email: "",
+        password: "",
+        departmentId: "",
+        positionId: "",
+        managerId: "",
+        salary: 0,
+      });
+    } catch (error: any) {
+      const msg = error.response?.data?.message || "Failed to add employee record.";
+      toast.error(msg);
+    }
+  };
+
+  const handleUpdateEmployee = async () => {
+    if (!editingEmployee || !editingEmployee._id) return;
+
+    try {
+      const payload: Record<string, any> = {
+        name: editingEmployee.name,
+        department: editingEmployee.department,
+        status: editingEmployee.status,
+        email: editingEmployee.email,
+        phone: editingEmployee.phone,
+        salary: editingEmployee.salary,
+        jobTitle: editingEmployee.jobTitle,
+        tinNumber: editingEmployee.tinNumber,
+        pensionMemberId: editingEmployee.pensionMemberId,
+        departmentId: editingEmployee.departmentId || null,
+        positionId: editingEmployee.positionId || null,
+        manager: editingEmployee.manager || null,
+        accessRole: editingEmployee.role, // role maps to accessRole in the update endpoint
+      };
+
+      await api.put(`/hr/employees/${editingEmployee._id}`, payload);
+      toast.success("Employee record updated successfully.");
+      setIsEditUserOpen(false);
+      refetchEmployees();
+      setEditingEmployee(null);
+    } catch (error: any) {
+      const msg = error.response?.data?.message || "Failed to update employee record.";
+      toast.error(msg);
+    }
+  };
+
+  const handleInviteEmployee = async (employeeId: string, employeeName: string) => {
+    try {
+      const response = await api.post(`/hr/employees/${employeeId}/invite`);
+      const { inviteUrl, emailSent, emailError } = response.data;
+      setInviteResult({
+        inviteUrl,
+        emailSent,
+        emailError,
+        employeeName,
+      });
+      setIsInviteDetailsOpen(true);
+      if (emailSent) {
+        toast.success("Invitation email sent successfully.");
+      } else if (emailError) {
+        toast.error(`Invitation generated, but email failed: ${emailError}`);
+      } else {
+        toast.success("One-time invite token generated successfully.");
+      }
+    } catch (error: any) {
+      const msg = error.response?.data?.message || "Failed to generate invite token.";
+      toast.error(msg);
+    }
+  };
+
+  const filteredEmployees = (employees || []).filter((emp: any) => {
+    const q = employeeSearchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (emp.name || "").toLowerCase().includes(q) ||
+      (emp.email || "").toLowerCase().includes(q) ||
+      (emp.employeeId || "").toLowerCase().includes(q) ||
+      (emp.role || "").toLowerCase().includes(q) ||
+      (emp.jobTitle || "").toLowerCase().includes(q)
+    );
   });
 
   useEffect(() => {
@@ -1068,6 +1256,155 @@ export default function Settings() {
           </TabsContent>
 
           <TabsContent value="access" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {isAdmin && (
+              <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+                <CardHeader className="p-10 pb-6 border-b border-border/10 bg-secondary/20">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                      <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
+                        <User className="h-7 w-7" />
+                      </div>
+                      <div className="space-y-1">
+                        <CardTitle className="text-2xl font-black tracking-tight uppercase italic text-foreground">Team User & Role Provisioning</CardTitle>
+                        <CardDescription className="text-[11px] font-black uppercase tracking-[0.2em] opacity-50">Manage administrative permissions, invite members, and edit credentials</CardDescription>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => setIsAddUserOpen(true)}
+                      className="rounded-2xl px-6 font-black uppercase tracking-widest text-[11px] bg-primary hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20 h-12 bg-primary"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Induct Personnel
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-10 space-y-6">
+                  {/* Search and stats bar */}
+                  <div className="flex items-center gap-4 bg-background/20 rounded-2xl p-4 border border-border/5">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
+                      <Input
+                        type="text"
+                        placeholder="Search team members by name, email, role, or ID..."
+                        value={employeeSearchQuery}
+                        onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                        className="pl-11 h-12 bg-background/50 border-border/10 rounded-xl text-sm focus-visible:ring-primary/20"
+                      />
+                    </div>
+                  </div>
+
+                  {employeesLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4">
+                      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Loading Personnel Registry...</p>
+                    </div>
+                  ) : filteredEmployees.length === 0 ? (
+                    <div className="text-center py-20 border border-dashed border-border/10 rounded-3xl bg-background/5">
+                      <p className="text-sm font-black uppercase tracking-widest text-muted-foreground/50">No matching team members found</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-hidden rounded-[2rem] border border-border/10 bg-background/20 shadow-inner">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-secondary/40 border-b border-border/10 hover:bg-secondary/40">
+                            <TableHead className="py-5 px-6 font-black uppercase tracking-[0.2em] text-[10px] text-foreground/75">Member Profile</TableHead>
+                            <TableHead className="py-5 px-6 font-black uppercase tracking-[0.2em] text-[10px] text-foreground/75">Job Position</TableHead>
+                            <TableHead className="py-5 px-6 font-black uppercase tracking-[0.2em] text-[10px] text-foreground/75">Permissions Role</TableHead>
+                            <TableHead className="py-5 px-6 font-black uppercase tracking-[0.2em] text-[10px] text-foreground/75">System Status</TableHead>
+                            <TableHead className="py-5 px-6 font-black uppercase tracking-[0.2em] text-[10px] text-foreground/75 text-right">Access Controls</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody className="divide-y divide-border/5">
+                          {filteredEmployees.map((emp: any) => {
+                            const showRole = emp.role || "employee";
+                            const statusColor =
+                              emp.status === "Active"
+                                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                : emp.status === "On Leave"
+                                ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                : "bg-rose-500/10 text-rose-500 border-rose-500/20";
+
+                            return (
+                              <TableRow key={emp._id} className="group hover:bg-primary/5 transition-all">
+                                <TableCell className="py-5 px-6">
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center font-black text-sm text-primary border border-primary/10">
+                                      {(emp.name || "?").charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-foreground group-hover:text-primary transition-all text-sm">{emp.name}</p>
+                                      <p className="text-[11px] text-muted-foreground/60 font-semibold">{emp.email || "No email assigned"}</p>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-5 px-6">
+                                  <div>
+                                    <p className="font-semibold text-xs text-foreground/80">{emp.jobTitle || emp.role || "Standard Staff"}</p>
+                                    <p className="text-[9px] text-muted-foreground/50 font-black uppercase tracking-wider">{emp.department || "No Department"}</p>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-5 px-6">
+                                  <Badge variant="outline" className="text-[9px] font-black uppercase tracking-widest bg-secondary/50 px-3 py-1 rounded-lg border-border/10">
+                                    {showRole.replace("_", " ")}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="py-5 px-6">
+                                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${statusColor}`}>
+                                    {emp.status}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="py-5 px-6 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingEmployee({
+                                          _id: emp._id,
+                                          employeeId: emp.employeeId,
+                                          name: emp.name,
+                                          department: emp.department,
+                                          departmentId: emp.departmentId?._id || emp.departmentId || "",
+                                          positionId: emp.positionId?._id || emp.positionId || "",
+                                          manager: emp.manager?._id || emp.manager || "",
+                                          status: emp.status,
+                                          email: emp.email || "",
+                                          phone: emp.phone || "",
+                                          salary: emp.salary || 0,
+                                          jobTitle: emp.jobTitle || "",
+                                          role: emp.role || "employee",
+                                          tinNumber: emp.tinNumber || "",
+                                          pensionMemberId: emp.pensionMemberId || "",
+                                        });
+                                        setIsEditUserOpen(true);
+                                      }}
+                                      className="h-8 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider border-border/10 bg-secondary/20 hover:bg-secondary/40 text-foreground"
+                                    >
+                                      <Edit2 className="h-3 w-3 mr-1.5" />
+                                      Edit Role
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleInviteEmployee(emp._id, emp.name)}
+                                      className="h-8 rounded-lg px-3 text-[10px] font-bold uppercase tracking-wider border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary"
+                                    >
+                                      <Key className="h-3 w-3 mr-1.5" />
+                                      Invite / Reset
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
               <CardHeader className="p-10 pb-6 border-b border-border/10 bg-secondary/20">
                 <div className="flex items-center justify-between">
@@ -1153,6 +1490,429 @@ export default function Settings() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Add Employee Dialog */}
+            <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+              <DialogContent className="max-w-2xl bg-card border border-border/10 rounded-3xl overflow-hidden p-0 shadow-erp">
+                <DialogHeader className="p-8 pb-4 bg-secondary/20 border-b border-border/5">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
+                      <Plus className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-xl font-black uppercase italic tracking-tight text-foreground">Induct Team User</DialogTitle>
+                      <DialogDescription className="text-[10px] font-black uppercase tracking-widest opacity-50">Create a new corporate account and assign system permissions</DialogDescription>
+                    </div>
+                  </div>
+                </DialogHeader>
+                <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Employee ID *</Label>
+                    <Input
+                      type="text"
+                      placeholder="EMP-100"
+                      value={newEmployee.employeeId}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, employeeId: e.target.value })}
+                      className="bg-background/50 border-border/10 rounded-xl h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Full Name *</Label>
+                    <Input
+                      type="text"
+                      placeholder="Abebe Bikila"
+                      value={newEmployee.name}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, name: e.target.value })}
+                      className="bg-background/50 border-border/10 rounded-xl h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Email Address *</Label>
+                    <Input
+                      type="email"
+                      placeholder="abebe@company.com"
+                      value={newEmployee.email}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
+                      className="bg-background/50 border-border/10 rounded-xl h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Temporary Password *</Label>
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      value={newEmployee.password}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
+                      className="bg-background/50 border-border/10 rounded-xl h-11"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Permissions Role *</Label>
+                    <Select
+                      value={newEmployee.accessRole}
+                      onValueChange={(val) => setNewEmployee({ ...newEmployee, accessRole: val })}
+                    >
+                      <SelectTrigger className="bg-background/50 border-border/10 rounded-xl h-11">
+                        <SelectValue placeholder="Select Access Role" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border/10">
+                        <SelectItem value="employee">Standard Employee</SelectItem>
+                        <SelectItem value="hr_head">HR Head</SelectItem>
+                        <SelectItem value="finance_head">Finance Head</SelectItem>
+                        <SelectItem value="finance_viewer">Finance Viewer</SelectItem>
+                        <SelectItem value="purchasing_head">Purchasing Head</SelectItem>
+                        <SelectItem value="warehouse_head">Warehouse Head</SelectItem>
+                        <SelectItem value="Admin">Company Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">System Status *</Label>
+                    <Select
+                      value={newEmployee.status}
+                      onValueChange={(val: any) => setNewEmployee({ ...newEmployee, status: val })}
+                    >
+                      <SelectTrigger className="bg-background/50 border-border/10 rounded-xl h-11">
+                        <SelectValue placeholder="Select Status" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border/10">
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="On Leave">On Leave</SelectItem>
+                        <SelectItem value="Offboarded">Offboarded</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Org Department *</Label>
+                    <Select
+                      value={newEmployee.departmentId}
+                      onValueChange={(val) => {
+                        const d = departments.find((dept: any) => dept._id === val);
+                        setNewEmployee({
+                          ...newEmployee,
+                          departmentId: val,
+                          department: d ? d.name : "",
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="bg-background/50 border-border/10 rounded-xl h-11">
+                        <SelectValue placeholder="Select Department" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border/10">
+                        {departments.map((d: any) => (
+                          <SelectItem key={d._id} value={d._id}>
+                            {d.name} ({d.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Job Position / Title *</Label>
+                    <Select
+                      value={newEmployee.positionId}
+                      onValueChange={(val) => {
+                        const p = positions.find((pos: any) => pos._id === val);
+                        setNewEmployee({
+                          ...newEmployee,
+                          positionId: val,
+                          position: p ? p.title : "",
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="bg-background/50 border-border/10 rounded-xl h-11">
+                        <SelectValue placeholder="Select Position" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border/10">
+                        {positions.map((p: any) => (
+                          <SelectItem key={p._id} value={p._id}>
+                            {p.title} ({p.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Salary (ETB)</Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={newEmployee.salary || ""}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, salary: Number(e.target.value) })}
+                      className="bg-background/50 border-border/10 rounded-xl h-11"
+                    />
+                  </div>
+                </div>
+                <DialogFooter className="p-8 bg-secondary/10 border-t border-border/5 flex items-center justify-end gap-3 col-span-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAddUserOpen(false)}
+                    className="rounded-xl border-border/10 bg-background/55 text-[11px] font-black uppercase tracking-widest h-11 px-6 text-foreground"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleAddEmployee}
+                    className="rounded-xl bg-primary text-[11px] font-black uppercase tracking-widest h-11 px-8 hover:scale-[1.02] active:scale-95 transition-all text-white"
+                  >
+                    Induct User
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Edit Employee Dialog */}
+            <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+              <DialogContent className="max-w-2xl bg-card border border-border/10 rounded-3xl overflow-hidden p-0 shadow-erp">
+                <DialogHeader className="p-8 pb-4 bg-secondary/20 border-b border-border/5">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
+                      <Edit2 className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-xl font-black uppercase italic tracking-tight text-foreground">Edit User settings & Role</DialogTitle>
+                      <DialogDescription className="text-[10px] font-black uppercase tracking-widest opacity-50">Modify details, salary structures, status, and permissions</DialogDescription>
+                    </div>
+                  </div>
+                </DialogHeader>
+                {editingEmployee && (
+                  <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Full Name *</Label>
+                      <Input
+                        type="text"
+                        value={editingEmployee.name}
+                        onChange={(e) => setEditingEmployee({ ...editingEmployee, name: e.target.value })}
+                        className="bg-background/50 border-border/10 rounded-xl h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Email Address *</Label>
+                      <Input
+                        type="email"
+                        value={editingEmployee.email || ""}
+                        onChange={(e) => setEditingEmployee({ ...editingEmployee, email: e.target.value })}
+                        className="bg-background/50 border-border/10 rounded-xl h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Phone Number</Label>
+                      <Input
+                        type="text"
+                        value={editingEmployee.phone || ""}
+                        onChange={(e) => setEditingEmployee({ ...editingEmployee, phone: e.target.value })}
+                        className="bg-background/50 border-border/10 rounded-xl h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Permissions Role *</Label>
+                      <Select
+                        value={editingEmployee.role}
+                        onValueChange={(val) => setEditingEmployee({ ...editingEmployee, role: val })}
+                      >
+                        <SelectTrigger className="bg-background/50 border-border/10 rounded-xl h-11">
+                          <SelectValue placeholder="Select Access Role" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border/10">
+                          <SelectItem value="employee">Standard Employee</SelectItem>
+                          <SelectItem value="hr_head">HR Head</SelectItem>
+                          <SelectItem value="finance_head">Finance Head</SelectItem>
+                          <SelectItem value="finance_viewer">Finance Viewer</SelectItem>
+                          <SelectItem value="purchasing_head">Purchasing Head</SelectItem>
+                          <SelectItem value="warehouse_head">Warehouse Head</SelectItem>
+                          <SelectItem value="Admin">Company Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">System Status *</Label>
+                      <Select
+                        value={editingEmployee.status}
+                        onValueChange={(val: any) => setEditingEmployee({ ...editingEmployee, status: val })}
+                      >
+                        <SelectTrigger className="bg-background/50 border-border/10 rounded-xl h-11">
+                          <SelectValue placeholder="Select Status" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border/10">
+                          <SelectItem value="Active">Active</SelectItem>
+                          <SelectItem value="On Leave">On Leave</SelectItem>
+                          <SelectItem value="Offboarded">Offboarded</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Org Department *</Label>
+                      <Select
+                        value={editingEmployee.departmentId}
+                        onValueChange={(val) => {
+                          const d = departments.find((dept: any) => dept._id === val);
+                          setEditingEmployee({
+                            ...editingEmployee,
+                            departmentId: val,
+                            department: d ? d.name : "",
+                          });
+                        }}
+                      >
+                        <SelectTrigger className="bg-background/50 border-border/10 rounded-xl h-11">
+                          <SelectValue placeholder="Select Department" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border/10">
+                          {departments.map((d: any) => (
+                            <SelectItem key={d._id} value={d._id}>
+                              {d.name} ({d.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Job Position / Title *</Label>
+                      <Select
+                        value={editingEmployee.positionId}
+                        onValueChange={(val) => {
+                          const p = positions.find((pos: any) => pos._id === val);
+                          setEditingEmployee({
+                            ...editingEmployee,
+                            positionId: val,
+                            jobTitle: p ? p.title : "",
+                          });
+                        }}
+                      >
+                        <SelectTrigger className="bg-background/50 border-border/10 rounded-xl h-11">
+                          <SelectValue placeholder="Select Position" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border/10">
+                          {positions.map((p: any) => (
+                            <SelectItem key={p._id} value={p._id}>
+                              {p.title} ({p.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Salary (ETB)</Label>
+                      <Input
+                        type="number"
+                        value={editingEmployee.salary || ""}
+                        onChange={(e) => setEditingEmployee({ ...editingEmployee, salary: Number(e.target.value) })}
+                        className="bg-background/50 border-border/10 rounded-xl h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">TIN Number</Label>
+                      <Input
+                        type="text"
+                        value={editingEmployee.tinNumber || ""}
+                        onChange={(e) => setEditingEmployee({ ...editingEmployee, tinNumber: e.target.value })}
+                        className="bg-background/50 border-border/10 rounded-xl h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Pension Member ID</Label>
+                      <Input
+                        type="text"
+                        value={editingEmployee.pensionMemberId || ""}
+                        onChange={(e) => setEditingEmployee({ ...editingEmployee, pensionMemberId: e.target.value })}
+                        className="bg-background/50 border-border/10 rounded-xl h-11"
+                      />
+                    </div>
+                  </div>
+                )}
+                <DialogFooter className="p-8 bg-secondary/10 border-t border-border/5 flex items-center justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditUserOpen(false);
+                      setEditingEmployee(null);
+                    }}
+                    className="rounded-xl border-border/10 bg-background/55 text-[11px] font-black uppercase tracking-widest h-11 px-6 text-foreground"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleUpdateEmployee}
+                    className="rounded-xl bg-primary text-[11px] font-black uppercase tracking-widest h-11 px-8 hover:scale-[1.02] active:scale-95 transition-all text-white"
+                  >
+                    Save Changes
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Invite Details Dialog */}
+            <Dialog open={isInviteDetailsOpen} onOpenChange={setIsInviteDetailsOpen}>
+              <DialogContent className="max-w-md bg-card border border-border/10 rounded-3xl overflow-hidden p-0 shadow-erp">
+                <DialogHeader className="p-8 pb-4 bg-secondary/20 border-b border-border/5">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary">
+                      <Key className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-xl font-black uppercase italic tracking-tight text-foreground">Invite / Reset Link</DialogTitle>
+                      <DialogDescription className="text-[10px] font-black uppercase tracking-widest opacity-50">One-time security credentials generated for the member</DialogDescription>
+                    </div>
+                  </div>
+                </DialogHeader>
+                {inviteResult && (
+                  <div className="p-8 space-y-6">
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        A one-time invitation link has been successfully generated for <strong className="text-foreground">{inviteResult.employeeName}</strong>. 
+                        This link expires in 7 days.
+                      </p>
+                      {inviteResult.emailSent ? (
+                        <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-1.5 mt-2 bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
+                          <Mail className="h-4 w-4" />
+                          Emailed successfully to user!
+                        </p>
+                      ) : inviteResult.emailError ? (
+                        <p className="text-xs font-bold text-rose-500 uppercase tracking-widest flex items-center gap-1.5 mt-2 bg-rose-500/10 p-3 rounded-xl border border-rose-500/20">
+                          <Mail className="h-4 w-4" />
+                          Mail dispatch failed: {inviteResult.emailError}
+                        </p>
+                      ) : (
+                        <p className="text-xs font-bold text-amber-500 uppercase tracking-widest flex items-center gap-1.5 mt-2 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
+                          <Mail className="h-4 w-4" />
+                          SMTP not configured. Please copy the link below.
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Invitation URL</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          readOnly
+                          value={inviteResult.inviteUrl}
+                          className="bg-background border-border/10 rounded-xl h-11 text-xs select-all flex-1"
+                        />
+                        <Button
+                          onClick={() => {
+                            navigator.clipboard.writeText(inviteResult.inviteUrl);
+                            toast.success("Link copied to clipboard!");
+                          }}
+                          className="h-11 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground px-4 flex items-center justify-center border border-border/10"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <DialogFooter className="p-8 bg-secondary/10 border-t border-border/5 flex items-center justify-end">
+                  <Button
+                    onClick={() => {
+                      setIsInviteDetailsOpen(false);
+                      setInviteResult(null);
+                    }}
+                    className="rounded-xl bg-primary text-[11px] font-black uppercase tracking-widest h-11 px-8 hover:scale-[1.02] active:scale-95 transition-all text-white"
+                  >
+                    Close
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {canAudit && (

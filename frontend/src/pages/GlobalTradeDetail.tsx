@@ -21,7 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { 
+import {
   ArrowLeft, Save, Container, FileCheck, Anchor, Plane, RefreshCw, Plus, Trash2,
   Users, CreditCard, PlusCircle, Briefcase, FileText
 } from "lucide-react";
@@ -37,7 +37,7 @@ export default function GlobalTradeDetail() {
 
   const [formData, setFormData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
-  
+
   const [expenseForm, setExpenseForm] = useState({
     expenseType: "duty" as "freight" | "duty" | "clearing",
     amount: 0,
@@ -203,16 +203,16 @@ export default function GlobalTradeDetail() {
             <div className="space-y-2">
               <Label>Vessel / Flight Name</Label>
               {isEditing ? (
-                <Input className="rounded-xl" value={formData.vesselOrFlight} onChange={(e) => setFormData({...formData, vesselOrFlight: e.target.value})} />
+                <Input className="rounded-xl" value={formData.vesselOrFlight} onChange={(e) => setFormData({ ...formData, vesselOrFlight: e.target.value })} />
               ) : (
                 <p className="font-semibold text-foreground">{formData.vesselOrFlight || "—"}</p>
               )}
             </div>
-            
+
             <div className="space-y-2">
               <Label>Reference Number (B/L or AWB)</Label>
               {isEditing ? (
-                <Input className="rounded-xl" value={formData.referenceNumber} onChange={(e) => setFormData({...formData, referenceNumber: e.target.value})} />
+                <Input className="rounded-xl" value={formData.referenceNumber} onChange={(e) => setFormData({ ...formData, referenceNumber: e.target.value })} />
               ) : (
                 <p className="font-semibold text-foreground">{formData.referenceNumber}</p>
               )}
@@ -221,7 +221,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-2">
               <Label>Port of Loading</Label>
               {isEditing ? (
-                <Input className="rounded-xl" value={formData.portOfLoading} onChange={(e) => setFormData({...formData, portOfLoading: e.target.value})} />
+                <Input className="rounded-xl" value={formData.portOfLoading} onChange={(e) => setFormData({ ...formData, portOfLoading: e.target.value })} />
               ) : (
                 <p className="font-medium text-foreground">{formData.portOfLoading || "—"}</p>
               )}
@@ -230,7 +230,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-2">
               <Label>Port of Discharge</Label>
               {isEditing ? (
-                <Input className="rounded-xl" value={formData.portOfDischarge} onChange={(e) => setFormData({...formData, portOfDischarge: e.target.value})} />
+                <Input className="rounded-xl" value={formData.portOfDischarge} onChange={(e) => setFormData({ ...formData, portOfDischarge: e.target.value })} />
               ) : (
                 <p className="font-medium text-foreground">{formData.portOfDischarge || "—"}</p>
               )}
@@ -239,7 +239,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-2">
               <Label>Estimated Time of Departure (ETD)</Label>
               {isEditing ? (
-                <Input type="date" className="rounded-xl" value={formData.etd} onChange={(e) => setFormData({...formData, etd: e.target.value})} />
+                <Input type="date" className="rounded-xl" value={formData.etd} onChange={(e) => setFormData({ ...formData, etd: e.target.value })} />
               ) : (
                 <p className="font-medium text-foreground">{formData.etd ? formatDate(formData.etd) : "—"}</p>
               )}
@@ -248,7 +248,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-2">
               <Label>Estimated Time of Arrival (ETA)</Label>
               {isEditing ? (
-                <Input type="date" className="rounded-xl" value={formData.eta} onChange={(e) => setFormData({...formData, eta: e.target.value})} />
+                <Input type="date" className="rounded-xl" value={formData.eta} onChange={(e) => setFormData({ ...formData, eta: e.target.value })} />
               ) : (
                 <p className="font-medium text-foreground">{formData.eta ? formatDate(formData.eta) : "—"}</p>
               )}
@@ -268,7 +268,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-3">
               <Label>Shipment Status</Label>
               {isEditing ? (
-                <Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v})}>
+                <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pre_shipment">Pre-shipment</SelectItem>
@@ -286,7 +286,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-3">
               <Label>Customs Status</Label>
               {isEditing ? (
-                <Select value={formData.customsStatus} onValueChange={(v) => setFormData({...formData, customsStatus: v})}>
+                <Select value={formData.customsStatus} onValueChange={(v) => setFormData({ ...formData, customsStatus: v })}>
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
@@ -297,13 +297,12 @@ export default function GlobalTradeDetail() {
                 </Select>
               ) : (
                 <div className="mt-1">
-                  <Badge 
-                    variant="secondary" 
-                    className={`uppercase tracking-wider px-3 py-1 rounded-full border ${
-                      formData.customsStatus === 'cleared' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                  <Badge
+                    variant="secondary"
+                    className={`uppercase tracking-wider px-3 py-1 rounded-full border ${formData.customsStatus === 'cleared' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
                       formData.customsStatus === 'held' ? 'bg-destructive/10 text-destructive border-destructive/20' :
-                      'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                    }`}
+                        'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                      }`}
                   >
                     {formData.customsStatus}
                   </Badge>
@@ -314,7 +313,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-3">
               <Label>Incoterm</Label>
               {isEditing ? (
-                <Select value={formData.incoterm} onValueChange={(v) => setFormData({...formData, incoterm: v})}>
+                <Select value={formData.incoterm} onValueChange={(v) => setFormData({ ...formData, incoterm: v })}>
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="EXW">EXW</SelectItem>
@@ -370,7 +369,7 @@ export default function GlobalTradeDetail() {
                       <TableCell>
                         {isEditing ? (
                           <Select value={c.type} onValueChange={v => handleContainerChange(i, 'type', v)}>
-                            <SelectTrigger className="h-8 rounded-lg"><SelectValue/></SelectTrigger>
+                            <SelectTrigger className="h-8 rounded-lg"><SelectValue /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="20ft">20ft</SelectItem>
                               <SelectItem value="40ft">40ft</SelectItem>
@@ -413,9 +412,9 @@ export default function GlobalTradeDetail() {
             <div className="space-y-4">
               <Label className="font-semibold text-foreground">Customs Clearing Agent</Label>
               {isEditing ? (
-                <Select 
-                  value={formData.clearingAgent || "none"} 
-                  onValueChange={(v) => setFormData({...formData, clearingAgent: v === "none" ? "" : v})}
+                <Select
+                  value={formData.clearingAgent || "none"}
+                  onValueChange={(v) => setFormData({ ...formData, clearingAgent: v === "none" ? "" : v })}
                 >
                   <SelectTrigger className="rounded-xl">
                     <SelectValue placeholder="Assign Clearing Agent" />
@@ -465,7 +464,7 @@ export default function GlobalTradeDetail() {
               ].map(doc => (
                 <div key={doc.key} className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/10">
                   <Label className="font-medium cursor-pointer" htmlFor={`doc-${doc.key}`}>{doc.label}</Label>
-                  <Switch 
+                  <Switch
                     id={`doc-${doc.key}`}
                     disabled={!isEditing}
                     checked={formData.documents?.[doc.key] || false}
@@ -474,14 +473,14 @@ export default function GlobalTradeDetail() {
                 </div>
               ))}
             </div>
-            
+
             <div className="mt-6 space-y-2">
               <Label>Notes / Remarks</Label>
               {isEditing ? (
-                <Textarea 
-                  className="rounded-xl resize-none min-h-[100px]" 
-                  value={formData.notes || ''} 
-                  onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                <Textarea
+                  className="rounded-xl resize-none min-h-[100px]"
+                  value={formData.notes || ''}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder="Enter any customs or logistics remarks..."
                 />
               ) : (
@@ -492,7 +491,7 @@ export default function GlobalTradeDetail() {
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Empty placeholder or small summary to balance grid */}
         <Card className="rounded-3xl shadow-sm border-border/40 p-6 flex flex-col justify-center items-center text-center">
           <Anchor className="h-12 w-12 text-muted-foreground/30 mb-2 animate-bounce duration-[4000ms]" />
@@ -532,8 +531,8 @@ export default function GlobalTradeDetail() {
                 <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20">
                   <p className="text-xs text-primary/80 uppercase tracking-widest font-bold">Total Pool</p>
                   <p className="text-lg font-black mt-1 text-primary">
-                    {((formData.purchaseOrder?.importFreight || 0) + 
-                      (formData.purchaseOrder?.importDuty || 0) + 
+                    {((formData.purchaseOrder?.importFreight || 0) +
+                      (formData.purchaseOrder?.importDuty || 0) +
                       (formData.purchaseOrder?.importClearing || 0)).toFixed(2)} ETB
                   </p>
                 </div>
@@ -558,7 +557,7 @@ export default function GlobalTradeDetail() {
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
                         <Label>Expense Type</Label>
-                        <Select value={expenseForm.expenseType} onValueChange={(v: any) => setExpenseForm({...expenseForm, expenseType: v})}>
+                        <Select value={expenseForm.expenseType} onValueChange={(v: any) => setExpenseForm({ ...expenseForm, expenseType: v })}>
                           <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="freight">Ocean/Air Freight</SelectItem>
@@ -567,10 +566,10 @@ export default function GlobalTradeDetail() {
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label>Vendor (AP Link)</Label>
-                        <Select value={expenseForm.vendorId} onValueChange={(v) => setExpenseForm({...expenseForm, vendorId: v})}>
+                        <Select value={expenseForm.vendorId} onValueChange={(v) => setExpenseForm({ ...expenseForm, vendorId: v })}>
                           <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select Vendor" /></SelectTrigger>
                           <SelectContent>
                             {vendorsData?.map((v: any) => (
@@ -583,28 +582,28 @@ export default function GlobalTradeDetail() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Bill Amount (ETB)</Label>
-                          <Input type="number" className="rounded-xl" value={expenseForm.amount || ""} onChange={(e) => setExpenseForm({...expenseForm, amount: Number(e.target.value)})} placeholder="0.00" />
+                          <Input type="number" className="rounded-xl" value={expenseForm.amount || ""} onChange={(e) => setExpenseForm({ ...expenseForm, amount: Number(e.target.value) })} placeholder="0.00" />
                         </div>
                         <div className="space-y-2">
                           <Label>Bill Reference Number</Label>
-                          <Input className="rounded-xl" value={expenseForm.billNumber} onChange={(e) => setExpenseForm({...expenseForm, billNumber: e.target.value})} placeholder="e.g. INV-1002" />
+                          <Input className="rounded-xl" value={expenseForm.billNumber} onChange={(e) => setExpenseForm({ ...expenseForm, billNumber: e.target.value })} placeholder="e.g. INV-1002" />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Bill Date</Label>
-                          <Input type="date" className="rounded-xl" value={expenseForm.billDate} onChange={(e) => setExpenseForm({...expenseForm, billDate: e.target.value})} />
+                          <Input type="date" className="rounded-xl" value={expenseForm.billDate} onChange={(e) => setExpenseForm({ ...expenseForm, billDate: e.target.value })} />
                         </div>
                         <div className="space-y-2">
                           <Label>Due Date</Label>
-                          <Input type="date" className="rounded-xl" value={expenseForm.dueDate} onChange={(e) => setExpenseForm({...expenseForm, dueDate: e.target.value})} />
+                          <Input type="date" className="rounded-xl" value={expenseForm.dueDate} onChange={(e) => setExpenseForm({ ...expenseForm, dueDate: e.target.value })} />
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <Label>Notes / Details</Label>
-                        <Textarea className="rounded-xl resize-none min-h-[80px]" value={expenseForm.notes} onChange={(e) => setExpenseForm({...expenseForm, notes: e.target.value})} placeholder="Additional expense notes..." />
+                        <Textarea className="rounded-xl resize-none min-h-[80px]" value={expenseForm.notes} onChange={(e) => setExpenseForm({ ...expenseForm, notes: e.target.value })} placeholder="Additional expense notes..." />
                       </div>
                     </div>
                     <DialogFooter>
@@ -616,7 +615,6 @@ export default function GlobalTradeDetail() {
                   </DialogContent>
                 </Dialog>
               </div>
-
               {formData.expenses?.length > 0 ? (
                 <div className="rounded-2xl border border-border/40 overflow-hidden">
                   <Table>

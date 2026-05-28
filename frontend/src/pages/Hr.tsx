@@ -8,6 +8,7 @@ import {
   Plus,
   Search,
   Users,
+  UserCheck,
   Edit2,
   Calendar,
   DollarSign,
@@ -74,6 +75,7 @@ const APP_ACCESS_ROLES = [
   "employee",
   "hr_head",
   "finance_head",
+  "finance_viewer",
   "purchasing_head",
   "warehouse_head",
   "Admin",
@@ -538,7 +540,7 @@ export default function Hr() {
         manager: newEmployee.managerId || undefined,
         salary: Number(newEmployee.salary) || 0,
       };
-      if (user?.role === "Admin") {
+      if (user?.role === "Admin" || user?.platformRole === "super_admin") {
         payload.accessRole = newEmployee.accessRole;
       }
 
@@ -607,7 +609,7 @@ export default function Hr() {
         positionId: editingEmployee.positionId || null,
         manager: editingEmployee.managerId || null,
       };
-      if (user?.role === "Admin") {
+      if (user?.role === "Admin" || user?.platformRole === "super_admin") {
         body.accessRole = editingEmployee.appRole;
       }
 
@@ -677,35 +679,44 @@ export default function Hr() {
   return (
     <>
       <div className="space-y-8 pb-8 animate-in fade-in duration-500">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.hr.title")}</h1>
-            <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.hr.subtitle")}</p>
+        <div className="overflow-hidden rounded-[18px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(190_75%_34%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
+          <div className="p-5 sm:p-7">
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+              <div className="min-w-0">
+                <div className="mb-4 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.2em] text-white/55">
+                  <Users className="h-4 w-4" />
+                  Human resource management
+                </div>
+                <h1 className="text-4xl font-black tracking-tight sm:text-5xl">{t("pages.hr.title")}</h1>
+                <p className="mt-3 max-w-3xl text-base font-semibold leading-7 text-white/60 sm:text-lg">
+                  {t("pages.hr.subtitle")}
+                </p>
+                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                  {[
+                    { label: "Headcount", value: employees.length, tone: "text-sky-200" },
+                    { label: "Active", value: activeCount, tone: "text-emerald-300" },
+                    { label: "Attendance", value: `${attendanceRateVal}%`, tone: "text-amber-300" },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-[16px] border border-white/20 bg-white/[0.08] p-4 backdrop-blur">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">{item.label}</p>
+                      <p className={`mt-2 text-3xl font-black tracking-tight ${item.tone}`}>{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-[16px] border border-white/15 bg-white/10 p-4 text-right backdrop-blur">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">Monthly payroll</p>
+                <p className="mt-2 text-3xl font-black tracking-tight text-white">{format(totalPayroll)}</p>
+                <p className="mt-1 text-sm font-semibold text-white/55">{pendingLeaveCount} leave requests pending</p>
+              </div>
+            </div>
           </div>
-          <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
-            <div className="text-right">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Headcount</p>
-              <p className="text-sm font-semibold text-foreground">{employees.length}</p>
-            </div>
-            <div className="h-8 w-px bg-border/70" />
-            <div className="text-right">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
-              <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{activeCount}</p>
-            </div>
-            <div className="h-8 w-px bg-border/70" />
-            <div className="text-right">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Attendance</p>
-              <p className="text-sm font-semibold text-warning">{attendanceRateVal}%</p>
-            </div>
-            <div className="h-8 w-px bg-border/70" />
-            <div className="text-right">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Payroll</p>
-              <p className="text-sm font-semibold text-primary">{format(totalPayroll)}</p>
-            </div>
-          </div>
+        </div>
+
+        <div className="flex flex-col justify-end gap-4 md:flex-row md:items-center">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="h-10 shrink-0 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
+              <Button className="h-10 shrink-0 gap-2 rounded-[12px] bg-primary px-5 font-black text-primary-foreground shadow-sm hover:bg-primary/90">
                 <Plus className="h-4 w-4" />
                 Induct personnel
               </Button>
@@ -845,7 +856,7 @@ export default function Hr() {
                     </Select>
                   </div>
                 </div>
-                {user?.role === "Admin" && (
+                {(user?.role === "Admin" || user?.platformRole === "super_admin") && (
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">App login role</Label>
                     <Select
@@ -984,30 +995,25 @@ export default function Hr() {
           </Dialog>
         </div>
 
-        <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Headcount</p>
-            <p className="text-sm font-semibold text-foreground">{employees.length}</p>
-          </div>
-          <div className="h-8 w-px bg-border/70" />
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</p>
-            <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{activeCount}</p>
-          </div>
-          <div className="h-8 w-px bg-border/70" />
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Attendance</p>
-            <p className="text-sm font-semibold text-primary">{attendanceRateVal}%</p>
-          </div>
-          <div className="h-8 w-px bg-border/70" />
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Leave queue</p>
-            <p
-              className={`text-sm font-semibold ${pendingLeaveCount > 0 ? "text-amber-600" : "text-muted-foreground"}`}
-            >
-              {pendingLeaveCount} pending
-            </p>
-          </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: "Headcount", value: employees.length, sub: "Personnel records", icon: Users, tone: "text-primary", accent: "from-primary to-cyan-400" },
+            { label: "Active staff", value: activeCount, sub: `${leaveCount} on leave`, icon: UserCheck, tone: "text-emerald-600", accent: "from-emerald-500 to-teal-400" },
+            { label: "Attendance", value: `${attendanceRateVal}%`, sub: "Current period", icon: Calendar, tone: "text-amber-600", accent: "from-amber-400 to-rose-500" },
+            { label: "Leave queue", value: pendingLeaveCount, sub: "Pending review", icon: FileText, tone: "text-violet-600", accent: "from-violet-500 to-blue-500" },
+          ].map((stat) => (
+            <Card key={stat.label} className="overflow-hidden rounded-[12px] border border-border/70 bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+              <div className={`h-1 bg-gradient-to-r ${stat.accent}`} />
+              <CardContent className="p-6">
+                <div className="mb-3 flex items-center gap-2">
+                  <stat.icon className={`h-3.5 w-3.5 ${stat.tone}`} />
+                  <h3 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">{stat.label}</h3>
+                </div>
+                <p className="text-4xl font-black tracking-tight text-foreground">{stat.value}</p>
+                <p className="mt-2 text-sm font-medium text-muted-foreground">{stat.sub}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -1118,7 +1124,7 @@ export default function Hr() {
                       />
                     </div>
                   </div>
-                  {user?.role === "Admin" && (
+                  {(user?.role === "Admin" || user?.platformRole === "super_admin") && (
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">App login role</Label>
                       <Select
@@ -1192,11 +1198,15 @@ export default function Hr() {
         </StickyModuleTabs>
 
         <TabsContent value="employees">
-          <Card className="group overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+          <Card className="group overflow-hidden rounded-[16px] border border-border/70 bg-card shadow-sm">
+            <div className="h-1 bg-gradient-to-r from-primary via-cyan-400 to-emerald-400" />
             <CardHeader className="space-y-4 border-b border-border/50 bg-muted/20 pb-4">
               <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
                 <div className="space-y-1">
-                  <h3 className="text-lg font-bold tracking-tight text-[#1a2744]">Personnel register</h3>
+                  <h3 className="flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
+                    <Users className="h-5 w-5 text-primary" />
+                    Personnel register
+                  </h3>
                   <p className="text-sm text-muted-foreground">Search by name, role, department, or status</p>
                 </div>
                 <div className="relative w-full md:w-96 group/search">
@@ -1205,7 +1215,7 @@ export default function Hr() {
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                     placeholder="Search name, role, department…"
-                    className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-11 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
+                    className="h-11 rounded-[12px] border-border/60 bg-muted/30 pl-11 shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
                   />
                 </div>
               </div>
@@ -1214,12 +1224,12 @@ export default function Hr() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="pl-6 h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Emp ID</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Full Name</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Dept</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Operational Role</TableHead>
-                    <TableHead className="h-12 text-[10px] font-black uppercase text-muted-foreground tracking-widest">Status</TableHead>
-                    <TableHead className="pr-6 h-12 text-right text-[10px] font-black uppercase text-muted-foreground tracking-widest">Protocol</TableHead>
+                    <TableHead className="h-12 pl-6 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Emp ID</TableHead>
+                    <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Full Name</TableHead>
+                    <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Dept</TableHead>
+                    <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Operational Role</TableHead>
+                    <TableHead className="h-12 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</TableHead>
+                    <TableHead className="h-12 pr-6 text-right text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Protocol</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1238,7 +1248,7 @@ export default function Hr() {
                     </TableRow>
                   ) : (
                     filteredEmployees.map((e) => (
-                      <TableRow key={e.id} className="group/row transition-all hover:bg-muted/30 border-border/50">
+                      <TableRow key={e.id} className="group/row border-border/50 transition-all hover:bg-primary/[0.03]">
                         <TableCell className="pl-6 py-4">
                           <span className="font-mono text-[10px] font-black px-2 py-1 rounded bg-muted/30 text-muted-foreground tracking-tighter uppercase group-hover/row:bg-primary group-hover/row:text-white transition-colors">
                             {e.id}
@@ -1267,7 +1277,7 @@ export default function Hr() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-10 w-10 rounded-xl hover:bg-primary/10 hover:text-primary transition-all group-hover/row:scale-110"
+                            className="h-10 w-10 rounded-[10px] border border-border/60 bg-card shadow-sm transition-all hover:bg-primary hover:text-primary-foreground group-hover/row:scale-105"
                             onClick={() => {
                               setEditingEmployee({
                                 ...e,

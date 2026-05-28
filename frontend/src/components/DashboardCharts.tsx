@@ -144,11 +144,15 @@ export function DashboardCharts() {
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card className="rounded-2xl border-0 bg-card shadow-sm">
+      <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
+        <div className="h-1 bg-gradient-to-r from-primary/75 to-emerald-400/75" />
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-2">
-          <CardTitle className="text-base font-bold text-foreground">{t("charts.assetValue")}</CardTitle>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Production flow</p>
+            <CardTitle className="mt-1 text-base font-black text-foreground">{t("charts.assetValue")}</CardTitle>
+          </div>
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="h-9 w-[150px] rounded-full border-border/60 bg-muted/40 text-xs font-medium">
+            <SelectTrigger className="h-9 w-[150px] rounded-[12px] border-border/60 bg-muted/40 text-xs font-semibold">
               <SelectValue placeholder={t("charts.sortByPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
@@ -158,7 +162,7 @@ export function DashboardCharts() {
             </SelectContent>
           </Select>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           {!moduleEnabled(user, "manufacturing") ? (
             <div className="flex h-[260px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
               {t("charts.mfgDisabled")}
@@ -173,7 +177,7 @@ export function DashboardCharts() {
             </div>
           ) : (
             <>
-              <div className="h-[240px] w-full">
+              <div className="h-[240px] w-full rounded-[14px] bg-gradient-to-b from-background/60 to-muted/20 p-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={productionSeries} margin={{ top: 12, right: 12, left: -8, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(228 24% 90%)" />
@@ -220,7 +224,7 @@ export function DashboardCharts() {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-              <div className="mt-3 flex flex-wrap justify-center gap-1.5 border-t border-border/50 pt-3">
+              <div className="mt-4 flex flex-wrap justify-center gap-1.5 border-t border-border/50 pt-3">
                 {rangePills.map((key) => (
                   <button
                     key={key}
@@ -242,11 +246,15 @@ export function DashboardCharts() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border-0 bg-card shadow-sm">
+      <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
+        <div className="h-1 bg-gradient-to-r from-amber-400/80 to-violet-500/70" />
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-2">
-          <CardTitle className="text-base font-bold text-foreground">{t("charts.stockByCategory")}</CardTitle>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Inventory mix</p>
+            <CardTitle className="mt-1 text-base font-black text-foreground">{t("charts.stockByCategory")}</CardTitle>
+          </div>
           <Select value={barSortBy} onValueChange={setBarSortBy}>
-            <SelectTrigger className="h-9 w-[150px] rounded-full border-border/60 bg-muted/40 text-xs font-medium">
+            <SelectTrigger className="h-9 w-[150px] rounded-[12px] border-border/60 bg-muted/40 text-xs font-semibold">
               <SelectValue placeholder={t("charts.sortByPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
@@ -256,7 +264,7 @@ export function DashboardCharts() {
             </SelectContent>
           </Select>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           {!moduleEnabled(user, "inventory") ? (
             <div className="flex h-[260px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
               {t("charts.invDisabled")}
@@ -274,7 +282,7 @@ export function DashboardCharts() {
               {t("charts.noInventory")}
             </div>
           ) : (
-            <div className="h-[260px] w-full">
+            <div className="h-[260px] w-full rounded-[14px] bg-gradient-to-b from-background/60 to-muted/20 p-2">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={inventoryBars} margin={{ top: 12, right: 12, left: 4, bottom: 4 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(228 24% 90%)" />

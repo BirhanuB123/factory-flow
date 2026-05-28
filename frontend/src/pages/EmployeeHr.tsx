@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Calendar, Clock, Edit2, Trash2, Save, ClipboardList, CheckCircle2, FileQuestion } from "lucide-react";
+import { Loader2, Calendar, Clock, Edit2, Trash2, Save, ClipboardList, CheckCircle2, FileQuestion, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   StickyModuleTabs,
@@ -249,16 +249,47 @@ export default function EmployeeHr() {
   return (
     <>
       <div className="space-y-8 pb-8 animate-in fade-in duration-500">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.myHr.title")}</h1>
-            <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.myHr.subtitle")}</p>
+        <div className="overflow-hidden rounded-[18px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(190_75%_34%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
+          <div className="p-5 sm:p-7">
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+              <div className="min-w-0">
+                <div className="mb-4 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.2em] text-white/55">
+                  <UserCheck className="h-4 w-4" />
+                  Employee self service
+                </div>
+                <h1 className="text-4xl font-black tracking-tight sm:text-5xl">{t("pages.myHr.title")}</h1>
+                <p className="mt-3 max-w-3xl text-base font-semibold leading-7 text-white/60 sm:text-lg">
+                  {t("pages.myHr.subtitle")}
+                </p>
+                <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                  {[
+                    { label: "Today", value: today?.status || "Open", tone: "text-sky-200" },
+                    { label: "Pending leaves", value: pendingLeaves, tone: "text-amber-300" },
+                    { label: "Corrections", value: pendingCorrections, tone: "text-emerald-300" },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-[16px] border border-white/20 bg-white/[0.08] p-4 backdrop-blur">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">{item.label}</p>
+                      <p className={`mt-2 text-3xl font-black tracking-tight ${item.tone}`}>{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-[16px] border border-white/15 bg-white/10 p-4 backdrop-blur">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">Today's interval</p>
+                <p className="mt-2 font-mono text-2xl font-black tracking-tight text-white">
+                  {today?.checkIn || "--:--"} / {today?.checkOut || "--:--"}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-white/55">{syncing ? "Syncing..." : "Auto sync every 30s"}</p>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+        </div>
+
+        <div className="flex flex-col justify-end gap-3 sm:flex-row">
             <Button
               onClick={onCheckIn}
               disabled={loading || !!today?.checkIn}
-              className="h-10 gap-2 rounded-full px-5 font-semibold shadow-sm"
+              className="h-10 gap-2 rounded-[12px] px-5 font-black shadow-sm"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />}
               {t("pages.myHr.checkIn")}
@@ -267,14 +298,13 @@ export default function EmployeeHr() {
               variant="outline"
               onClick={onCheckOut}
               disabled={loading || !today?.checkIn || !!today?.checkOut}
-              className="h-10 rounded-full border-border/60 px-5 font-semibold shadow-erp-sm"
+              className="h-10 rounded-[12px] border-border/60 px-5 font-black shadow-sm"
             >
               {t("pages.myHr.checkOut")}
             </Button>
-          </div>
         </div>
 
-        <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
+        <div className="hidden items-center gap-5 rounded-[16px] border border-border/70 bg-card px-6 py-3 shadow-sm lg:flex">
           <div className="text-right">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Today</p>
             <p className="text-sm font-semibold text-foreground">
@@ -292,7 +322,7 @@ export default function EmployeeHr() {
           <div className="text-right">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Sync</p>
             <p className={`text-sm font-semibold ${syncing ? "text-primary" : "text-muted-foreground"}`}>
-              {syncing ? "Syncing…" : "Auto 30s"}
+              {syncing ? "Syncing..." : "Auto 30s"}
             </p>
           </div>
         </div>
@@ -302,47 +332,55 @@ export default function EmployeeHr() {
             {
               label: "History rows",
               value: String(history.length),
+              sub: "Attendance records",
               icon: ClipboardList,
               color: "text-primary",
               bg: "bg-primary/10",
+              accent: "from-primary to-cyan-400",
             },
             {
               label: "Pending leaves",
               value: String(pendingLeaves),
+              sub: "Awaiting review",
               icon: Calendar,
-              color: "text-warning",
-              bg: "bg-warning/10",
+              color: "text-amber-600",
+              bg: "bg-amber-500/10",
+              accent: "from-amber-400 to-rose-500",
             },
             {
               label: "Corrections (pending)",
               value: String(pendingCorrections),
+              sub: "Attendance changes",
               icon: FileQuestion,
-              color: "text-info",
-              bg: "bg-info/10",
+              color: "text-violet-600",
+              bg: "bg-violet-500/10",
+              accent: "from-violet-500 to-blue-500",
             },
             {
               label: "Decided leaves",
               value: String(reviewedLeaves.length),
+              sub: "Approved or rejected",
               icon: CheckCircle2,
-              color: "text-success",
-              bg: "bg-success/10",
+              color: "text-emerald-600",
+              bg: "bg-emerald-500/10",
+              accent: "from-emerald-500 to-teal-400",
             },
           ].map((stat, idx) => (
             <Card
               key={idx}
-              className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+              className="group relative overflow-hidden rounded-[12px] border border-border/70 bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
             >
-              <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
-              <CardContent className="flex items-center gap-4 p-5">
-                <div
-                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
-                >
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+              <div className={`h-1 bg-gradient-to-r ${stat.accent}`} />
+              <CardContent className="p-6">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <stat.icon className={`h-3.5 w-3.5 ${stat.color}`} />
+                    <p className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">{stat.label}</p>
+                  </div>
+                  <div className={`h-9 w-9 rounded-full ${stat.bg}`} />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{stat.label}</p>
-                  <p className="text-2xl font-bold tracking-tight">{stat.value}</p>
-                </div>
+                <p className="text-4xl font-black tracking-tight text-foreground">{stat.value}</p>
+                <p className="mt-2 text-sm font-medium text-muted-foreground">{stat.sub}</p>
               </CardContent>
             </Card>
           ))}
@@ -364,17 +402,22 @@ export default function EmployeeHr() {
         </StickyModuleTabs>
 
         <TabsContent value="attendance">
-          <Card className="rounded-2xl border-border/70 bg-background/70 overflow-hidden">
-            <CardHeader className="pb-4 border-b border-border/60 bg-muted/10">
-              <CardTitle className="text-base font-black uppercase tracking-wide">My Attendance History</CardTitle>
+          <Card className="overflow-hidden rounded-[16px] border border-border/70 bg-card shadow-sm">
+            <div className="h-1 bg-gradient-to-r from-primary via-cyan-400 to-emerald-400" />
+            <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
+                <ClipboardList className="h-5 w-5 text-primary" />
+                My Attendance History
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
-              <div className="rounded-xl border border-border/60 bg-muted/20 p-3 space-y-3">
+              <div className="space-y-3 rounded-[16px] border border-border/60 bg-muted/20 p-4">
                 <Label className="text-xs font-semibold">Manual attendance entry</Label>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                   <div>
                     <Label>Date</Label>
-                    <Input
+                      <Input
+                        className="h-10 rounded-[12px] border-border/60 bg-card"
                       type="date"
                       value={attendanceForm.date}
                       onChange={(e) => setAttendanceForm((s) => ({ ...s, date: e.target.value }))}
@@ -383,7 +426,7 @@ export default function EmployeeHr() {
                   <div>
                     <Label>Status</Label>
                     <select
-                      className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+                      className="h-10 w-full rounded-[12px] border border-border/60 bg-card px-3 text-sm"
                       value={attendanceForm.status}
                       onChange={(e) =>
                         setAttendanceForm((s) => ({
@@ -400,7 +443,8 @@ export default function EmployeeHr() {
                   </div>
                   <div>
                     <Label>Check-in (optional)</Label>
-                    <Input
+                      <Input
+                        className="h-10 rounded-[12px] border-border/60 bg-card"
                       type="time"
                       value={attendanceForm.checkIn}
                       onChange={(e) => setAttendanceForm((s) => ({ ...s, checkIn: e.target.value }))}
@@ -408,19 +452,21 @@ export default function EmployeeHr() {
                   </div>
                   <div>
                     <Label>Check-out (optional)</Label>
-                    <Input
+                      <Input
+                        className="h-10 rounded-[12px] border-border/60 bg-card"
                       type="time"
                       value={attendanceForm.checkOut}
                       onChange={(e) => setAttendanceForm((s) => ({ ...s, checkOut: e.target.value }))}
                     />
                   </div>
                   <div className="flex items-end">
-                    <Button onClick={onSubmitAttendance} className="w-full h-10 font-black uppercase text-xs">
+                    <Button onClick={onSubmitAttendance} className="h-10 w-full rounded-[12px] text-xs font-black uppercase">
                       Submit attendance
                     </Button>
                   </div>
                 </div>
                 <Input
+                  className="h-10 rounded-[12px] border-border/60 bg-card"
                   placeholder="Notes (optional)"
                   value={attendanceForm.notes}
                   onChange={(e) => setAttendanceForm((s) => ({ ...s, notes: e.target.value }))}
@@ -429,11 +475,11 @@ export default function EmployeeHr() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Interval</TableHead>
-                    <TableHead>OT</TableHead>
-                    <TableHead>OT Review</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Date</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Interval</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">OT</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">OT Review</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -445,7 +491,7 @@ export default function EmployeeHr() {
                     </TableRow>
                   ) : (
                     history.map((a) => (
-                      <TableRow key={a._id}>
+                      <TableRow key={a._id} className="border-border/40 hover:bg-primary/[0.03]">
                         <TableCell>{new Date(a.date).toLocaleDateString()}</TableCell>
                         <TableCell>{a.status}</TableCell>
                         <TableCell>{a.checkIn || "--:--"} - {a.checkOut || "--:--"}</TableCell>
@@ -463,11 +509,11 @@ export default function EmployeeHr() {
                     <p className="text-sm text-muted-foreground">No decisions yet.</p>
                   ) : (
                     reviewedLeaves.slice(0, 6).map((l) => (
-                      <div key={l._id} className="rounded-md border p-2 text-sm flex items-center justify-between">
+                      <div key={l._id} className="flex items-center justify-between rounded-[12px] border border-border/60 bg-card p-3 text-sm shadow-sm">
                         <span>
                           {new Date(l.startDate).toLocaleDateString()} - {new Date(l.endDate).toLocaleDateString()} ({l.leaveType})
                         </span>
-                        <Badge variant={l.status === "approved" ? "success" : "secondary"}>{l.status}</Badge>
+                        <Badge variant={l.status === "approved" ? "success" : "secondary"} className="rounded-[8px] text-[10px] font-black uppercase">{l.status}</Badge>
                       </div>
                     ))
                   )}
@@ -478,9 +524,10 @@ export default function EmployeeHr() {
         </TabsContent>
 
         <TabsContent value="leaves">
-          <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+          <Card className="overflow-hidden rounded-[16px] border border-border/70 bg-card shadow-sm">
+            <div className="h-1 bg-gradient-to-r from-amber-400 via-rose-400 to-primary" />
             <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg font-bold tracking-tight text-[#1a2744]">
+              <CardTitle className="flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
                 <Calendar className="h-5 w-5 text-primary" /> Request leave
               </CardTitle>
             </CardHeader>
@@ -489,7 +536,7 @@ export default function EmployeeHr() {
                 <div>
                   <Label>Type</Label>
                   <select
-                    className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+                    className="h-10 w-full rounded-[12px] border border-border/60 bg-muted/30 px-3 text-sm"
                     value={leaveForm.leaveType}
                     onChange={(e) =>
                       setLeaveForm((s) => ({ ...s, leaveType: e.target.value as HrLeaveRow["leaveType"] }))
@@ -506,6 +553,7 @@ export default function EmployeeHr() {
                 <div>
                   <Label>Start date</Label>
                   <Input
+                    className="h-10 rounded-[12px] border-border/60 bg-muted/30"
                     type="date"
                     value={leaveForm.startDate}
                     onChange={(e) => setLeaveForm((s) => ({ ...s, startDate: e.target.value }))}
@@ -514,18 +562,20 @@ export default function EmployeeHr() {
                 <div>
                   <Label>End date</Label>
                   <Input
+                    className="h-10 rounded-[12px] border-border/60 bg-muted/30"
                     type="date"
                     value={leaveForm.endDate}
                     onChange={(e) => setLeaveForm((s) => ({ ...s, endDate: e.target.value }))}
                   />
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={onRequestLeave} className="w-full h-10 font-black uppercase text-xs">
+                  <Button onClick={onRequestLeave} className="h-10 w-full rounded-[12px] text-xs font-black uppercase">
                     Submit request
                   </Button>
                 </div>
               </div>
               <Input
+                className="h-10 rounded-[12px] border-border/60 bg-muted/30"
                 placeholder="Reason (optional)"
                 value={leaveForm.reason}
                 onChange={(e) => setLeaveForm((s) => ({ ...s, reason: e.target.value }))}
@@ -534,11 +584,11 @@ export default function EmployeeHr() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Period</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Days</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Period</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Type</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Days</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-right text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -550,7 +600,7 @@ export default function EmployeeHr() {
                     </TableRow>
                   ) : (
                     leaves.map((l) => (
-                      <TableRow key={l._id}>
+                      <TableRow key={l._id} className="border-border/40 hover:bg-primary/[0.03]">
                         <TableCell>
                           {editingLeaveId === l._id ? (
                             <div className="flex gap-2">
@@ -558,13 +608,13 @@ export default function EmployeeHr() {
                                 type="date"
                                 value={editLeaveForm.startDate}
                                 onChange={(e) => setEditLeaveForm((s) => ({ ...s, startDate: e.target.value }))}
-                                className="h-8"
+                                  className="h-8 rounded-[9px] border-border/60 bg-card"
                               />
                               <Input
                                 type="date"
                                 value={editLeaveForm.endDate}
                                 onChange={(e) => setEditLeaveForm((s) => ({ ...s, endDate: e.target.value }))}
-                                className="h-8"
+                                  className="h-8 rounded-[9px] border-border/60 bg-card"
                               />
                             </div>
                           ) : (
@@ -574,7 +624,7 @@ export default function EmployeeHr() {
                         <TableCell className="uppercase">
                           {editingLeaveId === l._id ? (
                             <select
-                              className="h-8 rounded-md border bg-background px-2 text-xs"
+                              className="h-8 rounded-[9px] border border-border/60 bg-card px-2 text-xs"
                               value={editLeaveForm.leaveType}
                               onChange={(e) =>
                                 setEditLeaveForm((s) => ({
@@ -613,13 +663,13 @@ export default function EmployeeHr() {
                             <div className="inline-flex gap-2">
                               {editingLeaveId === l._id ? (
                                 <>
-                                  <Button size="sm" className="h-7 text-[10px]" onClick={onSaveEditLeave}>
+                                  <Button size="sm" className="h-7 rounded-[9px] text-[10px] font-black" onClick={onSaveEditLeave}>
                                     <Save className="h-3 w-3 mr-1" /> Save
                                   </Button>
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-7 text-[10px]"
+                                    className="h-7 rounded-[9px] text-[10px]"
                                     onClick={() => setEditingLeaveId(null)}
                                   >
                                     Cancel
@@ -630,7 +680,7 @@ export default function EmployeeHr() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-7 text-[10px]"
+                                    className="h-7 rounded-[9px] text-[10px] font-black"
                                     onClick={() => onStartEditLeave(l)}
                                   >
                                     <Edit2 className="h-3 w-3 mr-1" /> Edit
@@ -638,7 +688,7 @@ export default function EmployeeHr() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-7 text-[10px]"
+                                    className="h-7 rounded-[9px] text-[10px]"
                                     onClick={() => onCancelLeave(l._id)}
                                   >
                                     <Trash2 className="h-3 w-3 mr-1" /> Cancel
@@ -660,15 +710,20 @@ export default function EmployeeHr() {
         </TabsContent>
 
         <TabsContent value="corrections">
-          <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+          <Card className="overflow-hidden rounded-[16px] border border-border/70 bg-card shadow-sm">
+            <div className="h-1 bg-gradient-to-r from-violet-500 via-blue-500 to-primary" />
             <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
-              <CardTitle className="text-lg font-bold tracking-tight text-[#1a2744]">Attendance correction</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
+                <FileQuestion className="h-5 w-5 text-primary" />
+                Attendance correction
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
               <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                 <div>
                   <Label>Date</Label>
                   <Input
+                    className="h-10 rounded-[12px] border-border/60 bg-muted/30"
                     type="date"
                     value={correctionForm.attendanceDate}
                     onChange={(e) => setCorrectionForm((s) => ({ ...s, attendanceDate: e.target.value }))}
@@ -677,7 +732,7 @@ export default function EmployeeHr() {
                 <div>
                   <Label>Requested status</Label>
                   <select
-                    className="w-full h-10 rounded-md border bg-background px-3 text-sm"
+                    className="h-10 w-full rounded-[12px] border border-border/60 bg-muted/30 px-3 text-sm"
                     value={correctionForm.requestedStatus}
                     onChange={(e) =>
                       setCorrectionForm((s) => ({
@@ -695,6 +750,7 @@ export default function EmployeeHr() {
                 <div>
                   <Label>Check-in (optional)</Label>
                   <Input
+                    className="h-10 rounded-[12px] border-border/60 bg-muted/30"
                     type="time"
                     value={correctionForm.requestedCheckIn}
                     onChange={(e) => setCorrectionForm((s) => ({ ...s, requestedCheckIn: e.target.value }))}
@@ -703,18 +759,20 @@ export default function EmployeeHr() {
                 <div>
                   <Label>Check-out (optional)</Label>
                   <Input
+                    className="h-10 rounded-[12px] border-border/60 bg-muted/30"
                     type="time"
                     value={correctionForm.requestedCheckOut}
                     onChange={(e) => setCorrectionForm((s) => ({ ...s, requestedCheckOut: e.target.value }))}
                   />
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={onRequestCorrection} className="w-full h-10 font-black uppercase text-xs">
+                  <Button onClick={onRequestCorrection} className="h-10 w-full rounded-[12px] text-xs font-black uppercase">
                     Submit correction
                   </Button>
                 </div>
               </div>
               <Input
+                className="h-10 rounded-[12px] border-border/60 bg-muted/30"
                 placeholder="Reason"
                 value={correctionForm.reason}
                 onChange={(e) => setCorrectionForm((s) => ({ ...s, reason: e.target.value }))}
@@ -722,10 +780,10 @@ export default function EmployeeHr() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Requested</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Review note</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Date</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Requested</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Review note</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -737,7 +795,7 @@ export default function EmployeeHr() {
                     </TableRow>
                   ) : (
                     corrections.map((c) => (
-                      <TableRow key={c._id}>
+                      <TableRow key={c._id} className="border-border/40 hover:bg-primary/[0.03]">
                         <TableCell>{new Date(c.attendanceDate).toLocaleDateString()}</TableCell>
                         <TableCell>
                           {c.requestedStatus} ({c.requestedCheckIn || "--:--"} - {c.requestedCheckOut || "--:--"})
@@ -753,7 +811,7 @@ export default function EmployeeHr() {
                                     ? "secondary"
                                     : "warning"
                             }
-                          >
+                            className="rounded-[8px] text-[10px] font-black uppercase">
                             {c.status}
                           </Badge>
                         </TableCell>

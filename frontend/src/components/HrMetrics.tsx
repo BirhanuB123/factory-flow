@@ -60,7 +60,7 @@ export function HrMetrics({
       {stats.map((stat, idx) => (
         <Card
           key={idx}
-          className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+          className="group relative overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_-32px_rgba(15,23,42,0.55)]"
         >
           <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
           <CardContent className="flex items-center gap-4 p-5">

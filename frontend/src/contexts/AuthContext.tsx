@@ -70,16 +70,13 @@ export function userFromApiPayload(data: Record<string, unknown>): User {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  /** Pass raw JSON from POST /auth/login (same shape as /auth/me, may include `token`). */
   login: (apiUserPayload: Record<string, unknown>, token: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
   can: (permission: string) => boolean;
   refreshPermissions: () => Promise<void>;
-  /** Merge into current user and persist `erp_user` (e.g. clear mustChangePassword before navigate). */
   patchUser: (patch: Partial<User>) => void;
-  /** Super admin only: optional override for `x-tenant-id` (persisted in localStorage). */
   actAsTenantId: string | null;
   setActAsTenantId: (tenantId: string | null) => void;
   updateProfile: (data: { name: string }) => Promise<{ success: boolean; message?: string }>;

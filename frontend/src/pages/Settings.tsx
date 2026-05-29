@@ -599,54 +599,71 @@ export default function Settings() {
   return (
     <>
       <div className="mx-auto max-w-[1600px] space-y-8 pb-8 animate-in fade-in duration-500">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-[#1a2744]">{t("pages.settings.title")}</h1>
-            <p className="mt-1 max-w-xl text-sm font-medium text-muted-foreground">{t("pages.settings.subtitle")}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              onClick={handleExport}
-              className="h-10 gap-2 rounded-full border-primary/20 font-semibold shadow-erp-sm"
-            >
-              <Globe className="h-4 w-4" />
-              Export data
-            </Button>
-            <Button onClick={handleSave} className="h-10 gap-2 rounded-full font-semibold shadow-erp-sm">
-              <Save className="h-4 w-4" />
-              Save changes
-            </Button>
-          </div>
-        </div>
+        <section className="relative overflow-hidden rounded-[20px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(190_75%_34%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_14%,rgba(255,255,255,0.18),transparent_28%),radial-gradient(circle_at_85%_12%,rgba(16,185,129,0.24),transparent_32%)]" />
+          <div className="relative grid gap-6 p-6 lg:grid-cols-[1fr_360px] lg:p-7">
+            <div className="max-w-3xl">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/80">
+                <Sliders className="h-3.5 w-3.5" />
+                Platform settings
+              </div>
+              <h1 className="text-4xl font-black tracking-tight sm:text-5xl">{t("pages.settings.title")}</h1>
+              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-white/65">{t("pages.settings.subtitle")}</p>
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: "Core build", value: "1.2.0", tone: "text-sky-200" },
+                  { label: "Regional", value: regionalLabel, tone: "text-amber-200" },
+                  { label: "Currency", value: currency, tone: "text-emerald-200" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-[14px] border border-white/15 bg-white/10 px-4 py-3 backdrop-blur">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-white/50">{item.label}</p>
+                    <p className={`mt-1 truncate text-xl font-black tracking-tight ${item.tone}`}>{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-        <div className="hidden items-center gap-5 rounded-2xl border border-border/60 bg-card px-6 py-3 shadow-erp-sm lg:flex">
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Core build</p>
-            <p className="text-sm font-semibold text-primary">1.2.0</p>
+            <div className="rounded-[18px] border border-white/15 bg-white/10 p-4 backdrop-blur">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/55">Configuration state</p>
+                  <p className="mt-2 text-3xl font-black tracking-tight">Ready</p>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-white/55">
+                    Local preferences, tenant controls, access, audit, tax, and document settings.
+                  </p>
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-emerald-400/15 text-emerald-200">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+              </div>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleExport}
+                  className="h-10 gap-2 rounded-[12px] border-white/20 bg-white/10 px-5 font-semibold text-white shadow-none hover:bg-white hover:text-slate-950"
+                >
+                  <Globe className="h-4 w-4" />
+                  Export data
+                </Button>
+                <Button onClick={handleSave} className="h-10 gap-2 rounded-[12px] bg-white px-5 font-semibold text-slate-950 shadow-sm hover:bg-white/90">
+                  <Save className="h-4 w-4" />
+                  Save changes
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="h-8 w-px bg-border/70" />
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Regional</p>
-            <p className="text-sm font-semibold text-foreground">{regionalLabel}</p>
-          </div>
-          <div className="h-8 w-px bg-border/70" />
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Currency</p>
-            <p className="text-sm font-semibold text-[hsl(152,69%,36%)]">{currency}</p>
-          </div>
-        </div>
+        </section>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {settingsHeroStats.map((stat, idx) => (
             <Card
               key={idx}
-              className="group relative overflow-hidden rounded-2xl border-0 bg-card shadow-erp transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+              className="group relative overflow-hidden rounded-[18px] border bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl opacity-20 ${stat.bg}`} />
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-emerald-500 to-amber-400" />
               <CardContent className="flex items-center gap-4 p-5">
                 <div
-                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.bg} transition-transform duration-300 group-hover:scale-110`}
+                  className={`flex h-12 w-12 items-center justify-center rounded-[14px] ${stat.bg} transition-transform duration-300 group-hover:scale-105`}
                 >
                   <stat.icon className={`h-6 w-6 ${stat.color}`} />
                 </div>
@@ -660,38 +677,38 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="shop" className="space-y-8">
-          <Card className="group overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
-            <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-primary to-purple-500" />
+          <Card className="group overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
+            <div className="h-1 bg-gradient-to-r from-primary via-sky-500 to-emerald-500" />
             <CardContent className="p-8">
               <div className="flex items-center gap-3 mb-8">
-                <div className="h-1.5 w-10 bg-primary/40 rounded-full" />
-                <p className="text-[11px] font-black uppercase tracking-[0.4em] text-foreground/50 italic">
+                <div className="h-1.5 w-10 rounded-full bg-primary/40" />
+                <p className="text-[11px] font-black uppercase tracking-[0.32em] text-muted-foreground">
                   Data Sovereignty & Persistence
                 </p>
               </div>
               <div className="grid gap-6 md:grid-cols-2">
-                <div className="group/card flex gap-5 rounded-3xl border border-border/10 bg-background/40 p-6 transition-all hover:border-primary/20 hover:bg-background/60 shadow-sm">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-secondary/50 border border-border/10 group-hover/card:text-primary group-hover/card:border-primary/20 transition-all">
+                <div className="group/card flex gap-5 rounded-[16px] border border-border/60 bg-muted/20 p-6 transition-all hover:border-primary/30 hover:bg-primary/[0.03]">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[14px] border border-border/60 bg-card text-muted-foreground transition-all group-hover/card:border-primary/30 group-hover/card:text-primary">
                     <Globe className="h-7 w-7" />
                   </div>
                   <div className="min-w-0 space-y-2">
-                    <Badge variant="secondary" className="text-[10px] uppercase tracking-widest font-black px-3 py-1 rounded-md border-none bg-muted/20">
+                    <Badge variant="secondary" className="rounded-[10px] px-3 py-1 text-[10px] font-black uppercase tracking-widest">
                       {DEVICE_ONLY_LABEL}
                     </Badge>
-                    <p className="text-[13px] font-medium text-muted-foreground/80 leading-relaxed pr-4 italic">
+                    <p className="pr-4 text-[13px] font-medium leading-relaxed text-muted-foreground">
                       Identity, notifications, and local preferences are stored in this browser's secure cache.
                     </p>
                   </div>
                 </div>
-                <div className="group/card flex gap-5 rounded-3xl border border-primary/10 bg-primary/5 p-6 transition-all hover:bg-primary/10 shadow-sm">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary">
+                <div className="group/card flex gap-5 rounded-[16px] border border-primary/20 bg-primary/5 p-6 transition-all hover:bg-primary/10">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[14px] border border-primary/20 bg-primary/10 text-primary">
                     <ShieldCheck className="h-7 w-7" />
                   </div>
                   <div className="min-w-0 space-y-2">
-                    <Badge variant="default" className="text-[10px] uppercase tracking-widest font-black px-3 py-1 rounded-md shadow-lg shadow-primary/10">
+                    <Badge variant="default" className="rounded-[10px] px-3 py-1 text-[10px] font-black uppercase tracking-widest">
                       {TENANT_WIDE_LABEL}
                     </Badge>
-                    <p className="text-[13px] font-medium text-muted-foreground/80 leading-relaxed pr-4 italic">
+                    <p className="pr-4 text-[13px] font-medium leading-relaxed text-muted-foreground">
                       Access roles, compliance logs, and tax profiles are synchronized across all company nodes.
                     </p>
                   </div>
@@ -743,13 +760,13 @@ export default function Settings() {
           {/* Shop Configuration */}
           <TabsContent value="shop" className="space-y-8">
             {tenantSubscription && user?.platformRole !== "super_admin" && (
-              <Card className="group overflow-hidden rounded-2xl border-0 border-l-4 border-l-primary/70 bg-card shadow-erp">
-                <div className="h-1 w-full bg-gradient-to-r from-primary/20 via-primary to-primary/20" />
+              <Card className="group overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
+                <div className="h-1 bg-gradient-to-r from-primary via-sky-500 to-emerald-500" />
                 <CardContent className="p-8">
                   <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
-                        <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20 shadow-inner">
+                          <div className="rounded-[14px] border border-primary/20 bg-primary/10 p-3">
                           <Zap className="h-6 w-6 text-primary" />
                         </div>
                         <div className="space-y-1">
@@ -759,16 +776,16 @@ export default function Settings() {
                           <div className="flex items-center gap-3">
                             <Badge
                               variant={subscriptionBadgeVariant(tenantSubscription.status)}
-                              className="px-3 py-1 font-black uppercase text-[10px] tracking-widest rounded-md border-none shadow-sm"
+                              className="rounded-[10px] px-3 py-1 text-[10px] font-black uppercase tracking-widest"
                             >
                               {subscriptionStatusLabel(tenantSubscription.status)}
                             </Badge>
-                            <span className="text-xl font-black tracking-tight text-foreground/90 italic uppercase">{tenantSubscription.displayName || shopName}</span>
+                            <span className="text-xl font-black tracking-tight text-foreground">{tenantSubscription.displayName || shopName}</span>
                           </div>
                         </div>
                       </div>
                       {isSuspendedOrArchived && tenantSubscription.statusReason ? (
-                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive">
+                        <div className="flex items-center gap-3 rounded-[14px] border border-destructive/20 bg-destructive/10 p-4 text-destructive">
                           <Ban className="h-5 w-5" />
                           <p className="text-xs font-bold uppercase tracking-wider">{tenantSubscription.statusReason}</p>
                         </div>
@@ -777,13 +794,13 @@ export default function Settings() {
 
                     <div className="flex flex-wrap items-center gap-6">
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-2 rounded-2xl border border-border/10 bg-background/40 px-6 py-4 min-w-[140px] shadow-sm">
+                        <div className="flex min-w-[140px] flex-col gap-2 rounded-[14px] border border-border/60 bg-muted/20 px-6 py-4">
                           <span className="text-[10px] uppercase font-black text-muted-foreground/40 tracking-widest">Plan Tier</span>
-                          <span className="font-black text-foreground text-base uppercase italic tracking-wider">
+                          <span className="text-base font-black uppercase tracking-wider text-foreground">
                             {tenantSubscription.plan || "starter"}
                           </span>
                         </div>
-                        <div className="flex flex-col gap-2 rounded-2xl border border-border/10 bg-background/40 px-6 py-4 min-w-[160px] shadow-sm">
+                        <div className="flex min-w-[160px] flex-col gap-2 rounded-[14px] border border-border/60 bg-muted/20 px-6 py-4">
                           <span className="text-[10px] uppercase font-black text-muted-foreground/40 tracking-widest">Cycle Reset</span>
                           <span className="font-bold text-foreground text-sm">
                             {trialDate ? trialDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : "—"}
@@ -792,9 +809,9 @@ export default function Settings() {
                       </div>
 
                       <div className="flex flex-col gap-3">
-                        <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-secondary/30 border border-border/10">
+                        <div className="flex items-center gap-3 rounded-[14px] border border-border/60 bg-muted/25 px-4 py-2">
                           {tenantSubscription.status === "active" ? (
-                            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
                           ) : (
                             <AlertTriangle className="h-4 w-4 text-amber-500" />
                           )}
@@ -813,12 +830,12 @@ export default function Settings() {
                           <Button
                             onClick={handlePayWithChapa}
                             disabled={startChapaCheckout.isPending || verifyChapaCheckout.isPending}
-                            className="h-12 px-8 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all bg-primary"
+                            className="h-11 rounded-[12px] bg-primary px-6 text-[11px] font-black uppercase tracking-widest shadow-sm transition-all active:scale-95"
                           >
                             {startChapaCheckout.isPending || verifyChapaCheckout.isPending ? (
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
-                              "Settle Ledger (Chapa)"
+                              "Pay with Chapa"
                             )}
                           </Button>
                         ) : null}
@@ -829,19 +846,20 @@ export default function Settings() {
               </Card>
             )}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-              <Card className="xl:col-span-2 overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
-                <CardHeader className="p-8 pb-4 border-b border-border/10 bg-secondary/20">
+              <Card className="xl:col-span-2 overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
+                <div className="h-1 bg-gradient-to-r from-primary via-sky-500 to-emerald-500" />
+                <CardHeader className="border-b border-border/50 bg-muted/25 p-8 pb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-[14px] border border-primary/20 bg-primary/10 text-primary">
                         <Factory className="h-6 w-6" />
                       </div>
                       <div className="space-y-1">
-                        <CardTitle className="text-xl font-black tracking-tight uppercase italic">Company Profile</CardTitle>
+                        <CardTitle className="text-xl font-black tracking-tight">Company Profile</CardTitle>
                         <CardDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60">Identity and contact ledger</CardDescription>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-md border-none bg-muted/20">
+                    <Badge variant="secondary" className="rounded-[10px] px-3 py-1 text-[10px] font-black uppercase tracking-widest">
                       {DEVICE_ONLY_LABEL}
                     </Badge>
                   </div>
@@ -849,21 +867,21 @@ export default function Settings() {
                 <CardContent className="p-10 space-y-10">
                   <div className="grid gap-8">
                     <div className="space-y-3">
-                      <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Entity Nomenclature</Label>
-                      <Input value={shopName} onChange={(e) => setShopName(e.target.value)} className="h-12 rounded-2xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-5" />
+                      <Label className="ml-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Entity Nomenclature</Label>
+                      <Input value={shopName} onChange={(e) => setShopName(e.target.value)} className="h-12 rounded-[12px] border-border/60 bg-muted/20 px-5 text-sm font-bold transition-all focus:bg-background" />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Statutory Communication Endpoint</Label>
-                      <Input type="email" value={shopEmail} onChange={(e) => setShopEmail(e.target.value)} className="h-12 rounded-2xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-5" />
+                      <Label className="ml-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Statutory Communication Endpoint</Label>
+                      <Input type="email" value={shopEmail} onChange={(e) => setShopEmail(e.target.value)} className="h-12 rounded-[12px] border-border/60 bg-muted/20 px-5 text-sm font-bold transition-all focus:bg-background" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div className="space-y-3">
-                        <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Voice Frequency</Label>
-                        <Input value={shopPhone} onChange={(e) => setShopPhone(e.target.value)} className="h-12 rounded-2xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-5" />
+                        <Label className="ml-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Voice Frequency</Label>
+                        <Input value={shopPhone} onChange={(e) => setShopPhone(e.target.value)} className="h-12 rounded-[12px] border-border/60 bg-muted/20 px-5 text-sm font-bold transition-all focus:bg-background" />
                       </div>
                       <div className="space-y-3">
-                        <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Geographic Coordinates</Label>
-                        <Input value={shopCity} onChange={(e) => setShopCity(e.target.value)} className="h-12 rounded-2xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-5" />
+                        <Label className="ml-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Geographic Coordinates</Label>
+                        <Input value={shopCity} onChange={(e) => setShopCity(e.target.value)} className="h-12 rounded-[12px] border-border/60 bg-muted/20 px-5 text-sm font-bold transition-all focus:bg-background" />
                       </div>
                     </div>
                   </div>
@@ -871,19 +889,20 @@ export default function Settings() {
               </Card>
 
               <div className="space-y-8 xl:col-span-1">
-                <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
-                  <CardHeader className="p-8 pb-4 border-b border-border/10 bg-secondary/20">
+                <Card className="overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
+                  <div className="h-1 bg-gradient-to-r from-sky-500 via-primary to-emerald-500" />
+                  <CardHeader className="border-b border-border/50 bg-muted/25 p-8 pb-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-500 shadow-inner">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-[14px] border border-blue-500/20 bg-blue-500/10 text-blue-500">
                           <Globe className="h-6 w-6" />
                         </div>
                         <div className="space-y-1">
-                          <CardTitle className="text-xl font-black tracking-tight uppercase italic">Regional</CardTitle>
-                          <CardDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60">Localization prefences</CardDescription>
+                          <CardTitle className="text-xl font-black tracking-tight">Regional</CardTitle>
+                          <CardDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60">Localization preferences</CardDescription>
                         </div>
                       </div>
-                      <Badge variant="secondary" className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-md border-none bg-muted/20">
+                      <Badge variant="secondary" className="rounded-[10px] px-3 py-1 text-[10px] font-black uppercase tracking-widest">
                         {DEVICE_ONLY_LABEL}
                       </Badge>
                     </div>
@@ -891,13 +910,13 @@ export default function Settings() {
                   <CardContent className="p-8 space-y-8 pt-8">
                     <div className="space-y-6">
                       <div className="space-y-3">
-                        <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Temporal Alignment</Label>
+                        <Label className="ml-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Temporal Alignment</Label>
                         <Select value={timezone} onValueChange={setTimezone}>
-                          <SelectTrigger className="h-12 rounded-2xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-5 shadow-none">
+                          <SelectTrigger className="h-12 rounded-[12px] border-border/60 bg-muted/20 px-5 text-sm font-bold shadow-none transition-all focus:bg-background">
                             <Clock className="h-4 w-4 mr-3 text-primary" />
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="rounded-2xl border-border/20 backdrop-blur-2xl bg-card/90">
+                          <SelectContent className="rounded-[14px] border-border/60 bg-card">
                             <SelectItem value="America/New_York" className="font-bold">Eastern (ET)</SelectItem>
                             <SelectItem value="America/Chicago" className="font-bold">Central (CT)</SelectItem>
                             <SelectItem value="America/Denver" className="font-bold">Mountain (MT)</SelectItem>
@@ -908,13 +927,13 @@ export default function Settings() {
                         </Select>
                       </div>
                       <div className="space-y-3">
-                        <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Financial Vector</Label>
+                        <Label className="ml-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Financial Vector</Label>
                         <Select value={currency} onValueChange={setCurrency}>
-                          <SelectTrigger className="h-12 rounded-2xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-5 shadow-none">
+                          <SelectTrigger className="h-12 rounded-[12px] border-border/60 bg-muted/20 px-5 text-sm font-bold shadow-none transition-all focus:bg-background">
                             <Globe className="h-4 w-4 mr-3 text-primary" />
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="rounded-2xl border-border/20 backdrop-blur-2xl bg-card/90">
+                          <SelectContent className="rounded-[14px] border-border/60 bg-card">
                             <SelectItem value="ETB" className="font-bold">ETB (Br) — default</SelectItem>
                             <SelectItem value="USD" className="font-bold">USD ($)</SelectItem>
                             <SelectItem value="EUR" className="font-bold">EUR (€)</SelectItem>
@@ -924,25 +943,25 @@ export default function Settings() {
                         </Select>
                       </div>
                       <div className="space-y-3">
-                        <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Core Lexicon</Label>
+                        <Label className="ml-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Core Lexicon</Label>
                         <Select
                           value={uiLanguage}
                           onValueChange={(v) => setUiLanguage(v as "en" | "am" | "om")}
                         >
-                          <SelectTrigger className="h-12 rounded-2xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-5 shadow-none">
+                          <SelectTrigger className="h-12 rounded-[12px] border-border/60 bg-muted/20 px-5 text-sm font-bold shadow-none transition-all focus:bg-background">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="rounded-2xl border-border/20 backdrop-blur-2xl bg-card/90">
+                          <SelectContent className="rounded-[14px] border-border/60 bg-card">
                             <SelectItem value="en" className="font-bold">English</SelectItem>
                             <SelectItem value="am" className="font-bold">አማርኛ (Amharic)</SelectItem>
                             <SelectItem value="om" className="font-bold">Afaan Oromo</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="flex items-center justify-between p-6 rounded-3xl border border-border/10 bg-secondary/10 group/item transition-all hover:bg-secondary/20">
+                      <div className="group/item flex items-center justify-between rounded-[16px] border border-border/60 bg-muted/20 p-6 transition-all hover:bg-primary/[0.03]">
                         <div className="space-y-1">
-                          <p className="text-[13px] font-black uppercase tracking-widest text-foreground/80 italic">Ethiopian Era</p>
-                          <p className="text-[11px] font-bold text-muted-foreground/50 leading-relaxed uppercase tracking-tighter">
+                          <p className="text-[13px] font-black uppercase tracking-widest text-foreground">Ethiopian Era</p>
+                          <p className="text-[11px] font-bold uppercase leading-relaxed text-muted-foreground">
                             Parallel Calendar Synthesis
                           </p>
                         </div>
@@ -957,16 +976,17 @@ export default function Settings() {
                 </Card>
               </div>
               <div className="space-y-8 xl:col-span-1">
-                <Card className="group overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+                <Card className="group overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
+                  <div className="h-1 bg-gradient-to-r from-emerald-500 via-primary to-sky-500" />
                   <CardContent className="p-8">
                     <div className="flex items-center justify-between gap-6">
                       <div className="space-y-1.5">
-                        <p className="text-[13px] font-black uppercase tracking-widest text-foreground/80 italic">Sync Protocol</p>
+                        <p className="text-[13px] font-black uppercase tracking-widest text-foreground">Sync Protocol</p>
                         <p className="text-[11px] font-bold text-muted-foreground/50 leading-relaxed uppercase tracking-tighter">
                           Local-to-Cloud Synchronization
                         </p>
                       </div>
-                      <Badge variant="secondary" className="px-3 py-1 font-black uppercase text-[10px] tracking-widest rounded-md border-none bg-emerald-500/10 text-emerald-500">
+                      <Badge variant="secondary" className="rounded-[10px] bg-emerald-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-500">
                         Synchronized
                       </Badge>
                     </div>
@@ -979,19 +999,20 @@ export default function Settings() {
           {/* User Preferences */}
           <TabsContent value="user" className="space-y-8">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-              <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
-                <CardHeader className="p-8 pb-4 border-b border-border/10 bg-secondary/20">
+              <Card className="overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
+                <div className="h-1 bg-gradient-to-r from-primary via-sky-500 to-emerald-500" />
+                <CardHeader className="border-b border-border/50 bg-muted/25 p-8 pb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-inner">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-[14px] border border-primary/20 bg-primary/10 text-primary">
                         <User className="h-6 w-6" />
                       </div>
                       <div className="space-y-1">
-                        <CardTitle className="text-xl font-black tracking-tight uppercase italic">Identity Profile</CardTitle>
+                        <CardTitle className="text-xl font-black tracking-tight">Identity Profile</CardTitle>
                         <CardDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60">Personal access ledger</CardDescription>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-md border-none bg-muted/20">
+                    <Badge variant="secondary" className="rounded-[10px] px-3 py-1 text-[10px] font-black uppercase tracking-widest">
                       {DEVICE_ONLY_LABEL}
                     </Badge>
                   </div>
@@ -999,30 +1020,31 @@ export default function Settings() {
                 <CardContent className="p-10 space-y-8 pt-8">
                   <div className="grid gap-8">
                     <div className="space-y-3">
-                      <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Personnel Nomenclature</Label>
-                      <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="h-12 rounded-2xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-5" />
+                      <Label className="ml-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Personnel Nomenclature</Label>
+                      <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="h-12 rounded-[12px] border-border/60 bg-muted/20 px-5 text-sm font-bold transition-all focus:bg-background" />
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Authorization Tier</Label>
-                      <Input value={role} disabled className="h-12 rounded-2xl bg-secondary/10 border-border/5 font-black text-[11px] uppercase tracking-widest px-5 opacity-60 cursor-not-allowed" />
+                      <Label className="ml-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Authorization Tier</Label>
+                      <Input value={role} disabled className="h-12 cursor-not-allowed rounded-[12px] border-border/40 bg-muted/20 px-5 text-[11px] font-black uppercase tracking-widest opacity-70" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
-                <CardHeader className="p-8 pb-4 border-b border-border/10 bg-secondary/20">
+              <Card className="overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
+                <div className="h-1 bg-gradient-to-r from-sky-500 via-primary to-emerald-500" />
+                <CardHeader className="border-b border-border/50 bg-muted/25 p-8 pb-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 text-blue-500 shadow-inner">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-[14px] border border-blue-500/20 bg-blue-500/10 text-blue-500">
                         <Palette className="h-6 w-6" />
                       </div>
                       <div className="space-y-1">
-                        <CardTitle className="text-xl font-black tracking-tight uppercase italic">Interface</CardTitle>
-                        <CardDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60">Display and density prefences</CardDescription>
+                        <CardTitle className="text-xl font-black tracking-tight">Interface</CardTitle>
+                        <CardDescription className="text-[11px] font-bold uppercase tracking-widest opacity-60">Display and density preferences</CardDescription>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-md border-none bg-muted/20">
+                    <Badge variant="secondary" className="rounded-[10px] px-3 py-1 text-[10px] font-black uppercase tracking-widest">
                       {DEVICE_ONLY_LABEL}
                     </Badge>
                   </div>
@@ -1030,12 +1052,12 @@ export default function Settings() {
                 <CardContent className="p-8 space-y-8 pt-8">
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Temporal Format</Label>
+                      <Label className="ml-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Temporal Format</Label>
                       <Select value={dateFormat} onValueChange={setDateFormat}>
-                        <SelectTrigger className="h-12 rounded-2xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-5 shadow-none">
+                        <SelectTrigger className="h-12 rounded-[12px] border-border/60 bg-muted/20 px-5 text-sm font-bold shadow-none transition-all focus:bg-background">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="rounded-2xl border-border/20 backdrop-blur-2xl bg-card/90">
+                        <SelectContent className="rounded-[14px] border-border/60 bg-card">
                           <SelectItem value="YYYY-MM-DD" className="font-bold">2026-03-12</SelectItem>
                           <SelectItem value="MM/DD/YYYY" className="font-bold">03/12/2026</SelectItem>
                           <SelectItem value="DD/MM/YYYY" className="font-bold">12/03/2026</SelectItem>
@@ -1043,34 +1065,34 @@ export default function Settings() {
                       </Select>
                     </div>
                     <div className="space-y-3">
-                      <Label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground/60 ml-1">Default Viewmode</Label>
+                      <Label className="ml-1 text-[11px] font-black uppercase tracking-widest text-muted-foreground">Default Viewmode</Label>
                       <Select value={defaultJobView} onValueChange={setDefaultJobView}>
-                        <SelectTrigger className="h-12 rounded-2xl bg-secondary/20 border-border/10 focus:bg-background transition-all font-bold text-sm px-5 shadow-none">
+                        <SelectTrigger className="h-12 rounded-[12px] border-border/60 bg-muted/20 px-5 text-sm font-bold shadow-none transition-all focus:bg-background">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="rounded-2xl border-border/20 backdrop-blur-2xl bg-card/90">
-                          <SelectItem value="table" className="font-bold italic">Ledger Table</SelectItem>
-                          <SelectItem value="kanban" className="font-bold italic">Kanban Grid</SelectItem>
-                          <SelectItem value="calendar" className="font-bold italic">Temporal Grid</SelectItem>
+                        <SelectContent className="rounded-[14px] border-border/60 bg-card">
+                          <SelectItem value="table" className="font-bold">Ledger Table</SelectItem>
+                          <SelectItem value="kanban" className="font-bold">Kanban Grid</SelectItem>
+                          <SelectItem value="calendar" className="font-bold">Temporal Grid</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-6 rounded-3xl border border-border/10 bg-secondary/10 group/item transition-all hover:bg-secondary/20">
+                    <div className="group/item flex items-center justify-between rounded-[16px] border border-border/60 bg-muted/20 p-6 transition-all hover:bg-primary/[0.03]">
                       <div className="space-y-1">
-                        <p className="text-[13px] font-black uppercase tracking-widest text-foreground/80 italic">Compact Density</p>
-                        <p className="text-[11px] font-bold text-muted-foreground/50 leading-relaxed uppercase tracking-tighter">
+                        <p className="text-[13px] font-black uppercase tracking-widest text-foreground">Compact Density</p>
+                        <p className="text-[11px] font-bold uppercase leading-relaxed text-muted-foreground">
                           Optimize data-to-pixel ratio
                         </p>
                       </div>
                       <Switch checked={compactView} onCheckedChange={setCompactView} className="data-[state=checked]:bg-primary" />
                     </div>
-                    <div className="flex items-center justify-between p-6 rounded-3xl border border-border/10 bg-secondary/10 group/item transition-all hover:bg-secondary/20">
+                    <div className="group/item flex items-center justify-between rounded-[16px] border border-border/60 bg-muted/20 p-6 transition-all hover:bg-primary/[0.03]">
                       <div className="space-y-1">
-                        <p className="text-[13px] font-black uppercase tracking-widest text-foreground/80 italic">Dark Mode</p>
-                        <p className="text-[11px] font-bold text-muted-foreground/50 leading-relaxed uppercase tracking-tighter">
+                        <p className="text-[13px] font-black uppercase tracking-widest text-foreground">Dark Mode</p>
+                        <p className="text-[11px] font-bold uppercase leading-relaxed text-muted-foreground">
                           Low-light environment optimization
                         </p>
                       </div>

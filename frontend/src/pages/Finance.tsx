@@ -108,20 +108,21 @@ function FinanceLedgerTable({
 }) {
   const { formatAmount, symbol } = useCurrency();
   return (
-    <div className="overflow-hidden rounded-2xl border-0 bg-card shadow-erp">
+    <div className="overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
+      <div className="h-1 bg-gradient-to-r from-emerald-500 via-primary to-amber-400" />
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-muted/25">
+          <TableHeader className="bg-muted/30">
             <TableRow className="border-border/40 hover:bg-transparent">
-              <TableHead className="w-32 py-4 pl-6 text-xs font-bold text-foreground">Journal ID</TableHead>
-              <TableHead className="py-4 text-xs font-bold text-foreground">Type</TableHead>
-              <TableHead className="py-4 text-xs font-bold text-foreground">Category</TableHead>
-              <TableHead className="py-4 text-xs font-bold text-foreground">Description</TableHead>
-              <TableHead className="py-4 text-xs font-bold text-foreground">Value</TableHead>
-              <TableHead className="py-4 text-xs font-bold text-foreground">Date</TableHead>
-              <TableHead className="py-4 pr-6 text-right text-xs font-bold text-foreground">Status</TableHead>
+              <TableHead className="w-32 py-4 pl-6 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Journal ID</TableHead>
+              <TableHead className="py-4 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Type</TableHead>
+              <TableHead className="py-4 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Category</TableHead>
+              <TableHead className="py-4 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Description</TableHead>
+              <TableHead className="py-4 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Value</TableHead>
+              <TableHead className="py-4 text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Date</TableHead>
+              <TableHead className="py-4 pr-6 text-right text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Status</TableHead>
               {onOpenTaxInvoice && (
-                <TableHead className="w-[52px] py-4 pr-6 text-center text-xs font-bold text-foreground">Tax</TableHead>
+                <TableHead className="w-[52px] py-4 pr-6 text-center text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Tax</TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -132,7 +133,7 @@ function FinanceLedgerTable({
                   <div className="flex flex-col items-center gap-3">
                     <LoadingLogo size={32} className="text-primary opacity-50" />
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                      Syncing ledger…
+                      Syncing ledger...
                     </span>
                   </div>
                 </TableCell>
@@ -165,7 +166,7 @@ function FinanceLedgerTable({
               rows.map((t) => (
                 <TableRow
                   key={t.id + t.date + t.type}
-                  className="group/row border-border/40 transition-colors hover:bg-muted/35"
+                   className="group/row border-border/40 transition-colors hover:bg-primary/[0.03]"
                 >
                   <TableCell className="py-3 pl-6">
                     <span className="font-mono text-[10px] font-bold text-muted-foreground group-hover/row:text-primary transition-colors">
@@ -174,7 +175,7 @@ function FinanceLedgerTable({
                   </TableCell>
                   <TableCell>
                     <div
-                      className={`text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${t.type === "Income"
+                       className={`text-[9px] font-black uppercase tracking-wide px-2.5 py-1 rounded-[8px] inline-flex items-center gap-1 ${t.type === "Income"
                           ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                           : t.type === "Journal"
                             ? "bg-violet-500/15 text-violet-600 dark:text-violet-400"
@@ -234,7 +235,7 @@ function FinanceLedgerTable({
                   <TableCell className="pr-6 text-right">
                     <Badge
                       variant={statusVariant[t.status]}
-                      className="text-[9px] font-black uppercase tracking-wide"
+                       className="rounded-[8px] px-2.5 py-1 text-[9px] font-black uppercase tracking-wide"
                     >
                       {t.status}
                     </Badge>
@@ -246,14 +247,14 @@ function FinanceLedgerTable({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                           className="h-8 w-8 rounded-[10px] border border-border/60 bg-card text-muted-foreground shadow-sm hover:bg-primary hover:text-primary-foreground"
                           title="Printable tax invoice"
                           onClick={() => onOpenTaxInvoice(t.sourceId!)}
                         >
                           <FileText className="h-4 w-4" />
                         </Button>
                       ) : (
-                        <span className="text-muted-foreground/30">—</span>
+                         <span className="text-muted-foreground/30">-</span>
                       )}
                     </TableCell>
                   )}
@@ -503,38 +504,58 @@ export default function Finance() {
   return (
     <div>
       <div className="space-y-8 pb-8 animate-in fade-in duration-500">
-        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card shadow-erp">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.16),transparent_34%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--secondary)/0.55))]" />
-          <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-emerald-500/10 to-transparent" />
-          <div className="relative flex flex-col justify-between gap-6 p-6 lg:flex-row lg:items-end lg:p-7">
+        <div className="relative overflow-hidden rounded-[20px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(190_75%_34%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_16%,rgba(255,255,255,0.18),transparent_28%),radial-gradient(circle_at_82%_4%,rgba(16,185,129,0.22),transparent_30%)]" />
+          <div className="relative grid gap-6 p-6 lg:grid-cols-[1fr_360px] lg:p-7">
             <div className="max-w-3xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-primary">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/80">
                 <WalletCards className="h-3.5 w-3.5" />
                 Finance command center
               </div>
-              <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">{t("pages.finance.title")}</h1>
-              <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-muted-foreground">{t("pages.finance.subtitle")}</p>
+              <h1 className="text-4xl font-black tracking-tight sm:text-5xl">{t("pages.finance.title")}</h1>
+              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-white/65">{t("pages.finance.subtitle")}</p>
               <div className="mt-5 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
                 {[
-                  { label: "Collection", value: `${dashboardSummary.collectionRate}%`, icon: CheckCircle2, tone: "text-emerald-600" },
-                  { label: "Open AR", value: format(dashboardSummary.openAr), icon: ReceiptText, tone: "text-primary" },
-                  { label: "Expense ratio", value: `${dashboardSummary.expenseRatio}%`, icon: Activity, tone: "text-amber-600" },
-                  { label: "Overdue", value: String(dashboardSummary.overdueCount), icon: AlertCircle, tone: "text-rose-600" },
+                  { label: "Collection", value: `${dashboardSummary.collectionRate}%`, icon: CheckCircle2, tone: "text-emerald-300" },
+                  { label: "Open AR", value: format(dashboardSummary.openAr), icon: ReceiptText, tone: "text-sky-300" },
+                  { label: "Expense ratio", value: `${dashboardSummary.expenseRatio}%`, icon: Activity, tone: "text-amber-300" },
+                  { label: "Overdue", value: String(dashboardSummary.overdueCount), icon: AlertCircle, tone: "text-rose-300" },
                 ].map((item) => (
-                  <div key={item.label} className="rounded-2xl border border-border/50 bg-background/70 px-4 py-3 shadow-sm backdrop-blur">
+                  <div key={item.label} className="rounded-[14px] border border-white/15 bg-white/10 px-4 py-3 shadow-sm backdrop-blur">
                     <div className="flex items-center gap-2">
                       <item.icon className={`h-4 w-4 ${item.tone}`} />
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{item.label}</p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-white/55">{item.label}</p>
                     </div>
                     <p className="mt-1 text-lg font-black tracking-tight">{item.value}</p>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2 lg:max-w-md lg:justify-end">
+            <div className="rounded-[18px] border border-white/15 bg-white/10 p-4 backdrop-blur">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/55">Net position</p>
+                  <p className="mt-2 text-3xl font-black tracking-tight">{format(financeStats.profit ?? 0)}</p>
+                  <p className="mt-1 text-xs font-semibold text-white/55">Revenue minus operating outflows.</p>
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-emerald-400/15 text-emerald-200">
+                  <Banknote className="h-6 w-6" />
+                </div>
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="rounded-[12px] border border-white/10 bg-white/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/45">Pending</p>
+                  <p className="mt-1 text-xl font-black">{format(financeStats.pending ?? 0)}</p>
+                </div>
+                <div className="rounded-[12px] border border-white/10 bg-white/10 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/45">Journals</p>
+                  <p className="mt-1 text-xl font-black">{transactions.length}</p>
+                </div>
+              </div>
+              <div className="mt-5 flex flex-wrap gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-10 gap-2 rounded-full border-primary/20 font-semibold shadow-erp-sm">
+                  <Button variant="outline" className="h-10 gap-2 rounded-[12px] border-white/20 bg-white/10 font-semibold text-white shadow-none hover:bg-white hover:text-slate-950">
                     <Download className="h-4 w-4" />
                     Export CSV
                   </Button>
@@ -604,7 +625,7 @@ export default function Finance() {
                 <>
                   <Button
                     variant="outline"
-                    className="h-10 gap-2 rounded-full border-amber-500/40 font-semibold text-amber-700 shadow-erp-sm dark:text-amber-400"
+                    className="h-10 gap-2 rounded-[12px] border-amber-300/30 bg-amber-300/15 font-semibold text-amber-100 shadow-none hover:bg-amber-100 hover:text-amber-950"
                     onClick={() => setEthCsvOpen(true)}
                   >
                     <FileText className="h-4 w-4" />
@@ -654,7 +675,7 @@ export default function Finance() {
               {canWriteFinance && (
                 <Dialog open={invFromOrderOpen} onOpenChange={(o) => { setInvFromOrderOpen(o); if (!o) setInvShipmentId(""); }}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="h-10 gap-2 rounded-full border-border/60 font-semibold shadow-erp-sm">
+                    <Button variant="outline" className="h-10 gap-2 rounded-[12px] border-white/20 bg-white/10 font-semibold text-white shadow-none hover:bg-white hover:text-slate-950">
                       <FileInput className="h-4 w-4" />
                       Invoice from order
                     </Button>
@@ -682,7 +703,7 @@ export default function Finance() {
                           <SelectContent className="max-h-64">
                             {(ordersForInv as { _id: string; client?: { name: string }; totalAmount: number }[]).map((o) => (
                               <SelectItem key={o._id} value={o._id}>
-                                {o.client?.name ?? "—"} · ${o.totalAmount} · …{o._id.slice(-6)}
+                                {o.client?.name ?? "-"} - ${o.totalAmount} - ...{o._id.slice(-6)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -771,7 +792,7 @@ export default function Finance() {
               {canWriteFinance && (
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button className="h-10 gap-2 rounded-full bg-primary px-5 font-semibold text-primary-foreground shadow-sm hover:bg-primary/90">
+                    <Button className="h-10 gap-2 rounded-[12px] bg-white px-5 font-semibold text-slate-950 shadow-sm hover:bg-white/90">
                       <Plus className="h-4 w-4" />
                       New entry
                     </Button>
@@ -865,6 +886,7 @@ export default function Finance() {
                   </DialogContent>
                 </Dialog>
               )}
+              </div>
             </div>
           </div>
         </div>
@@ -872,7 +894,9 @@ export default function Finance() {
         <FinanceMetrics stats={financeStats} />
 
         <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-erp-sm">
+          <div className="overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
+            <div className="h-1 bg-gradient-to-r from-emerald-500 via-sky-500 to-primary" />
+            <div className="p-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cashflow health</p>
@@ -888,7 +912,7 @@ export default function Finance() {
                 { label: "Expenses", value: dashboardSummary.expenseCount, color: "bg-rose-500" },
                 { label: "Settled", value: dashboardSummary.settledCount, color: "bg-blue-500" },
               ].map((item) => (
-                <div key={item.label} className="rounded-xl border border-border/50 bg-secondary/30 p-4">
+                <div key={item.label} className="rounded-[14px] border border-border/60 bg-muted/25 p-4">
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{item.label}</p>
                     <span className={`h-2.5 w-2.5 rounded-full ${item.color}`} />
@@ -897,11 +921,14 @@ export default function Finance() {
                 </div>
               ))}
             </div>
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-erp-sm">
+          <div className="overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
+            <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400" />
+            <div className="p-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-amber-500/10 text-amber-600">
                 <AlertCircle className="h-5 w-5" />
               </div>
               <div>
@@ -910,14 +937,15 @@ export default function Finance() {
               </div>
             </div>
             <div className="mt-5 space-y-3">
-              <div className="flex items-center justify-between rounded-xl bg-secondary/35 px-4 py-3">
+              <div className="flex items-center justify-between rounded-[14px] border border-border/60 bg-muted/25 px-4 py-3">
                 <span className="text-sm font-semibold text-muted-foreground">Pending value</span>
                 <span className="font-black">{format(financeStats.pending ?? 0)}</span>
               </div>
-              <div className="flex items-center justify-between rounded-xl bg-secondary/35 px-4 py-3">
+              <div className="flex items-center justify-between rounded-[14px] border border-border/60 bg-muted/25 px-4 py-3">
                 <span className="text-sm font-semibold text-muted-foreground">Overdue entries</span>
                 <span className="font-black text-rose-600">{dashboardSummary.overdueCount}</span>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -961,8 +989,8 @@ export default function Finance() {
                   <Input
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    placeholder="Search ledger…"
-                    className="h-10 rounded-full border-0 bg-[#EEF2F7] pl-10 text-sm shadow-none focus-visible:ring-2 focus-visible:ring-primary/25"
+                    placeholder="Search ledger..."
+                    className="h-11 rounded-[12px] border border-border/60 bg-card pl-10 text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-primary/25"
                   />
                 </div>
               </div>
@@ -994,31 +1022,31 @@ export default function Finance() {
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     {[
                       { label: "Not due", k: "notDue" as const, t: arPayload.totals.notDue },
-                      { label: "1–30 d", k: "days1_30" as const, t: arPayload.totals.days1_30 },
-                      { label: "31–60 d", k: "days31_60" as const, t: arPayload.totals.days31_60 },
-                      { label: "61–90 d", k: "days61_90" as const, t: arPayload.totals.days61_90 },
+                      { label: "1-30 d", k: "days1_30" as const, t: arPayload.totals.days1_30 },
+                      { label: "31-60 d", k: "days31_60" as const, t: arPayload.totals.days31_60 },
+                      { label: "61-90 d", k: "days61_90" as const, t: arPayload.totals.days61_90 },
                       { label: "90+ d", k: "days90plus" as const, t: arPayload.totals.days90plus },
                     ].map((b) => (
-                      <div key={b.k} className="rounded-2xl border-0 bg-card p-4 shadow-erp-sm">
+                      <div key={b.k} className="rounded-[16px] border border-border/70 bg-card p-4 shadow-sm">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{b.label}</p>
                         <p className="text-xl font-bold tracking-tight">{format(b.t)}</p>
                       </div>
                     ))}
                   </div>
-                  <p className="text-sm font-semibold text-[#1a2744]">
+                  <p className="rounded-[14px] border border-border/70 bg-card px-4 py-3 text-sm font-black text-foreground shadow-sm">
                     Open AR: {format(arPayload.totals.openAR)}
                   </p>
                   {(
                     [
                       ["days90plus", "90+ days past due"],
-                      ["days61_90", "61–90 days past due"],
-                      ["days31_60", "31–60 days past due"],
-                      ["days1_30", "1–30 days past due"],
+                      ["days61_90", "61-90 days past due"],
+                      ["days31_60", "31-60 days past due"],
+                      ["days1_30", "1-30 days past due"],
                       ["notDue", "Not yet due"],
                     ] as const
                   ).map(([bucket, title]) => (
-                    <div key={bucket} className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-erp">
-                      <p className="border-b border-border/50 bg-muted/20 px-4 py-2 text-xs font-bold uppercase text-[#1a2744]">
+                    <div key={bucket} className="overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
+                      <p className="border-b border-border/50 bg-muted/30 px-4 py-3 text-[11px] font-black uppercase tracking-[0.14em] text-foreground">
                         {title}
                       </p>
                       <Table>
@@ -1034,7 +1062,7 @@ export default function Finance() {
                         <TableBody>
                           {(arPayload.buckets[bucket] as { invoiceId: string; clientName: string; amount: number; dueDate: string; daysPastDue: number }[]).length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={5} className="text-center text-muted-foreground py-6">—</TableCell>
+                              <TableCell colSpan={5} className="text-center text-muted-foreground py-6">-</TableCell>
                             </TableRow>
                           ) : (
                             (arPayload.buckets[bucket] as { invoiceId: string; clientName: string; amount: number; dueDate: string; daysPastDue: number }[]).map((row) => (

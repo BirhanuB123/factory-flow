@@ -70,15 +70,16 @@ export function FinanceMetrics({ stats }: FinanceMetricsProps) {
       {metrics.map((m, i) => (
         <Card
           key={i}
-          className={`group relative overflow-hidden rounded-2xl border bg-card shadow-erp-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-erp ${m.border}`}
+          className={`group relative overflow-hidden rounded-[18px] border bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${m.border}`}
         >
-          <div className={`absolute inset-x-0 top-0 h-20 bg-gradient-to-b ${m.accent}`} />
+          <div className={`absolute inset-x-0 top-0 h-24 bg-gradient-to-b ${m.accent}`} />
+          <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${m.accent}`} />
           <CardContent className="relative p-5">
             <div className="flex items-start justify-between gap-3">
-              <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${m.bg}`}>
+              <div className={`flex h-11 w-11 items-center justify-center rounded-[14px] ${m.bg}`}>
                 <m.icon className={`h-5 w-5 ${m.color}`} />
               </div>
-              <div className={`inline-flex items-center gap-1 rounded-full ${m.bg} px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${m.color}`}>
+              <div className={`inline-flex items-center gap-1 rounded-[10px] ${m.bg} px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${m.color}`}>
                 <m.trendIcon className="h-3 w-3" />
                 {m.delta}
               </div>

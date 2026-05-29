@@ -101,18 +101,12 @@ export function DashboardFeedsCalendar() {
       for (const j of jobs as { dueDate?: string; status?: string }[]) {
         if (!j.dueDate || j.status === "Cancelled") continue;
         const d = new Date(j.dueDate);
-        if (d.getFullYear() === y && d.getMonth() === m) {
-          const day = d.getDate();
-          marks.set(day, "blue");
-        }
+        if (d.getFullYear() === y && d.getMonth() === m) marks.set(d.getDate(), "blue");
       }
       for (const d of downtime as { startedAt?: string; endedAt?: string | null }[]) {
         if (!d.startedAt || d.endedAt) continue;
         const dt = new Date(d.startedAt);
-        if (dt.getFullYear() === y && dt.getMonth() === m) {
-          const day = dt.getDate();
-          marks.set(day, "orange");
-        }
+        if (dt.getFullYear() === y && dt.getMonth() === m) marks.set(dt.getDate(), "orange");
       }
       let i = 0;
       for (const j of jobs as { updatedAt?: string; status?: string }[]) {
@@ -133,40 +127,44 @@ export function DashboardFeedsCalendar() {
     for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d });
     while (cells.length % 7 !== 0) cells.push(null);
     const weeks: ({ day: number | null } | null)[][] = [];
-    for (let i = 0; i < cells.length; i += 7) {
-      weeks.push(cells.slice(i, i + 7));
-    }
+    for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
-    const monthLabel = `${first.toLocaleString(undefined, { month: "short" })} – ${last.toLocaleString(undefined, { month: "short" })} ${y}`;
-
+    const monthLabel = `${first.toLocaleString(undefined, { month: "long" })} ${y}`;
     return { monthLabel, calendarWeeks: weeks, marksByDay: marks };
   }, [jobs, downtime, mfgEnabled]);
 
   const dotClass: Record<DayMark, string> = {
-    blue: "bg-[hsl(221,83%,53%)]",
-    orange: "bg-[hsl(32,95%,52%)]",
-    purple: "bg-[hsl(262,83%,58%)]",
-    green: "bg-[hsl(152,69%,42%)]",
+    blue: "bg-primary",
+    orange: "bg-amber-500",
+    purple: "bg-violet-500",
+    green: "bg-emerald-500",
   };
 
+  const today = new Date().getDate();
   const rows = feedTab === "checkout" ? checkoutRows : repairRows;
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
-        <div className="h-1 bg-gradient-to-r from-primary/70 to-cyan-400/70" />
+      {/* Work Queue Table */}
+      <Card className="overflow-hidden rounded-2xl border-border/50 bg-card shadow-sm">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-2">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Work queue</p>
-            <CardTitle className="mt-1 text-base font-black text-foreground">{t("feeds.title")}</CardTitle>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Work queue
+            </p>
+            <CardTitle className="mt-1 text-base font-bold text-foreground">
+              {t("feeds.title")}
+            </CardTitle>
           </div>
-          <div className="flex rounded-[12px] bg-muted/60 p-1">
+          <div className="flex rounded-lg bg-muted/40 p-0.5">
             <button
               type="button"
               onClick={() => setFeedTab("checkout")}
               className={cn(
-                "rounded-[9px] px-3 py-1.5 text-xs font-semibold transition-colors",
-                feedTab === "checkout" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
+                "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
+                feedTab === "checkout"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {t("feeds.checkout")}
@@ -175,25 +173,33 @@ export function DashboardFeedsCalendar() {
               type="button"
               onClick={() => setFeedTab("repair")}
               className={cn(
-                "rounded-[9px] px-3 py-1.5 text-xs font-semibold transition-colors",
-                feedTab === "repair" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
+                "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
+                feedTab === "repair"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {t("feeds.repair")}
             </button>
           </div>
         </CardHeader>
-        <CardContent className="px-2 sm:px-4">
+        <CardContent className="px-3 sm:px-5">
           {!mfgEnabled ? (
             <p className="py-8 text-center text-sm text-muted-foreground">{t("feeds.enableMfg")}</p>
           ) : (
-            <div className="overflow-x-auto rounded-[14px] border border-border/50 bg-background/50">
+            <div className="overflow-x-auto rounded-xl border border-border/40">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-border/60 hover:bg-transparent">
-                    <TableHead className="text-xs font-bold text-foreground">{t("feeds.colTag")}</TableHead>
-                    <TableHead className="text-xs font-bold text-foreground">{t("feeds.colDesc")}</TableHead>
-                    <TableHead className="text-xs font-bold text-foreground">{t("feeds.colDue")}</TableHead>
+                  <TableRow className="border-border/40 hover:bg-transparent">
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {t("feeds.colTag")}
+                    </TableHead>
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {t("feeds.colDesc")}
+                    </TableHead>
+                    <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {t("feeds.colDue")}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -207,11 +213,11 @@ export function DashboardFeedsCalendar() {
                     rows.map((r, idx) => (
                       <TableRow
                         key={`${r.id}-${idx}`}
-                      className={cn("border-border/40 transition-colors hover:bg-muted/40", idx % 2 === 1 ? "bg-muted/20" : "bg-transparent")}
+                        className="border-border/30 transition-colors hover:bg-muted/30"
                       >
-                        <TableCell className="text-sm font-medium">{r.id}</TableCell>
+                        <TableCell className="text-sm font-medium text-foreground">{r.id}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{r.desc}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{r.due}</TableCell>
+                        <TableCell className="text-sm font-medium text-muted-foreground">{r.due}</TableCell>
                       </TableRow>
                     ))
                   )}
@@ -222,16 +228,20 @@ export function DashboardFeedsCalendar() {
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
-        <div className="h-1 bg-gradient-to-r from-amber-400/75 to-emerald-400/75" />
+      {/* Calendar */}
+      <Card className="overflow-hidden rounded-2xl border-border/50 bg-card shadow-sm">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Calendar</p>
-            <CardTitle className="mt-1 text-base font-black text-foreground">{t("feeds.alerts")}</CardTitle>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Calendar
+            </p>
+            <CardTitle className="mt-1 text-base font-bold text-foreground">
+              {t("feeds.alerts")}
+            </CardTitle>
           </div>
-          <p className="text-center text-sm font-semibold text-muted-foreground sm:flex-1">{monthLabel}</p>
+          <p className="text-center text-sm font-semibold text-foreground sm:flex-1">{monthLabel}</p>
           <Select value={calSort} onValueChange={setCalSort}>
-            <SelectTrigger className="h-9 w-[150px] rounded-[12px] border-border/60 bg-muted/40 text-xs font-semibold sm:ml-auto">
+            <SelectTrigger className="h-8 w-[130px] rounded-lg border-border/50 bg-muted/30 text-xs font-medium sm:ml-auto">
               <SelectValue placeholder={t("charts.sortByPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
@@ -245,44 +255,42 @@ export function DashboardFeedsCalendar() {
             <p className="py-8 text-center text-sm text-muted-foreground">{t("feeds.enableMfgCal")}</p>
           ) : (
             <>
-              <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase text-muted-foreground">
+              {/* Weekday headers */}
+              <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 {(
                   [
-                    "feeds.weekday.sun",
-                    "feeds.weekday.mon",
-                    "feeds.weekday.tue",
-                    "feeds.weekday.wed",
-                    "feeds.weekday.thu",
-                    "feeds.weekday.fri",
+                    "feeds.weekday.sun", "feeds.weekday.mon", "feeds.weekday.tue",
+                    "feeds.weekday.wed", "feeds.weekday.thu", "feeds.weekday.fri",
                     "feeds.weekday.sat",
                   ] as const
                 ).map((k) => (
-                  <div key={k} className="py-2">
-                    {t(k)}
-                  </div>
+                  <div key={k} className="py-2">{t(k)}</div>
                 ))}
               </div>
-              <div className="mt-1 space-y-1 rounded-[14px] bg-muted/20 p-2">
+
+              {/* Calendar grid */}
+              <div className="mt-1 space-y-1 rounded-xl bg-muted/15 p-2">
                 {calendarWeeks.map((week, wi) => (
                   <div key={wi} className="grid grid-cols-7 gap-1">
                     {week.map((cell, ci) => {
                       if (!cell || cell.day == null) {
-                        return <div key={ci} className="aspect-square rounded-lg bg-transparent" />;
+                        return <div key={ci} className="aspect-square" />;
                       }
                       const mark = marksByDay.get(cell.day);
+                      const isToday = cell.day === today;
                       return (
                         <div
                           key={ci}
-                          className="relative flex aspect-square items-center justify-center rounded-[10px] bg-background text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-accent"
+                          className={cn(
+                            "relative flex aspect-square items-center justify-center rounded-lg text-sm font-medium transition-colors",
+                            isToday
+                              ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                              : "bg-background text-foreground hover:bg-accent"
+                          )}
                         >
                           {cell.day}
-                          {mark ? (
-                            <span
-                              className={cn(
-                                "absolute bottom-1 h-1.5 w-1.5 rounded-full",
-                                dotClass[mark]
-                              )}
-                            />
+                          {mark && !isToday ? (
+                            <span className={cn("absolute bottom-1 h-1.5 w-1.5 rounded-full", dotClass[mark])} />
                           ) : null}
                         </div>
                       );
@@ -290,18 +298,20 @@ export function DashboardFeedsCalendar() {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 flex flex-wrap gap-3 border-t border-border/50 pt-4 text-[11px] text-muted-foreground">
+
+              {/* Legend */}
+              <div className="mt-4 flex flex-wrap gap-4 border-t border-border/40 pt-3 text-[11px] text-muted-foreground">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-[hsl(221,83%,53%)]" /> {t("feeds.legendJobDue")}
+                  <span className="h-2 w-2 rounded-full bg-primary" /> {t("feeds.legendJobDue")}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-[hsl(32,95%,52%)]" /> {t("feeds.legendDowntime")}
+                  <span className="h-2 w-2 rounded-full bg-amber-500" /> {t("feeds.legendDowntime")}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-[hsl(262,83%,58%)]" /> {t("feeds.legendCompleted")}
+                  <span className="h-2 w-2 rounded-full bg-violet-500" /> {t("feeds.legendCompleted")}
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-[hsl(152,69%,42%)]" /> {t("feeds.legendActivity")}
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" /> {t("feeds.legendActivity")}
                 </span>
               </div>
             </>

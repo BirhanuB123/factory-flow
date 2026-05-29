@@ -6,6 +6,7 @@ const { byTenant } = require('../utils/tenantQuery');
 const { applyMovement } = require('../services/stockService');
 const { applyReceiptToAverageCost } = require('../services/costingService');
 const { computeLineInventoryUnitCosts } = require('../services/landedCostService');
+const { record: auditRecord } = require('../services/auditService');
 
 function attachCostPreview(poDoc) {
   const o = poDoc.toObject ? poDoc.toObject() : { ...poDoc };
@@ -210,6 +211,13 @@ exports.approvePurchaseOrder = asyncHandler(async (req, res) => {
   po.approvedBy = req.user._id;
   po.approvedAt = new Date();
   await po.save();
+  await auditRecord({
+    req,
+    action: 'purchase_order.approve',
+    entityType: 'PurchaseOrder',
+    entityId: po._id,
+    summary: { poNumber: po.poNumber || String(po._id), vendor: po.vendor?.toString?.() || null },
+  });
   const populated = await PurchaseOrder.findOne(byTenant(req, { _id: po._id }))
     .populate('lines.product', 'name sku')
     .populate('approvedBy', 'name');
@@ -320,6 +328,18 @@ exports.receivePurchaseOrder = asyncHandler(async (req, res) => {
   po.status = allDone ? 'received' : 'partial_received';
   po.updatedAt = new Date();
   await po.save();
+
+  await auditRecord({
+    req,
+    action: 'purchase_order.receive',
+    entityType: 'PurchaseOrder',
+    entityId: po._id,
+    summary: {
+      poNumber: po.poNumber || String(po._id),
+      receivedLines: receipts.map((r) => ({ lineIndex: Number(r.lineIndex), quantity: Number(r.quantity) })),
+      status: po.status,
+    },
+  });
 
   const populated = await PurchaseOrder.findOne(byTenant(req, { _id: po._id })).populate(
     'lines.product',

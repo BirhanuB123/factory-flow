@@ -19,6 +19,7 @@ const {
   listActiveForJob,
 } = require('../services/reservationService');
 const { byTenant } = require('../utils/tenantQuery');
+const audit = require('../services/auditService');
 
 function computeCostSnapshot(job) {
   const laborMin = (job.operations || []).reduce((s, o) => s + (o.actualLaborMin || 0), 0);
@@ -96,6 +97,17 @@ exports.createJob = asyncHandler(async (req, res, next) => {
       });
     }
     const updated = await ProductionJob.findOne(byTenant(req, { _id: job._id })).populate('bom');
+    await audit.record({
+      req,
+      action: 'production_job.complete',
+      entityType: 'ProductionJob',
+      entityId: job._id,
+      summary: {
+        jobId: job.jobId,
+        sourceOrder: job.sourceOrder?.toString?.(),
+        quantity: job.quantity,
+      },
+    });
     return res.status(201).json({ success: true, data: updated });
   }
 
@@ -292,6 +304,20 @@ exports.updateJob = asyncHandler(async (req, res, next) => {
     new: true,
     runValidators: true,
   }).populate('bom');
+
+  if (nextStatus === 'Completed' && prevStatus !== 'Completed') {
+    await audit.record({
+      req,
+      action: 'production_job.complete',
+      entityType: 'ProductionJob',
+      entityId: updated._id,
+      summary: {
+        jobId: updated.jobId,
+        sourceOrder: updated.sourceOrder?.toString?.(),
+        quantity: updated.quantity,
+      },
+    });
+  }
 
   res.status(200).json({ success: true, data: updated });
 });

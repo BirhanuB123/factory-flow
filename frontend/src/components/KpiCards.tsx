@@ -51,6 +51,41 @@ function poApproxTotal(po: {
   );
 }
 
+const kpiThemes = [
+  {
+    gradient: "from-blue-500/8 to-blue-500/0",
+    iconBg: "bg-blue-500/10",
+    iconColor: "text-blue-600 dark:text-blue-400",
+    ringColor: "hsl(221, 83%, 53%)",
+    barColor: "bg-blue-500",
+    borderAccent: "hover:border-blue-200/70 dark:hover:border-blue-800/50",
+  },
+  {
+    gradient: "from-amber-500/8 to-amber-500/0",
+    iconBg: "bg-amber-500/10",
+    iconColor: "text-amber-600 dark:text-amber-400",
+    ringColor: "hsl(32, 95%, 52%)",
+    barColor: "bg-amber-500",
+    borderAccent: "hover:border-amber-200/70 dark:hover:border-amber-800/50",
+  },
+  {
+    gradient: "from-violet-500/8 to-violet-500/0",
+    iconBg: "bg-violet-500/10",
+    iconColor: "text-violet-600 dark:text-violet-400",
+    ringColor: "hsl(262, 83%, 58%)",
+    barColor: "bg-violet-500",
+    borderAccent: "hover:border-violet-200/70 dark:hover:border-violet-800/50",
+  },
+  {
+    gradient: "from-emerald-500/8 to-emerald-500/0",
+    iconBg: "bg-emerald-500/10",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+    ringColor: "hsl(152, 69%, 42%)",
+    barColor: "bg-emerald-500",
+    borderAccent: "hover:border-emerald-200/70 dark:hover:border-emerald-800/50",
+  },
+];
+
 export function KpiCards() {
   const { t } = useLocale();
   const navigate = useNavigate();
@@ -113,40 +148,14 @@ export function KpiCards() {
     ).length;
     const workloadPct = jobPool <= 0 ? 0 : Math.round((100 * activeJobs) / jobPool);
 
-    const ring1 =
-      mfgEnabled || invEnabled
-        ? Math.min(100, Math.max(18, 24 + Math.min(assetCount * 4, 56)))
-        : 0;
-    const ring2 =
-      invEnabled && grossValue > 0
-        ? Math.min(100, Math.round(32 + (Math.log10(grossValue + 1) / 5) * 28))
-        : invEnabled
-          ? 32
-          : 0;
-    const ring3 =
-      invEnabled && grossValue > 0
-        ? Math.min(100, Math.round((100 * netValue) / grossValue))
-        : invEnabled
-          ? 48
-          : 0;
+    const ring1 = mfgEnabled || invEnabled ? Math.min(100, Math.max(18, 24 + Math.min(assetCount * 4, 56))) : 0;
+    const ring2 = invEnabled && grossValue > 0 ? Math.min(100, Math.round(32 + (Math.log10(grossValue + 1) / 5) * 28)) : invEnabled ? 32 : 0;
+    const ring3 = invEnabled && grossValue > 0 ? Math.min(100, Math.round((100 * netValue) / grossValue)) : invEnabled ? 48 : 0;
     const ring4 = poEnabled
-      ? fyPurchases > 0
-        ? Math.min(100, Math.round(45 + (Math.log10(fyPurchases + 1) / 6) * 35))
-        : 28
-      : mfgEnabled
-        ? Math.min(100, Math.max(20, workloadPct))
-        : 0;
+      ? fyPurchases > 0 ? Math.min(100, Math.round(45 + (Math.log10(fyPurchases + 1) / 6) * 35)) : 28
+      : mfgEnabled ? Math.min(100, Math.max(20, workloadPct)) : 0;
 
-    return {
-      assetCount,
-      grossValue,
-      netValue,
-      fyPurchases,
-      ring1,
-      ring2,
-      ring3,
-      ring4,
-    };
+    return { assetCount, grossValue, netValue, fyPurchases, ring1, ring2, ring3, ring4 };
   }, [assets, inventory, jobs, purchaseOrders, mfgEnabled, invEnabled, poEnabled]);
 
   const cur = settings.currency || "USD";
@@ -156,99 +165,88 @@ export function KpiCards() {
       label: t("kpi.assetsCount"),
       value: mfgEnabled || invEnabled ? String(metrics.assetCount) : "—",
       ring: metrics.ring1,
-      color: "hsl(221, 83%, 53%)",
       icon: Factory,
       href: mfgEnabled ? "/production" : "/inventory",
       chip: "Assets",
-      bg: "from-blue-500/18 via-cyan-500/8 to-transparent",
     },
     {
       label: t("kpi.valueOfAssets"),
       value: invEnabled ? formatMoney(metrics.grossValue, cur) : "—",
       ring: metrics.ring2,
-      color: "hsl(32, 95%, 52%)",
       icon: Boxes,
       href: "/inventory",
       chip: "Inventory",
-      bg: "from-amber-500/18 via-orange-500/8 to-transparent",
     },
     {
       label: t("kpi.netAssetsValue"),
       value: invEnabled ? formatMoney(metrics.netValue, cur) : "—",
       ring: metrics.ring3,
-      color: "hsl(262, 83%, 58%)",
       icon: PackageCheck,
       href: "/inventory",
       chip: "Net value",
-      bg: "from-violet-500/17 via-blue-500/8 to-transparent",
     },
     {
       label: t("kpi.purchasesFY"),
       value: poEnabled ? formatMoney(metrics.fyPurchases, cur) : "—",
       ring: metrics.ring4,
-      color: "hsl(152, 69%, 42%)",
       icon: Wallet,
       href: "/purchase-orders",
       chip: "Fiscal year",
-      bg: "from-emerald-500/18 via-teal-500/8 to-transparent",
     },
   ];
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {kpis.map((kpi) => (
-        <Card
-          key={kpi.label}
-          role="link"
-          tabIndex={0}
-          className="group relative cursor-pointer overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_45px_-32px_rgba(15,23,42,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          onClick={() => navigate(kpi.href)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              navigate(kpi.href);
-            }
-          }}
-        >
-          <div className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-br ${kpi.bg}`} />
-          <CardContent className="relative p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <div className="inline-flex items-center rounded-full border border-border/50 bg-background/70 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground shadow-sm">
-                  {kpi.chip}
+      {kpis.map((kpi, idx) => {
+        const theme = kpiThemes[idx];
+        return (
+          <Card
+            key={kpi.label}
+            role="link"
+            tabIndex={0}
+            className={`group relative cursor-pointer overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${theme.borderAccent}`}
+            onClick={() => navigate(kpi.href)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(kpi.href); }
+            }}
+          >
+            {/* Subtle gradient background */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient}`} />
+
+            <CardContent className="relative p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <span className="inline-flex items-center rounded-md border border-border/40 bg-background/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {kpi.chip}
+                  </span>
+                  <p className="mt-2 truncate text-2xl font-bold tracking-tight text-foreground">{kpi.value}</p>
                 </div>
-                <p className="mt-4 truncate text-3xl font-black tracking-tight text-foreground">{kpi.value}</p>
-              </div>
-              <div className="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center">
-                <StatRing pct={kpi.ring} color={kpi.color} size={72} stroke={5} />
-                <div
-                  className="absolute flex h-11 w-11 items-center justify-center rounded-full bg-background/80 shadow-sm"
-                  style={{ color: kpi.color }}
-                >
-                  <kpi.icon className="h-5 w-5" strokeWidth={2} />
-                </div>
-              </div>
-            </div>
-            <div className="mt-5 flex items-center justify-between gap-3 border-t border-border/50 pt-4">
-              <p className="text-sm font-semibold text-muted-foreground">{kpi.label}</p>
-              <div className="flex items-center gap-2">
-                <div className="hidden h-2 w-20 overflow-hidden rounded-full bg-muted sm:block">
-                  <div
-                    className="h-full rounded-full transition-all duration-700 group-hover:opacity-90"
-                    style={{ width: `${kpi.ring}%`, backgroundColor: kpi.color }}
-                  />
-                </div>
-                <div
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-background text-muted-foreground shadow-sm transition-colors group-hover:text-primary"
-                  aria-hidden
-                >
-                  <ArrowUpRight className="h-4 w-4" />
+                <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
+                  <StatRing pct={kpi.ring} color={theme.ringColor} size={64} stroke={4.5} />
+                  <div className={`absolute flex h-9 w-9 items-center justify-center rounded-lg ${theme.iconBg}`}>
+                    <kpi.icon className={`h-4 w-4 ${theme.iconColor}`} strokeWidth={2} />
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+
+              <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/40 pt-3">
+                <p className="text-[13px] font-medium text-muted-foreground">{kpi.label}</p>
+                <div className="flex items-center gap-2">
+                  <div className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-muted sm:block">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${theme.barColor}`}
+                      style={{ width: `${kpi.ring}%` }}
+                    />
+                  </div>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

@@ -17,17 +17,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import {
   Activity,
   AlertTriangle,
+  ArrowRight,
   ArrowUpRight,
   Ban,
   BarChart3,
   CalendarClock,
   CheckCircle2,
+  ChevronRight,
   DollarSign,
   Factory,
   Gauge,
   LayoutDashboard,
   PackageCheck,
   ShieldCheck,
+  Sparkles,
   Truck,
   Users,
   Zap,
@@ -130,7 +133,6 @@ const Index = () => {
           bg: "bg-amber-500/10",
         };
       }
-
       return {
         label: "Needs attention",
         value: "No active blockers",
@@ -140,7 +142,6 @@ const Index = () => {
         bg: "bg-emerald-500/10",
       };
     }
-
     if (isSuspendedOrArchived) {
       return {
         label: "Needs attention",
@@ -151,7 +152,6 @@ const Index = () => {
         bg: "bg-destructive/10",
       };
     }
-
     if (isTrialExpired) {
       return {
         label: "Needs attention",
@@ -162,7 +162,6 @@ const Index = () => {
         bg: "bg-amber-500/10",
       };
     }
-
     if (tenantSubscription?.status === "trial" && trialDaysLeft != null && trialDaysLeft <= 7) {
       return {
         label: "Needs attention",
@@ -173,7 +172,6 @@ const Index = () => {
         bg: "bg-amber-500/10",
       };
     }
-
     if (disabledModules.length > 0) {
       return {
         label: "Needs attention",
@@ -184,7 +182,6 @@ const Index = () => {
         bg: "bg-primary/10",
       };
     }
-
     return {
       label: "Needs attention",
       value: "No blockers",
@@ -207,45 +204,20 @@ const Index = () => {
 
   const roleAction = useMemo(() => {
     if (isSuperAdmin) {
-      return {
-        label: "Open platform admin",
-        href: "/platform",
-        detail: "Manage tenants, audit logs, and global controls.",
-      };
+      return { label: "Open platform admin", href: "/platform", detail: "Manage tenants, audit logs, and global controls." };
     }
-
     if (user?.role === "finance_head" || user?.role === "finance_viewer") {
-      return {
-        label: "Open finance work",
-        href: "/finance",
-        detail: "Review cash, AP/AR, and finance summaries.",
-      };
+      return { label: "Open finance work", href: "/finance", detail: "Review cash, AP/AR, and finance summaries." };
     }
-
     if (user?.role === "hr_head") {
-      return {
-        label: "Open HR work",
-        href: "/hr",
-        detail: "Review headcount, payroll, and employee actions.",
-      };
+      return { label: "Open HR work", href: "/hr", detail: "Review headcount, payroll, and employee actions." };
     }
-
     if (user?.role === "purchasing_head" || user?.role === "warehouse_head") {
-      return {
-        label: "Open procurement work",
-        href: "/purchase-orders",
-        detail: "Move on sourcing, receiving, and inventory flow.",
-      };
+      return { label: "Open procurement work", href: "/purchase-orders", detail: "Move on sourcing, receiving, and inventory flow." };
     }
-
     if (user?.role === "employee") {
-      return {
-        label: "Open my HR",
-        href: "/my-hr",
-        detail: "Review personal tasks, attendance, and requests.",
-      };
+      return { label: "Open my HR", href: "/my-hr", detail: "Review personal tasks, attendance, and requests." };
     }
-
     if (showOpsDashboard) {
       return {
         label: can(PERMS.DASHBOARD_MFG) ? "Open production" : "Open inventory",
@@ -253,12 +225,7 @@ const Index = () => {
         detail: "Jump into the operational summary for today.",
       };
     }
-
-    return {
-      label: "Open profile",
-      href: "/profile",
-      detail: "Review your access and account details.",
-    };
+    return { label: "Open profile", href: "/profile", detail: "Review your access and account details." };
   }, [can, isSuperAdmin, showOpsDashboard, user?.role]);
 
   const changeSummary = useMemo(() => {
@@ -272,7 +239,6 @@ const Index = () => {
         bg: "bg-amber-500/10",
       };
     }
-
     if (tenantSubscription?.status) {
       return {
         label: "What changed",
@@ -283,7 +249,6 @@ const Index = () => {
         bg: "bg-emerald-500/10",
       };
     }
-
     return {
       label: "What changed",
       value: mfgDash && hasOpenDowntime ? "Open downtime" : "Live snapshot",
@@ -292,59 +257,39 @@ const Index = () => {
       tone: "text-primary",
       bg: "bg-primary/10",
     };
-  }, [
-    hasOpenDowntime,
-    mfgDash,
-    t,
-    tenantSubscription?.displayName,
-    tenantSubscription?.status,
-    trialDate,
-    trialDaysLeft,
-  ]);
+  }, [hasOpenDowntime, mfgDash, t, tenantSubscription?.displayName, tenantSubscription?.status, trialDate, trialDaysLeft]);
 
   const summaryCards = useMemo(() => {
     return [
       {
         label: isSuperAdmin ? "Platform status" : "System health",
         value: isSuperAdmin
-          ? hasOpenDowntime
-            ? "Open maintenance signal"
-            : "No active blockers"
+          ? hasOpenDowntime ? "Open maintenance signal" : "No active blockers"
           : systemHealthLabel,
         detail: isSuperAdmin
-          ? hasOpenDowntime
-            ? "Operations has an active downtime signal that needs review."
-            : "Platform services and tenant access are stable."
-          : mfgDash
-            ? "Manufacturing signal for the last 30 days"
-            : "Role-based access and tenant status",
+          ? hasOpenDowntime ? "Operations has an active downtime signal." : "Platform services are stable."
+          : mfgDash ? "Manufacturing signal — 30 days" : "Role-based access and tenant status",
         icon: isSuperAdmin ? (hasOpenDowntime ? AlertTriangle : CheckCircle2) : CheckCircle2,
-        tone: isSuperAdmin
-          ? hasOpenDowntime
-            ? "text-amber-600 dark:text-amber-400"
-            : "text-emerald-600 dark:text-emerald-400"
-          : hasOpenDowntime
-            ? "text-amber-600 dark:text-amber-400"
-            : "text-emerald-600 dark:text-emerald-400",
-        bg: isSuperAdmin
-          ? hasOpenDowntime
-            ? "bg-amber-500/10"
-            : "bg-emerald-500/10"
-          : hasOpenDowntime
-            ? "bg-amber-500/10"
-            : "bg-emerald-500/10",
+        tone: (isSuperAdmin ? hasOpenDowntime : hasOpenDowntime)
+          ? "text-amber-600 dark:text-amber-400"
+          : "text-emerald-600 dark:text-emerald-400",
+        bg: (isSuperAdmin ? hasOpenDowntime : hasOpenDowntime)
+          ? "bg-amber-500/10"
+          : "bg-emerald-500/10",
+        accent: (isSuperAdmin ? hasOpenDowntime : hasOpenDowntime)
+          ? "border-amber-200/60 dark:border-amber-800/40"
+          : "border-emerald-200/60 dark:border-emerald-800/40",
       },
       {
         label: isSuperAdmin ? "Platform scope" : "Module access",
         value: isSuperAdmin ? "Team-based view" : `${enabledModuleCount}/6`,
         detail: isSuperAdmin
-          ? "Role-specific controls loaded for today."
-          : disabledModules.length === 0
-            ? "All core modules enabled"
-            : `${disabledModules.length} restricted`,
+          ? "Role-specific controls loaded."
+          : disabledModules.length === 0 ? "All core modules enabled" : `${disabledModules.length} restricted`,
         icon: isSuperAdmin ? LayoutDashboard : Factory,
-        tone: isSuperAdmin ? "text-primary" : "text-primary",
+        tone: "text-primary",
         bg: "bg-primary/10",
+        accent: "border-blue-200/60 dark:border-blue-800/40",
       },
       {
         label: isSuperAdmin ? "Live activity" : "OEE proxy",
@@ -353,308 +298,327 @@ const Index = () => {
         icon: isSuperAdmin ? Activity : BarChart3,
         tone: isSuperAdmin ? "text-primary" : "text-amber-600 dark:text-amber-400",
         bg: isSuperAdmin ? "bg-primary/10" : "bg-amber-500/10",
+        accent: isSuperAdmin
+          ? "border-blue-200/60 dark:border-blue-800/40"
+          : "border-amber-200/60 dark:border-amber-800/40",
       },
     ];
-  }, [
-    disabledModules.length,
-    enabledModuleCount,
-    hasOpenDowntime,
-    isSuperAdmin,
-    mfgDash,
-    oeeProxyLabel,
-    systemHealthLabel,
-  ]);
+  }, [disabledModules.length, enabledModuleCount, hasOpenDowntime, isSuperAdmin, mfgDash, oeeProxyLabel, systemHealthLabel]);
 
   const quickLinks = useMemo(
     () => [
-      {
-        label: "Production",
-        href: "/production",
-        icon: Factory,
-        enabled: can(PERMS.DASHBOARD_MFG),
-      },
-      {
-        label: "Inventory",
-        href: "/inventory",
-        icon: PackageCheck,
-        enabled: can(PERMS.DASHBOARD_INVENTORY),
-      },
-      {
-        label: "Reports",
-        href: "/reports",
-        icon: BarChart3,
-        enabled: can(PERMS.DASHBOARD_VIEW),
-      },
+      { label: "Production", href: "/production", icon: Factory, enabled: can(PERMS.DASHBOARD_MFG) },
+      { label: "Inventory", href: "/inventory", icon: PackageCheck, enabled: can(PERMS.DASHBOARD_INVENTORY) },
+      { label: "Reports", href: "/reports", icon: BarChart3, enabled: can(PERMS.DASHBOARD_VIEW) },
     ],
     [can]
   );
 
   return (
-    <div className="relative -m-3 min-h-full space-y-6 overflow-hidden bg-[linear-gradient(180deg,hsl(var(--accent)/0.55),hsl(var(--background))_34rem)] p-3 pb-8 animate-in fade-in duration-500 sm:-m-4 sm:p-4 lg:-m-6 lg:p-6 lg:pb-10">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[linear-gradient(135deg,hsl(var(--primary)/0.14),transparent_42%,hsl(var(--success)/0.10))]" />
-
-      <div className="relative grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.85fr)]">
-        <section className="overflow-hidden rounded-[18px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_26%)_52%,hsl(180_65%_28%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
-          <div className="relative p-5 sm:p-7">
-            <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.12))] lg:block" />
-            <div className="relative max-w-3xl space-y-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white/90">
-                  {isSuperAdmin ? <ShieldCheck className="h-3.5 w-3.5" /> : <Gauge className="h-3.5 w-3.5" />}
-                  {isSuperAdmin ? "Platform command center" : "Operations command center"}
-                </div>
-                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">
-                  {todayLabel}
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-cyan-100">Welcome back, {displayName}</p>
-                <h1 className="max-w-3xl text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
-                  {t("dashboard.title")}
-                </h1>
-                <p className="max-w-2xl text-sm leading-6 text-white/72 sm:text-base">
-                  {t("dashboard.subtitle")}
-                </p>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                {[attentionSummary, changeSummary].map((item) => (
-                  <div key={item.label} className="rounded-[14px] border border-white/15 bg-white/[0.09] p-4 backdrop-blur">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-white/60">{item.label}</p>
-                    <div className="mt-3 flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-lg font-black tracking-tight text-white">{item.value}</p>
-                        <p className="mt-1 text-xs font-semibold leading-5 text-white/68">{item.detail}</p>
-                      </div>
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-white/12">
-                        <item.icon className="h-5 w-5 text-white" />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <Card className="rounded-[18px] border border-border/70 bg-card/95 shadow-[0_20px_50px_-34px_rgba(15,23,42,0.45)] backdrop-blur">
-          <CardHeader className="space-y-4 p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Current role</p>
-                <CardTitle className="text-2xl font-black tracking-tight">
-                  {isSuperAdmin ? "Super Admin" : user?.role || "User"}
-                </CardTitle>
-                <CardDescription className="text-xs font-semibold text-muted-foreground">
-                  {isSuperAdmin ? "Platform access" : "Tenant workspace"}
-                </CardDescription>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-primary/10 text-primary">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-            </div>
-            <div className="rounded-[14px] border border-border/60 bg-[linear-gradient(135deg,hsl(var(--secondary)/0.58),hsl(var(--background)/0.85))] px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Next action</p>
-              <p className="mt-1 text-sm font-semibold leading-6 text-foreground">{roleAction.detail}</p>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-4 px-5 pb-5 sm:px-6 sm:pb-6">
-            <Button asChild className="h-11 w-full rounded-[12px] text-sm font-semibold shadow-sm">
-              <Link to={roleAction.href}>
-                {roleAction.label}
-                <ArrowUpRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-
-            <div className="grid gap-2 text-xs">
-              <div className="flex items-center justify-between rounded-[12px] bg-secondary/35 px-4 py-3">
-                <span className="font-semibold text-muted-foreground">Operational scope</span>
-                <span className="font-black">{isSuperAdmin ? "All tenants" : "Tenant scoped"}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-[12px] bg-secondary/35 px-4 py-3">
-                <span className="font-semibold text-muted-foreground">Modules enabled</span>
-                <span className="font-black">{enabledModuleCount}/6</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              {quickLinks
-                .filter((item) => item.enabled)
-                .map((item) => (
-                  <Button
-                    key={item.label}
-                    asChild
-                    variant="outline"
-                    className="h-auto flex-col gap-1 rounded-[12px] border-border/70 py-3 text-xs"
-                  >
-                    <Link to={item.href}>
-                      <item.icon className="h-4 w-4 text-primary" />
-                      {item.label}
-                    </Link>
-                  </Button>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
+    <div className="relative min-h-full animate-in fade-in duration-500">
+      {/* Subtle ambient background */}
+      <div className="pointer-events-none absolute inset-0 -m-3 sm:-m-4 lg:-m-6">
+        <div className="absolute inset-x-0 top-0 h-[480px] bg-gradient-to-b from-primary/[0.04] via-primary/[0.02] to-transparent" />
+        <div className="absolute right-0 top-0 h-96 w-96 rounded-full bg-primary/[0.03] blur-3xl" />
+        <div className="absolute left-0 top-32 h-64 w-64 rounded-full bg-emerald-500/[0.03] blur-3xl" />
       </div>
 
-      <div className="relative grid gap-4 md:grid-cols-3">
-        {summaryCards.map((item) => (
-          <Card key={item.label} className="group overflow-hidden rounded-[16px] border border-border/70 bg-card/95 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_-32px_rgba(15,23,42,0.55)]">
-            <div className="h-1 bg-gradient-to-r from-primary/70 via-emerald-400/70 to-amber-400/70 opacity-0 transition-opacity group-hover:opacity-100" />
-            <CardContent className="flex items-start justify-between gap-3 p-5">
-              <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                  {item.label}
-                </p>
-                <p className="mt-1 text-xl font-black tracking-tight text-foreground">{item.value}</p>
-                <p className="mt-1 text-xs font-semibold leading-5 text-muted-foreground">
-                  {item.detail}
-                </p>
+      <div className="relative space-y-8 pb-8 lg:pb-10">
+        {/* ──────── Hero Section ──────── */}
+        <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+          {/* Main welcome card */}
+          <section className="relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-xl dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+            {/* Decorative mesh */}
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-primary/20 blur-3xl" />
+              <div className="absolute -bottom-10 -left-10 h-60 w-60 rounded-full bg-emerald-500/15 blur-3xl" />
+              <div className="absolute right-1/4 top-1/3 h-32 w-32 rounded-full bg-cyan-400/10 blur-2xl" />
+            </div>
+            <div className="relative p-6 sm:p-8">
+              <div className="max-w-3xl space-y-6">
+                {/* Top badges */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/80 backdrop-blur-sm">
+                    {isSuperAdmin ? <ShieldCheck className="h-3.5 w-3.5 text-blue-300" /> : <Gauge className="h-3.5 w-3.5 text-cyan-300" />}
+                    {isSuperAdmin ? "Platform command center" : "Operations command center"}
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-white/60">
+                    <Sparkles className="h-3 w-3" />
+                    {todayLabel}
+                  </span>
+                </div>
+
+                {/* Greeting */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-cyan-200/80">Welcome back, {displayName}</p>
+                  <h1 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.75rem] lg:leading-tight">
+                    {t("dashboard.title")}
+                  </h1>
+                  <p className="max-w-xl text-[15px] leading-relaxed text-white/50">
+                    {t("dashboard.subtitle")}
+                  </p>
+                </div>
+
+                {/* Status cards inside hero */}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[attentionSummary, changeSummary].map((item) => (
+                    <div
+                      key={item.label}
+                      className="group rounded-xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-sm transition-colors hover:bg-white/[0.09]"
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40">
+                        {item.label}
+                      </p>
+                      <div className="mt-2.5 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-base font-bold tracking-tight text-white">{item.value}</p>
+                          <p className="mt-1 text-[13px] leading-relaxed text-white/50">{item.detail}</p>
+                        </div>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.08]">
+                          <item.icon className="h-[18px] w-[18px] text-white/70" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] ${item.bg}`}>
-                <item.icon className={`h-5 w-5 ${item.tone}`} />
+            </div>
+          </section>
+
+          {/* Sidebar card: role + quick links */}
+          <div className="flex flex-col gap-4">
+            <Card className="flex-1 rounded-2xl border-border/50 bg-card shadow-sm">
+              <CardHeader className="space-y-3 pb-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      Current role
+                    </p>
+                    <CardTitle className="text-xl font-bold tracking-tight">
+                      {isSuperAdmin ? "Super Admin" : user?.role || "User"}
+                    </CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground">
+                      {isSuperAdmin ? "Platform access" : "Tenant workspace"}
+                    </CardDescription>
+                  </div>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                </div>
+
+                {/* Next action */}
+                <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Next action
+                  </p>
+                  <p className="mt-1 text-sm font-medium leading-relaxed text-foreground">
+                    {roleAction.detail}
+                  </p>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4 pt-0">
+                <Button asChild className="h-10 w-full rounded-xl text-sm font-semibold">
+                  <Link to={roleAction.href}>
+                    {roleAction.label}
+                    <ArrowUpRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between rounded-xl bg-muted/25 px-3.5 py-2.5">
+                    <span className="font-medium text-muted-foreground">Operational scope</span>
+                    <span className="font-bold">{isSuperAdmin ? "All tenants" : "Tenant scoped"}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-xl bg-muted/25 px-3.5 py-2.5">
+                    <span className="font-medium text-muted-foreground">Modules enabled</span>
+                    <span className="font-bold">{enabledModuleCount}/6</span>
+                  </div>
+                </div>
+
+                {/* Quick links */}
+                <div className="grid grid-cols-3 gap-2">
+                  {quickLinks
+                    .filter((item) => item.enabled)
+                    .map((item) => (
+                      <Button
+                        key={item.label}
+                        asChild
+                        variant="outline"
+                        className="h-auto flex-col gap-1.5 rounded-xl border-border/50 py-3 text-xs font-medium transition-colors hover:border-primary/30 hover:bg-primary/5"
+                      >
+                        <Link to={item.href}>
+                          <item.icon className="h-4 w-4 text-primary/70" />
+                          {item.label}
+                        </Link>
+                      </Button>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* ──────── Summary metric cards ──────── */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          {summaryCards.map((item) => (
+            <Card
+              key={item.label}
+              className={`group overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${item.accent}`}
+            >
+              <CardContent className="flex items-start justify-between gap-3 p-5">
+                <div className="min-w-0 space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    {item.label}
+                  </p>
+                  <p className="text-xl font-bold tracking-tight text-foreground">{item.value}</p>
+                  <p className="text-xs font-medium leading-relaxed text-muted-foreground">{item.detail}</p>
+                </div>
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.bg}`}>
+                  <item.icon className={`h-[18px] w-[18px] ${item.tone}`} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* ──────── Subscription banner ──────── */}
+        {!isSuperAdmin && tenantSubscription ? (
+          <Card className="rounded-2xl border-border/50 bg-card shadow-sm">
+            <CardContent className="py-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Zap className="h-3.5 w-3.5" />
+                    </div>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      {t("dashboard.subscriptionStatus")}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={subscriptionBadgeVariant(tenantSubscription.status)} className="px-2.5 py-0.5 text-xs">
+                      {subscriptionStatusLabel(tenantSubscription.status)}
+                    </Badge>
+                    <span className="text-sm font-semibold">
+                      {tenantSubscription.displayName || t("dashboard.currentTenant")}
+                    </span>
+                  </div>
+                  {isSuspendedOrArchived && tenantSubscription.statusReason ? (
+                    <p className="inline-flex items-center gap-1.5 text-xs text-destructive">
+                      <Ban className="h-3.5 w-3.5" />
+                      {tenantSubscription.statusReason}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <div className="inline-flex items-center gap-2 rounded-xl border border-border/50 bg-muted/20 px-3 py-2">
+                    <span className="text-muted-foreground">{t("dashboard.plan")}</span>
+                    <span className="font-bold uppercase tracking-wide text-foreground">
+                      {tenantSubscription.plan || "starter"}
+                    </span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-xl border border-border/50 bg-muted/20 px-3 py-2">
+                    <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-muted-foreground">{t("dashboard.trialEnds")}</span>
+                    <span className="font-bold text-foreground">
+                      {trialDate ? trialDate.toLocaleDateString() : "—"}
+                    </span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
+        ) : null}
 
-      {!isSuperAdmin && tenantSubscription ? (
-        <Card className="rounded-2xl border border-border/60 bg-card shadow-sm">
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-primary/20 bg-primary/15 text-primary">
-                    <Zap className="h-4 w-4" />
-                  </div>
-                  <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-                    {t("dashboard.subscriptionStatus")}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={subscriptionBadgeVariant(tenantSubscription.status)} className="px-2.5 py-1">
-                    {subscriptionStatusLabel(tenantSubscription.status)}
-                  </Badge>
-                  <span className="text-sm font-semibold">
-                    {tenantSubscription.displayName || t("dashboard.currentTenant")}
-                  </span>
-                </div>
-                {isSuspendedOrArchived && tenantSubscription.statusReason ? (
-                  <p className="inline-flex items-center gap-1.5 text-xs text-destructive">
-                    <Ban className="h-3.5 w-3.5" />
-                    {tenantSubscription.statusReason}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="grid gap-2 text-xs">
-                <div className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/60 px-3 py-2">
-                  <span className="text-muted-foreground">{t("dashboard.plan")}</span>
-                  <span className="font-semibold uppercase tracking-wide text-foreground">
-                    {tenantSubscription.plan || "starter"}
-                  </span>
-                </div>
-                <div className="inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background/60 px-3 py-2">
-                  <CalendarClock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground">{t("dashboard.trialEnds")}</span>
-                  <span className="font-semibold text-foreground">
-                    {trialDate ? trialDate.toLocaleDateString() : "—"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {user?.platformRole !== "super_admin" && disabledModules.length > 0 ? (
-        <Card className="rounded-2xl border border-border/60 bg-card shadow-sm">
-          <CardContent className="pt-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
-                {t("dashboard.moduleAccess")}
-              </span>
-              <Badge variant="destructive" className="text-[10px] uppercase tracking-wider">
-                {disabledModules.length} {t("dashboard.disabledPolicy")}
-              </Badge>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {disabledModules.map((mod) => (
-                <Badge key={mod.key} variant="outline" className="text-[10px] uppercase tracking-wider">
-                  {t(mod.labelKey)}
+        {/* ──────── Disabled modules banner ──────── */}
+        {user?.platformRole !== "super_admin" && disabledModules.length > 0 ? (
+          <Card className="rounded-2xl border-border/50 bg-card shadow-sm">
+            <CardContent className="py-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  {t("dashboard.moduleAccess")}
+                </span>
+                <Badge variant="destructive" className="text-[10px] uppercase tracking-wider">
+                  {disabledModules.length} {t("dashboard.disabledPolicy")}
                 </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {disabledModules.map((mod) => (
+                  <Badge key={mod.key} variant="outline" className="text-[10px] uppercase tracking-wider">
+                    {t(mod.labelKey)}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
-      {user?.platformRole === "super_admin" || user?.role === "Admin" ? (
-        <Tabs defaultValue="operations" className="space-y-6">
-          <TabsList className="h-auto w-full flex-wrap justify-start gap-2 rounded-[18px] border border-border/60 bg-card/90 p-2 shadow-[0_18px_45px_-36px_rgba(15,23,42,0.45)] backdrop-blur">
-            <TabsTrigger
-              value="operations"
-              className="rounded-[12px] px-4 py-2.5 font-bold text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-            >
-              <Activity className="mr-2 h-4 w-4" />
-              Operations
-            </TabsTrigger>
-            <TabsTrigger
-              value="finance"
-              className="rounded-[12px] px-4 py-2.5 font-bold text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-            >
-              <DollarSign className="mr-2 h-4 w-4" />
-              Finance
-            </TabsTrigger>
-            <TabsTrigger
-              value="hr"
-              className="rounded-[12px] px-4 py-2.5 font-bold text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Human Resources
-            </TabsTrigger>
-            <TabsTrigger
-              value="procurement"
-              className="rounded-[12px] px-4 py-2.5 font-bold text-muted-foreground transition-all hover:bg-muted/60 hover:text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
-            >
-              <Truck className="mr-2 h-4 w-4" />
-              Procurement
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="operations" className="mt-0 space-y-6 focus-visible:outline-none">
+        {/* ──────── Main tabbed content ──────── */}
+        {user?.platformRole === "super_admin" || user?.role === "Admin" ? (
+          <Tabs defaultValue="operations" className="space-y-6">
+            <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-2xl border border-border/50 bg-card p-1.5 shadow-sm">
+              <TabsTrigger
+                value="operations"
+                className="rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+              >
+                <Activity className="mr-2 h-4 w-4" />
+                Operations
+              </TabsTrigger>
+              <TabsTrigger
+                value="finance"
+                className="rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+              >
+                <DollarSign className="mr-2 h-4 w-4" />
+                Finance
+              </TabsTrigger>
+              <TabsTrigger
+                value="hr"
+                className="rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+              >
+                <Users className="mr-2 h-4 w-4" />
+                Human Resources
+              </TabsTrigger>
+              <TabsTrigger
+                value="procurement"
+                className="rounded-xl px-4 py-2.5 text-sm font-medium text-muted-foreground transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+              >
+                <Truck className="mr-2 h-4 w-4" />
+                Procurement
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="operations" className="mt-0 space-y-6 focus-visible:outline-none">
+              <KpiCards />
+              <DashboardCharts />
+              <DashboardFeedsCalendar />
+            </TabsContent>
+            <TabsContent value="finance" className="mt-0 space-y-6 focus-visible:outline-none">
+              <FinanceDashboardSummary />
+            </TabsContent>
+            <TabsContent value="hr" className="mt-0 space-y-6 focus-visible:outline-none">
+              <HrDashboardSummary />
+            </TabsContent>
+            <TabsContent value="procurement" className="mt-0 space-y-6 focus-visible:outline-none">
+              <ProcurementDashboardSummary />
+            </TabsContent>
+          </Tabs>
+        ) : user?.role === "finance_head" || user?.role === "finance_viewer" ? (
+          <FinanceDashboardSummary />
+        ) : user?.role === "hr_head" ? (
+          <HrDashboardSummary />
+        ) : user?.role === "purchasing_head" || user?.role === "warehouse_head" ? (
+          <ProcurementDashboardSummary />
+        ) : user?.role === "employee" ? (
+          <EmployeeDashboardSummary />
+        ) : showOpsDashboard ? (
+          <div className="space-y-6">
             <KpiCards />
             <DashboardCharts />
             <DashboardFeedsCalendar />
-          </TabsContent>
-          <TabsContent value="finance" className="mt-0 space-y-6 focus-visible:outline-none">
-            <FinanceDashboardSummary />
-          </TabsContent>
-          <TabsContent value="hr" className="mt-0 space-y-6 focus-visible:outline-none">
-            <HrDashboardSummary />
-          </TabsContent>
-          <TabsContent value="procurement" className="mt-0 space-y-6 focus-visible:outline-none">
-            <ProcurementDashboardSummary />
-          </TabsContent>
-        </Tabs>
-      ) : user?.role === "finance_head" || user?.role === "finance_viewer" ? (
-        <FinanceDashboardSummary />
-      ) : user?.role === "hr_head" ? (
-        <HrDashboardSummary />
-      ) : user?.role === "purchasing_head" || user?.role === "warehouse_head" ? (
-        <ProcurementDashboardSummary />
-      ) : user?.role === "employee" ? (
-        <EmployeeDashboardSummary />
-      ) : showOpsDashboard ? (
-        <div className="space-y-6">
-          <KpiCards />
-          <DashboardCharts />
-          <DashboardFeedsCalendar />
-        </div>
-      ) : null}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 };

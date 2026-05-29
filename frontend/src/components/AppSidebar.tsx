@@ -176,25 +176,44 @@ export function AppSidebar() {
   const { user, can } = useAuth();
   const { t } = useLocale();
 
+  const isSuperAdmin = user?.platformRole === "super_admin";
+
+  const hasModuleAccess = (moduleKey?: TenantModuleKey) => {
+    if (!moduleKey) return true;
+    if (isSuperAdmin) return true;
+    return user?.tenantModuleFlags?.[moduleKey] !== false;
+  };
+
+  const hasRoleAccess = (roles?: readonly string[]) => {
+    if (!roles?.length) return true;
+    if (isSuperAdmin) return true;
+    return !!user && roles.includes(user.role);
+  };
+
+  const hasPermissionAccess = (permissions?: string[]) => {
+    if (!permissions?.length) return true;
+    if (isSuperAdmin) return true;
+    return permissions.some((p) => can(p));
+  };
+
   const navItems = allNavItems
     .map((item) => {
       // Filter the item itself
       const visible = (() => {
         if ("platformSuperAdmin" in item && item.platformSuperAdmin) {
-          return user?.platformRole === "super_admin";
+          return isSuperAdmin;
         }
         if (item.url) {
           const moduleKey = routeModuleMap[item.url];
-          if (moduleKey && user?.tenantModuleFlags?.[moduleKey] === false) {
+          if (!hasModuleAccess(moduleKey)) {
             return false;
           }
         }
         if ("permissions" in item && item.permissions?.length) {
-          if (!item.permissions.some((p) => can(p))) return false;
+          if (!hasPermissionAccess(item.permissions)) return false;
         }
         if ("roles" in item && item.roles) {
-          const allowed = item.roles as readonly string[];
-          if (!user || !allowed.includes(user.role)) return false;
+          if (!hasRoleAccess(item.roles)) return false;
         }
         return true;
       })();
@@ -205,18 +224,17 @@ export function AppSidebar() {
       if (item.items) {
         const filteredSubItems = item.items.filter((sub) => {
           if (sub.platformSuperAdmin) {
-            if (user?.platformRole !== "super_admin") return false;
+            if (!isSuperAdmin) return false;
           }
           const subModuleKey = routeModuleMap[sub.url];
-          if (subModuleKey && user?.tenantModuleFlags?.[subModuleKey] === false) {
+          if (!hasModuleAccess(subModuleKey)) {
             return false;
           }
           if (sub.permissions?.length) {
-            if (!sub.permissions.some((p) => can(p))) return false;
+            if (!hasPermissionAccess(sub.permissions)) return false;
           }
           if (sub.roles) {
-            const allowed = sub.roles as readonly string[];
-            if (!user || !allowed.includes(user.role)) return false;
+            if (!hasRoleAccess(sub.roles)) return false;
           }
           return true;
         });

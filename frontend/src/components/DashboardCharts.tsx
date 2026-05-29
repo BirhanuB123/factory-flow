@@ -27,7 +27,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/contexts/LocaleContext";
 
-const BAR_BLUE = "hsl(221, 83%, 53%)";
 const LINE_PRIMARY = "hsl(221, 83%, 53%)";
 const LINE_SECONDARY = "hsl(152, 69%, 42%)";
 
@@ -61,10 +60,7 @@ function buildProductionTrend(
     d.setDate(d.getDate() - i);
     const start = d.getTime();
     const end = start + 86400000;
-    const label =
-      n <= 14
-        ? d.toLocaleDateString(undefined, { month: "short", day: "numeric" })
-        : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const label = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
     const completion = jobs.filter((j) => {
       if (j.status !== "Completed") return false;
       const t = new Date(j.updatedAt || j.dueDate || 0).getTime();
@@ -105,6 +101,16 @@ function inventoryWeeklyBars(products: Array<{ category?: string; stock?: number
   }));
 }
 
+const BAR_COLORS = [
+  "hsl(221, 83%, 53%)",
+  "hsl(221, 83%, 60%)",
+  "hsl(221, 75%, 67%)",
+  "hsl(221, 65%, 72%)",
+  "hsl(221, 55%, 76%)",
+  "hsl(221, 45%, 80%)",
+  "hsl(221, 35%, 84%)",
+];
+
 export function DashboardCharts() {
   const { t } = useLocale();
   const { user, can } = useAuth();
@@ -142,17 +148,31 @@ export function DashboardCharts() {
 
   const rangePills: (keyof typeof RANGE_DAYS)[] = ["1d", "1w", "1m", "3m", "1y", "All"];
 
+  const tooltipStyle = {
+    backgroundColor: "hsl(0 0% 100%)",
+    borderColor: "hsl(214 32% 91%)",
+    borderRadius: "10px",
+    fontSize: "12px",
+    fontWeight: 500,
+    boxShadow: "0 8px 30px -6px rgba(15, 23, 42, 0.1)",
+    padding: "8px 12px",
+  };
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
-        <div className="h-1 bg-gradient-to-r from-primary/75 to-emerald-400/75" />
+      {/* Production Flow Chart */}
+      <Card className="overflow-hidden rounded-2xl border-border/50 bg-card shadow-sm">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-2">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Production flow</p>
-            <CardTitle className="mt-1 text-base font-black text-foreground">{t("charts.assetValue")}</CardTitle>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Production flow
+            </p>
+            <CardTitle className="mt-1 text-base font-bold text-foreground">
+              {t("charts.assetValue")}
+            </CardTitle>
           </div>
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="h-9 w-[150px] rounded-[12px] border-border/60 bg-muted/40 text-xs font-semibold">
+            <SelectTrigger className="h-8 w-[130px] rounded-lg border-border/50 bg-muted/30 text-xs font-medium">
               <SelectValue placeholder={t("charts.sortByPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
@@ -177,84 +197,101 @@ export function DashboardCharts() {
             </div>
           ) : (
             <>
-              <div className="h-[240px] w-full rounded-[14px] bg-gradient-to-b from-background/60 to-muted/20 p-2">
+              <div className="h-[250px] w-full rounded-xl bg-muted/15 p-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={productionSeries} margin={{ top: 12, right: 12, left: -8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(228 24% 90%)" />
+                    <defs>
+                      <linearGradient id="lineGrad1" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={LINE_PRIMARY} stopOpacity={0.15} />
+                        <stop offset="100%" stopColor={LINE_PRIMARY} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(214 32% 91%)" strokeOpacity={0.6} />
                     <XAxis
                       dataKey="name"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 11, fill: "hsl(215 16% 46%)" }}
+                      tick={{ fontSize: 11, fill: "hsl(215 16% 56%)", fontWeight: 500 }}
                       interval="preserveStartEnd"
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 11, fill: "hsl(215 16% 46%)" }}
+                      tick={{ fontSize: 11, fill: "hsl(215 16% 56%)", fontWeight: 500 }}
                       allowDecimals={false}
                     />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(0 0% 100%)",
-                        borderColor: "hsl(228 24% 90%)",
-                        borderRadius: "12px",
-                        fontSize: "12px",
-                        boxShadow: "0 4px 24px -4px rgba(15, 23, 42, 0.08)",
-                      }}
-                    />
+                    <Tooltip contentStyle={tooltipStyle} />
                     <Line
                       type="monotone"
                       dataKey="completion"
                       name={t("charts.legendCompleted")}
                       stroke={LINE_PRIMARY}
                       strokeWidth={2.5}
-                      dot={{ r: 3, fill: LINE_PRIMARY, strokeWidth: 0 }}
-                      activeDot={{ r: 5 }}
+                      dot={false}
+                      activeDot={{ r: 5, strokeWidth: 2, stroke: "white" }}
                     />
                     <Line
                       type="monotone"
                       dataKey="due"
                       name={t("charts.legendScheduled")}
                       stroke={LINE_SECONDARY}
-                      strokeWidth={2.5}
-                      dot={{ r: 3, fill: LINE_SECONDARY, strokeWidth: 0 }}
-                      activeDot={{ r: 5 }}
+                      strokeWidth={2}
+                      strokeDasharray="6 3"
+                      dot={false}
+                      activeDot={{ r: 4, strokeWidth: 2, stroke: "white" }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-              <div className="mt-4 flex flex-wrap justify-center gap-1.5 border-t border-border/50 pt-3">
-                {rangePills.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setLineRange(key)}
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-                      lineRange === key
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-muted/80"
-                    )}
-                  >
-                    {t(key === "All" ? "charts.range.all" : `charts.range.${key}`)}
-                  </button>
-                ))}
+
+              {/* Legend + range pills */}
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-3">
+                <div className="flex gap-4 text-xs">
+                  <span className="inline-flex items-center gap-1.5 font-medium text-muted-foreground">
+                    <span className="h-0.5 w-4 rounded-full bg-primary" />
+                    {t("charts.legendCompleted")}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 font-medium text-muted-foreground">
+                    <span className="h-0.5 w-4 rounded-full bg-emerald-500" style={{ backgroundImage: 'repeating-linear-gradient(90deg, hsl(152 69% 42%) 0, hsl(152 69% 42%) 4px, transparent 4px, transparent 7px)' }} />
+                    {t("charts.legendScheduled")}
+                  </span>
+                </div>
+                <div className="flex gap-1">
+                  {rangePills.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setLineRange(key)}
+                      className={cn(
+                        "rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors",
+                        lineRange === key
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-muted/60"
+                      )}
+                    >
+                      {t(key === "All" ? "charts.range.all" : `charts.range.${key}`)}
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden rounded-[16px] border border-border/60 bg-card shadow-sm">
-        <div className="h-1 bg-gradient-to-r from-amber-400/80 to-violet-500/70" />
+      {/* Inventory Mix Chart */}
+      <Card className="overflow-hidden rounded-2xl border-border/50 bg-card shadow-sm">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-2">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Inventory mix</p>
-            <CardTitle className="mt-1 text-base font-black text-foreground">{t("charts.stockByCategory")}</CardTitle>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Inventory mix
+            </p>
+            <CardTitle className="mt-1 text-base font-bold text-foreground">
+              {t("charts.stockByCategory")}
+            </CardTitle>
           </div>
           <Select value={barSortBy} onValueChange={setBarSortBy}>
-            <SelectTrigger className="h-9 w-[150px] rounded-[12px] border-border/60 bg-muted/40 text-xs font-semibold">
+            <SelectTrigger className="h-8 w-[130px] rounded-lg border-border/50 bg-muted/30 text-xs font-medium">
               <SelectValue placeholder={t("charts.sortByPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
@@ -282,38 +319,31 @@ export function DashboardCharts() {
               {t("charts.noInventory")}
             </div>
           ) : (
-            <div className="h-[260px] w-full rounded-[14px] bg-gradient-to-b from-background/60 to-muted/20 p-2">
+            <div className="h-[280px] w-full rounded-xl bg-muted/15 p-2">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={inventoryBars} margin={{ top: 12, right: 12, left: 4, bottom: 4 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(228 24% 90%)" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(214 32% 91%)" strokeOpacity={0.6} />
                   <XAxis
                     dataKey="name"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 11, fill: "hsl(215 16% 46%)" }}
+                    tick={{ fontSize: 11, fill: "hsl(215 16% 56%)", fontWeight: 500 }}
                   />
                   <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fontSize: 11, fill: "hsl(215 16% 46%)" }}
+                    tick={{ fontSize: 11, fill: "hsl(215 16% 56%)", fontWeight: 500 }}
                     allowDecimals={false}
                   />
                   <Tooltip
-                    cursor={{ fill: "hsl(221 91% 97%)" }}
-                    contentStyle={{
-                      backgroundColor: "hsl(0 0% 100%)",
-                      borderColor: "hsl(228 24% 90%)",
-                      borderRadius: "12px",
-                      fontSize: "12px",
-                      boxShadow: "0 4px 24px -4px rgba(15, 23, 42, 0.08)",
-                    }}
+                    cursor={{ fill: "hsl(221 91% 97%)", radius: 8 }}
+                    contentStyle={tooltipStyle}
                   />
-                  <Bar dataKey="value" radius={[10, 10, 0, 0]} maxBarSize={48}>
+                  <Bar dataKey="value" radius={[8, 8, 2, 2]} maxBarSize={44}>
                     {inventoryBars.map((entry, index) => (
                       <Cell
                         key={`cell-${entry.name}-${index}`}
-                        fill={BAR_BLUE}
-                        opacity={typeof entry.shade === "number" ? entry.shade : 0.85}
+                        fill={BAR_COLORS[index % BAR_COLORS.length]}
                       />
                     ))}
                   </Bar>

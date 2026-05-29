@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   apApi,
@@ -45,9 +45,11 @@ const bucketKeys = [
 export function FinanceApTab({
   symbol,
   canWrite,
+  initialPoId,
 }: {
   symbol: string;
   canWrite: boolean;
+  initialPoId?: string;
 }) {
   const { format, formatAmount } = useCurrency();
   const qc = useQueryClient();
@@ -68,6 +70,29 @@ export function FinanceApTab({
   const [payAmt, setPayAmt] = useState("");
   const [poForBill, setPoForBill] = useState("");
 
+  const { data: bills = [] } = useQuery({
+    queryKey: ["vendor-bills"],
+    queryFn: apApi.listBills,
+  });
+
+  const { data: pos = [] } = useQuery({
+    queryKey: ["purchase-orders"],
+    queryFn: purchaseOrdersApi.getAll,
+    enabled: canWrite,
+  });
+
+  useEffect(() => {
+    if (!initialPoId || poForBill) return;
+    if ((pos as { _id: string }[]).some((p) => p._id === initialPoId)) {
+      setPoForBill(initialPoId);
+    }
+  }, [initialPoId, pos, poForBill]);
+
+  const totalOutstanding = bills.reduce(
+    (sum, b) => sum + Math.max(0, b.amount - (b.amountPaid ?? 0)),
+    0,
+  );
+
   const { data: apAging, isLoading: apLoading } = useQuery({
     queryKey: ["ap-aging"],
     queryFn: apApi.getAPAging,
@@ -78,20 +103,9 @@ export function FinanceApTab({
     queryFn: apApi.listVendorsAll,
   });
 
-  const { data: bills = [] } = useQuery({
-    queryKey: ["vendor-bills"],
-    queryFn: apApi.listBills,
-  });
-
   const { data: certs = [] } = useQuery({
     queryKey: ["withholding-certificates"],
     queryFn: withholdingCertificatesApi.list,
-  });
-
-  const { data: pos = [] } = useQuery({
-    queryKey: ["purchase-orders"],
-    queryFn: purchaseOrdersApi.getAll,
-    enabled: canWrite,
   });
 
   const createVendorMut = useMutation({
@@ -379,6 +393,9 @@ export function FinanceApTab({
       </div>
 
       <TabsContent value="bills" className="mt-0">
+        <div className="mb-4 rounded-[18px] border border-border/60 bg-card/70 p-4 text-sm font-semibold text-foreground">
+          Open AP balance: {symbol}{format(totalOutstanding)}
+        </div>
         <div className="rounded-xl border border-border/60 bg-card/40 overflow-hidden">
           <Table>
             <TableHeader>
@@ -410,6 +427,10 @@ export function FinanceApTab({
                     <TableCell className="text-right text-muted-foreground">
                       {symbol}
                       {formatAmount(b.amountPaid ?? 0)}
+                    </TableCell>
+                    <TableCell className="text-right font-bold">
+                      {symbol}
+                      {formatAmount(Math.max(0, b.amount - (b.amountPaid ?? 0)))}
                     </TableCell>
                     <TableCell className="text-xs">
                       {new Date(b.dueDate).toLocaleDateString()}

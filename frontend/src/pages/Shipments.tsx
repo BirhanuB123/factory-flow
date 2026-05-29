@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { shipmentsApi, ordersApi, inventoryApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -56,6 +57,7 @@ export default function Shipments() {
   const { formatDate } = useEthiopianDateDisplay();
   const qc = useQueryClient();
   const canShip = user?.role === "Admin" || user?.role === "warehouse_head";
+  const [searchParams] = useSearchParams();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [orderId, setOrderId] = useState("");
@@ -68,6 +70,18 @@ export default function Shipments() {
   const [tracking, setTracking] = useState("");
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+
+  useEffect(() => {
+    const queryOrderId = searchParams.get("orderId") ?? "";
+    const openCreate = searchParams.get("openCreate");
+
+    if (queryOrderId) {
+      setOrderId(queryOrderId);
+      setCreateOpen(true);
+    } else if (openCreate !== null) {
+      setCreateOpen(openCreate !== "0");
+    }
+  }, [searchParams]);
 
   const { data: shipments = [], isLoading } = useQuery({
     queryKey: ["shipments"],

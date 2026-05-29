@@ -76,6 +76,7 @@ interface PO {
   _id: string;
   poNumber: string;
   supplierName: string;
+  vendor?: { _id: string; code?: string; name?: string };
   status: POStatus;
   lines: POLine[];
   notes?: string;
@@ -114,6 +115,10 @@ function receivedProgress(po: PO) {
 
 function statusLabel(status: POStatus) {
   return status.replace("_", " ");
+}
+
+function poReceivedQty(po: PO) {
+  return po.lines.reduce((sum, l) => sum + Math.max(0, Number(l.quantityReceived) || 0), 0);
 }
 
 function statusBadgeClass(status: POStatus) {
@@ -740,8 +745,9 @@ export default function PurchaseOrders() {
                           </TableCell>
                           <TableCell>
                             <div className="max-w-[260px] truncate text-sm font-semibold">{po.supplierName}</div>
-                            <div className="mt-1 text-xs text-muted-foreground">
-                              {(po.invoiceCurrency || "ETB").toUpperCase()} invoice
+                            <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+                              <span>{(po.invoiceCurrency || "ETB").toUpperCase()} invoice</span>
+                              {po.vendor?.code ? <span className="font-mono">{po.vendor.code}</span> : null}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -789,6 +795,13 @@ export default function PurchaseOrders() {
                                   onClick={() => approveMut.mutate(po._id)}
                                 >
                                   <CheckCircle className="h-3.5 w-3.5" /> Approve
+                                </Button>
+                              )}
+                              {po.vendor?._id && poReceivedQty(po) > 0 && (
+                                <Button asChild size="sm" variant="outline" className="h-8 rounded-[10px]">
+                                  <Link to={`/finance?poId=${encodeURIComponent(po._id)}`}>
+                                    Bill PO
+                                  </Link>
                                 </Button>
                               )}
                               {["approved", "partial_received"].includes(po.status) && can(PERM.receive) && (
@@ -1295,6 +1308,13 @@ export default function PurchaseOrders() {
                 {selected.status === "draft" && can(PERM.approve) && (
                   <Button variant="secondary" onClick={() => approveMut.mutate(selected._id)}>
                     Approve PO
+                  </Button>
+                )}
+                {selected.vendor?._id && poReceivedQty(selected) > 0 && (
+                  <Button asChild variant="outline" size="sm" className="h-9 rounded-full">
+                    <Link to={`/finance?poId=${encodeURIComponent(selected._id)}`}>
+                      Bill PO
+                    </Link>
                   </Button>
                 )}
                 {selected.status === "draft" && can(PERM.cancel) && (

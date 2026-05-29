@@ -32,6 +32,7 @@ import {
   moduleTabsTriggerClassName,
 } from "@/components/ModuleDashboardLayout";
 import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/use-currency";
 import {
@@ -277,6 +278,7 @@ export default function Finance() {
   const [q, setQ] = useState("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newTransaction, setNewTransaction] = useState({
     category: "",
@@ -304,6 +306,34 @@ export default function Finance() {
   const [invForceVatRate, setInvForceVatRate] = useState("");
   const [invForceWhtRate, setInvForceWhtRate] = useState("");
   const [invVatExempt, setInvVatExempt] = useState(false);
+  const [searchParams] = useSearchParams();
+  const queryPOId = searchParams.get("poId") ?? "";
+
+  useEffect(() => {
+    const queryOrderId = searchParams.get("orderId") ?? "";
+    const queryShipmentId = searchParams.get("shipmentId") ?? "";
+
+    if (queryOrderId) {
+      setInvOrderId(queryOrderId);
+      setInvFromOrderOpen(true);
+    }
+    if (queryShipmentId) {
+      setInvShipmentId(queryShipmentId);
+    }
+    if (!queryOrderId && queryPOId) {
+      setActiveTab("ap");
+    }
+  }, [searchParams, queryPOId]);
+
+    if (queryOrderId) {
+      setInvOrderId(queryOrderId);
+      setInvFromOrderOpen(true);
+    }
+    if (queryShipmentId) {
+      setInvShipmentId(queryShipmentId);
+    }
+  }, [searchParams]);
+
   const [ethCsvOpen, setEthCsvOpen] = useState(false);
   const [ethFrom, setEthFrom] = useState(() => {
     const d = new Date();
@@ -950,7 +980,7 @@ export default function Finance() {
           </div>
         </div>
 
-        <Tabs defaultValue="all" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <StickyModuleTabs>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <TabsList className={moduleTabsListClassName()}>
@@ -1083,7 +1113,7 @@ export default function Finance() {
               )}
             </TabsContent>
             <TabsContent value="ap" className="mt-0 focus-visible:outline-none">
-              <FinanceApTab symbol={symbol} canWrite={canWriteFinance} />
+              <FinanceApTab symbol={symbol} canWrite={canWriteFinance} initialPoId={queryPOId} />
             </TabsContent>
             <TabsContent value="payroll" className="mt-0 focus-visible:outline-none">
               <FinancePayrollTab />

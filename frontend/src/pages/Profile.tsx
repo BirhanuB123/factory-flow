@@ -66,7 +66,11 @@ export default function Profile() {
     ? `${getBaseUrl()}${user.profilePicture}` 
     : '/default-avatar.svg';
 
-  const displayRole = user.platformRole === "super_admin" ? "Platform Super Admin" : user.role.replace('_', ' ');
+  const displayRole = user.platformRole === "super_admin"
+    ? "Platform Super Admin"
+    : typeof user.role === "string"
+      ? user.role.replace('_', ' ')
+      : "User";
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-8 pb-8 animate-in fade-in duration-500">

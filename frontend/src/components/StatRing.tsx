@@ -1,4 +1,4 @@
-/** Circular progress ring (dashboard / production metrics). */
+/** Circular progress ring with subtle entrance animation. */
 export function StatRing({
   pct,
   color,
@@ -17,7 +17,15 @@ export function StatRing({
   const cx = size / 2;
   return (
     <svg width={size} height={size} className="shrink-0" aria-hidden>
-      <circle cx={cx} cy={cx} r={r} fill="none" stroke="#E8ECF4" strokeWidth={stroke} />
+      <circle
+        cx={cx}
+        cy={cx}
+        r={r}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={stroke}
+        className="text-border/50"
+      />
       <circle
         cx={cx}
         cy={cx}
@@ -29,6 +37,9 @@ export function StatRing({
         strokeDasharray={c}
         strokeDashoffset={offset}
         transform={`rotate(-90 ${cx} ${cx})`}
+        style={{
+          transition: "stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
       />
     </svg>
   );

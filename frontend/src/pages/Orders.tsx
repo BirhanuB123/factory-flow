@@ -680,6 +680,18 @@ export default function Orders({ embedded = false }: { embedded?: boolean }) {
                 </Table>
               </div>
               <p className="text-sm text-muted-foreground">Order date: {new Date(selectedOrder.orderDate).toLocaleDateString()}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button asChild variant="outline" size="sm" className="h-9 rounded-full">
+                  <Link to={`/shipments?orderId=${encodeURIComponent(selectedOrder._id)}&openCreate=1`}>
+                    Create shipment
+                  </Link>
+                </Button>
+                <Button asChild variant="secondary" size="sm" className="h-9 rounded-full">
+                  <Link to={`/finance?orderId=${encodeURIComponent(selectedOrder._id)}`}>
+                    Invoice order
+                  </Link>
+                </Button>
+              </div>
             </div>
           )}
           <DialogFooter>

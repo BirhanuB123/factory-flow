@@ -7,7 +7,7 @@ const currencySymbols: Record<string, string> = {
   EUR: "€",
   GBP: "£",
   CAD: "C$",
-  ETB: "Br",
+  ETB: "ETB ",
 };
 
 export const defaultSettings = {

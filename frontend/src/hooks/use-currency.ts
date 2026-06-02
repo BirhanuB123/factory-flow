@@ -8,7 +8,7 @@ const currencySymbols: Record<string, string> = {
   EUR: "€",
   GBP: "£",
   CAD: "C$",
-  ETB: "Br",
+  ETB: "ETB ",
 };
 
 export function useCurrency() {
@@ -25,7 +25,7 @@ export function useCurrency() {
     return "ETB";
   });
 
-  const symbol = currencySymbols[currency] || (currency === "ETB" ? "Br" : "$");
+  const symbol = currencySymbols[currency] || (currency === "ETB" ? "ETB " : "$");
 
   useEffect(() => {
     const handleSettingsUpdate = () => {

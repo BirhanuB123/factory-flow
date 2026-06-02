@@ -934,7 +934,7 @@ export default function Settings() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="rounded-[14px] border-border/60 bg-card">
-                            <SelectItem value="ETB" className="font-bold">ETB (Br) — default</SelectItem>
+                            <SelectItem value="ETB" className="font-bold">ETB (ETB) — default</SelectItem>
                             <SelectItem value="USD" className="font-bold">USD ($)</SelectItem>
                             <SelectItem value="EUR" className="font-bold">EUR (€)</SelectItem>
                             <SelectItem value="GBP" className="font-bold">GBP (£)</SelectItem>

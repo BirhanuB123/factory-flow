@@ -325,15 +325,6 @@ export default function Finance() {
     }
   }, [searchParams, queryPOId]);
 
-    if (queryOrderId) {
-      setInvOrderId(queryOrderId);
-      setInvFromOrderOpen(true);
-    }
-    if (queryShipmentId) {
-      setInvShipmentId(queryShipmentId);
-    }
-  }, [searchParams]);
-
   const [ethCsvOpen, setEthCsvOpen] = useState(false);
   const [ethFrom, setEthFrom] = useState(() => {
     const d = new Date();

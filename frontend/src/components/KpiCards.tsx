@@ -30,7 +30,7 @@ const currencySymbols: Record<string, string> = {
   EUR: "€",
   GBP: "£",
   CAD: "C$",
-  ETB: "Br",
+  ETB: "ETB ",
 };
 
 function formatMoney(amount: number, currencyCode: string): string {

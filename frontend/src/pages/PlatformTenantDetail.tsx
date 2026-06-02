@@ -254,7 +254,7 @@ export default function PlatformTenantDetail() {
     setEditDisplayName(loadedTenant.displayName || "");
     setEditLegalName(loadedTenant.legalName || "");
     setEditPlan(loadedTenant.plan || "starter");
-    setEditTimezone(loadedTenant.timezone || "Africa/Addis_Ababa");
+    setEditTimezone(loadedTenant.timezone || "Africa/Addis Ababa");
     setEditCurrency(loadedTenant.currency || "ETB");
     setEditIndustry(
       INDUSTRY_OPTIONS.includes(loadedTenant.industry as (typeof INDUSTRY_OPTIONS)[number])
@@ -573,7 +573,7 @@ export default function PlatformTenantDetail() {
                 <div className="relative">
                   <Input
                     id="tz"
-                    placeholder="Africa/Addis_Ababa"
+                    placeholder="Africa/Addis Ababa"
                     value={editTimezone}
                     onChange={(e) => setEditTimezone(e.target.value)}
                     disabled={patchMut.isPending}
@@ -663,7 +663,9 @@ export default function PlatformTenantDetail() {
                       <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 ml-1">Priority Level</Label>
                       <Select
                         value={tenantAnnouncementLevel}
-                        onValueChange={(val: any) => setTenantAnnouncementLevel(val)}
+                        onValueChange={(val: string) =>
+                          setTenantAnnouncementLevel(val as "info" | "warning" | "maintenance")
+                        }
                         disabled={patchMut.isPending}
                       >
                         <SelectTrigger className="h-11 rounded-xl bg-background border-border/10 font-bold text-[10px] uppercase tracking-wider px-4">

@@ -296,14 +296,36 @@ export default function Settings() {
     },
   });
 
+  type HrEmployee = {
+    _id?: string;
+    employeeId?: string;
+    name?: string;
+    email?: string;
+    role?: string;
+    jobTitle?: string;
+    department?: string;
+    status?: "Active" | "On Leave" | "Offboarded" | string;
+    accessRole?: string;
+    position?: string;
+    phone?: string;
+    salary?: number;
+    tinNumber?: string;
+    pensionMemberId?: string;
+    departmentId?: string | { _id?: string };
+    positionId?: string | { _id?: string };
+    managerId?: string;
+    manager?: string | { _id?: string };
+    [key: string]: unknown;
+  };
+
   // Access tab queries and mutations
   const isAdmin = user?.role === "Admin" || user?.platformRole === "super_admin";
 
-  const { data: employees = [], refetch: refetchEmployees, isLoading: employeesLoading } = useQuery({
+  const { data: employees = [], refetch: refetchEmployees, isLoading: employeesLoading } = useQuery<HrEmployee[]>({
     queryKey: ["settings-employees"],
     queryFn: async () => {
       const response = await api.get("/hr/employees");
-      return response.data as any[];
+      return response.data as HrEmployee[];
     },
     enabled: isAdmin,
   });
@@ -348,7 +370,7 @@ export default function Settings() {
     salary: 0,
   });
 
-  const [editingEmployee, setEditingEmployee] = useState<any | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState<HrEmployee | null>(null);
 
   const handleAddEmployee = async () => {
     if (!newEmployee.employeeId || !newEmployee.name || !newEmployee.position || !newEmployee.department || !newEmployee.password) {
@@ -357,7 +379,7 @@ export default function Settings() {
     }
 
     try {
-      const payload: Record<string, any> = {
+      const payload: Record<string, string | number | undefined> = {
         employeeId: newEmployee.employeeId,
         name: newEmployee.name,
         department: newEmployee.department,
@@ -390,8 +412,14 @@ export default function Settings() {
         managerId: "",
         salary: 0,
       });
-    } catch (error: any) {
-      const msg = error.response?.data?.message || "Failed to add employee record.";
+    } catch (error: unknown) {
+      const msg =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: unknown }).response === "object"
+          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          : "Failed to add employee record.";
       toast.error(msg);
     }
   };
@@ -400,7 +428,7 @@ export default function Settings() {
     if (!editingEmployee || !editingEmployee._id) return;
 
     try {
-      const payload: Record<string, any> = {
+      const payload = {
         name: editingEmployee.name,
         department: editingEmployee.department,
         status: editingEmployee.status,
@@ -421,8 +449,14 @@ export default function Settings() {
       setIsEditUserOpen(false);
       refetchEmployees();
       setEditingEmployee(null);
-    } catch (error: any) {
-      const msg = error.response?.data?.message || "Failed to update employee record.";
+    } catch (error: unknown) {
+      const msg =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: unknown }).response === "object"
+          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          : "Failed to update employee record.";
       toast.error(msg);
     }
   };
@@ -445,22 +479,27 @@ export default function Settings() {
       } else {
         toast.success("One-time invite token generated successfully.");
       }
-    } catch (error: any) {
-      const msg = error.response?.data?.message || "Failed to generate invite token.";
+    } catch (error: unknown) {
+      const msg =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof (error as { response?: unknown }).response === "object"
+          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          : "Failed to generate invite token.";
       toast.error(msg);
     }
   };
 
-  const filteredEmployees = (employees || []).filter((emp: any) => {
+  const filteredEmployees = (employees || []).filter((emp: Record<string, unknown>) => {
     const q = employeeSearchQuery.toLowerCase().trim();
     if (!q) return true;
-    return (
-      (emp.name || "").toLowerCase().includes(q) ||
-      (emp.email || "").toLowerCase().includes(q) ||
-      (emp.employeeId || "").toLowerCase().includes(q) ||
-      (emp.role || "").toLowerCase().includes(q) ||
-      (emp.jobTitle || "").toLowerCase().includes(q)
-    );
+    const name = String(emp.name || "").toLowerCase();
+    const email = String(emp.email || "").toLowerCase();
+    const employeeId = String(emp.employeeId || "").toLowerCase();
+    const role = String(emp.role || "").toLowerCase();
+    const jobTitle = String(emp.jobTitle || "").toLowerCase();
+    return name.includes(q) || email.includes(q) || employeeId.includes(q) || role.includes(q) || jobTitle.includes(q);
   });
 
   useEffect(() => {
@@ -922,7 +961,7 @@ export default function Settings() {
                             <SelectItem value="America/Denver" className="font-bold">Mountain (MT)</SelectItem>
                             <SelectItem value="America/Los_Angeles" className="font-bold">Pacific (PT)</SelectItem>
                             <SelectItem value="America/Detroit" className="font-bold">Detroit (ET)</SelectItem>
-                            <SelectItem value="Africa/Addis_Ababa" className="font-bold">East Africa (EAT)</SelectItem>
+                            <SelectItem value="Africa/Addis Ababa" className="font-bold">East Africa (EAT)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1337,7 +1376,7 @@ export default function Settings() {
                           </TableRow>
                         </TableHeader>
                         <TableBody className="divide-y divide-border/5">
-                          {filteredEmployees.map((emp: any) => {
+                          {filteredEmployees.map((emp: HrEmployee) => {
                             const showRole = emp.role || "employee";
                             const statusColor =
                               emp.status === "Active"
@@ -1386,9 +1425,9 @@ export default function Settings() {
                                           employeeId: emp.employeeId,
                                           name: emp.name,
                                           department: emp.department,
-                                          departmentId: emp.departmentId?._id || emp.departmentId || "",
-                                          positionId: emp.positionId?._id || emp.positionId || "",
-                                          manager: emp.manager?._id || emp.manager || "",
+                                          departmentId: typeof emp.departmentId === "string" ? emp.departmentId : emp.departmentId?._id || "",
+                                          positionId: typeof emp.positionId === "string" ? emp.positionId : emp.positionId?._id || "",
+                                          manager: typeof emp.manager === "string" ? emp.manager : emp.manager?._id || "",
                                           status: emp.status,
                                           email: emp.email || "",
                                           phone: emp.phone || "",
@@ -1592,7 +1631,7 @@ export default function Settings() {
                     <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">System Status *</Label>
                     <Select
                       value={newEmployee.status}
-                      onValueChange={(val: any) => setNewEmployee({ ...newEmployee, status: val })}
+                      onValueChange={(val: "Active" | "On Leave" | "Offboarded") => setNewEmployee({ ...newEmployee, status: val })}
                     >
                       <SelectTrigger className="bg-background/50 border-border/10 rounded-xl h-11">
                         <SelectValue placeholder="Select Status" />
@@ -1609,7 +1648,9 @@ export default function Settings() {
                     <Select
                       value={newEmployee.departmentId}
                       onValueChange={(val) => {
-                        const d = departments.find((dept: any) => dept._id === val);
+                        const d = (departments as Array<{ _id: string; name: string; code?: string }>).find(
+                          (dept) => dept._id === val
+                        );
                         setNewEmployee({
                           ...newEmployee,
                           departmentId: val,
@@ -1621,7 +1662,7 @@ export default function Settings() {
                         <SelectValue placeholder="Select Department" />
                       </SelectTrigger>
                       <SelectContent className="bg-card border-border/10">
-                        {departments.map((d: any) => (
+                        {(departments as Array<{ _id: string; name: string; code?: string }>).map((d) => (
                           <SelectItem key={d._id} value={d._id}>
                             {d.name} ({d.code})
                           </SelectItem>
@@ -1634,7 +1675,9 @@ export default function Settings() {
                     <Select
                       value={newEmployee.positionId}
                       onValueChange={(val) => {
-                        const p = positions.find((pos: any) => pos._id === val);
+                        const p = (positions as Array<{ _id: string; title: string; code?: string }>).find(
+                          (pos) => pos._id === val
+                        );
                         setNewEmployee({
                           ...newEmployee,
                           positionId: val,
@@ -1646,7 +1689,7 @@ export default function Settings() {
                         <SelectValue placeholder="Select Position" />
                       </SelectTrigger>
                       <SelectContent className="bg-card border-border/10">
-                        {positions.map((p: any) => (
+                        {(positions as Array<{ _id: string; title: string; code?: string }>).map((p) => (
                           <SelectItem key={p._id} value={p._id}>
                             {p.title} ({p.code})
                           </SelectItem>
@@ -1750,7 +1793,7 @@ export default function Settings() {
                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">System Status *</Label>
                       <Select
                         value={editingEmployee.status}
-                        onValueChange={(val: any) => setEditingEmployee({ ...editingEmployee, status: val })}
+                        onValueChange={(val: string) => setEditingEmployee({ ...editingEmployee, status: val })}
                       >
                         <SelectTrigger className="bg-background/50 border-border/10 rounded-xl h-11">
                           <SelectValue placeholder="Select Status" />
@@ -1765,9 +1808,9 @@ export default function Settings() {
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Org Department *</Label>
                       <Select
-                        value={editingEmployee.departmentId}
+                        value={typeof editingEmployee.departmentId === "string" ? editingEmployee.departmentId : (editingEmployee.departmentId as { _id?: string } | undefined)?._id || ""}
                         onValueChange={(val) => {
-                          const d = departments.find((dept: any) => dept._id === val);
+                          const d = departments.find((dept: { _id?: string; name?: string; code?: string }) => dept._id === val);
                           setEditingEmployee({
                             ...editingEmployee,
                             departmentId: val,
@@ -1779,8 +1822,8 @@ export default function Settings() {
                           <SelectValue placeholder="Select Department" />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border/10">
-                          {departments.map((d: any) => (
-                            <SelectItem key={d._id} value={d._id}>
+                          {departments.map((d: { _id?: string; name?: string; code?: string }) => (
+                            <SelectItem key={d._id} value={d._id || ""}>
                               {d.name} ({d.code})
                             </SelectItem>
                           ))}
@@ -1790,9 +1833,9 @@ export default function Settings() {
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Job Position / Title *</Label>
                       <Select
-                        value={editingEmployee.positionId}
+                        value={typeof editingEmployee.positionId === "string" ? editingEmployee.positionId : (editingEmployee.positionId as { _id?: string } | undefined)?._id || ""}
                         onValueChange={(val) => {
-                          const p = positions.find((pos: any) => pos._id === val);
+                          const p = positions.find((pos: { _id?: string; title?: string; code?: string }) => pos._id === val);
                           setEditingEmployee({
                             ...editingEmployee,
                             positionId: val,
@@ -1804,7 +1847,7 @@ export default function Settings() {
                           <SelectValue placeholder="Select Position" />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border/10">
-                          {positions.map((p: any) => (
+                          {positions.map((p: { _id?: string; title?: string; code?: string }) => (
                             <SelectItem key={p._id} value={p._id}>
                               {p.title} ({p.code})
                             </SelectItem>

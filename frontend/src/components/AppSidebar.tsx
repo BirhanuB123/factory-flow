@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
   Wrench,
@@ -57,14 +58,14 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 type NavItem = {
   titleKey: string;
   url?: string;
-  icon: any;
+  icon: LucideIcon;
   permissions?: string[];
   roles?: readonly string[];
   platformSuperAdmin?: boolean;
   items?: readonly {
     titleKey: string;
     url: string;
-    icon: any;
+    icon: LucideIcon;
     permissions?: string[];
     roles?: readonly string[];
     platformSuperAdmin?: boolean;

@@ -106,7 +106,7 @@ export default function Orders({ embedded = false }: { embedded?: boolean }) {
       });
       setReserveQtyByLine(next);
     }
-  }, [selectedOrder?._id]);
+  }, [selectedOrder]);
 
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => ordersApi.create(data),

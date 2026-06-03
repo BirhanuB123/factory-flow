@@ -24,6 +24,7 @@ import {
   ClipboardCheck,
   ChevronRight,
   Globe,
+  Cpu,
 } from "lucide-react";
 import {
   Collapsible,
@@ -100,6 +101,7 @@ const allNavItems: readonly NavItem[] = [
       { titleKey: "nav.jobs", url: "/production-jobs", icon: Wrench, permissions: [PERMS.DASHBOARD_MFG] },
       { titleKey: "nav.scheduling", url: "/scheduling", icon: CalendarDays, permissions: [PERMS.DASHBOARD_MFG] },
       { titleKey: "nav.boms", url: "/boms", icon: FileStack, permissions: [PERMS.DASHBOARD_MFG] },
+      { titleKey: "nav.maintenance", url: "/maintenance", icon: Cpu, permissions: [PERMS.DASHBOARD_MFG] },
       { titleKey: "nav.quality", url: "/quality-settings", icon: ClipboardCheck, roles: ["Admin", "warehouse_head"] as const },
     ],
   },
@@ -153,6 +155,7 @@ const routeModuleMap: Partial<Record<string, TenantModuleKey>> = {
   "/production-jobs": "manufacturing",
   "/scheduling": "manufacturing",
   "/boms": "manufacturing",
+  "/maintenance": "manufacturing",
   "/inventory": "inventory",
   "/kiosk/receiving": "inventory",
   "/orders": "sales",

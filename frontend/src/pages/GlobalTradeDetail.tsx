@@ -28,6 +28,107 @@ import {
 import { toast } from "sonner";
 import { useEthiopianDateDisplay } from "@/hooks/use-ethiopian-date";
 
+type ContainerDetail = {
+  containerNumber: string;
+  sealNumber: string;
+  type: "20ft" | "40ft" | "LCL";
+};
+
+type Documents = {
+  commercialInvoice?: boolean;
+  packingList?: boolean;
+  certificateOfOrigin?: boolean;
+  billOfLading?: boolean;
+  exportPermit?: boolean;
+  [key: string]: boolean | undefined;
+};
+
+type ExpenseBill = {
+  _id: string;
+  billNumber?: string;
+  vendor?: { name?: string };
+  status?: string;
+  dueDate: string;
+  amount?: number;
+};
+
+type ReceiptEntry = {
+  _id: string;
+  product?: { name?: string; unit?: string; sku?: string };
+  delta?: number;
+  createdAt: string;
+  lotNumber?: string;
+};
+
+type ClearingAgentInfo = {
+  _id?: string;
+  name?: string;
+  employeeId?: string;
+};
+
+type TradeShipmentFormData = {
+  referenceNumber?: string;
+  tradeType?: string;
+  vesselOrFlight?: string;
+  portOfLoading?: string;
+  portOfDischarge?: string;
+  etd?: string;
+  eta?: string;
+  clearingAgent?: string;
+  status?: string;
+  customsStatus?: string;
+  incoterm?: string;
+  documents?: Documents;
+  notes?: string;
+  containerDetails?: ContainerDetail[];
+  purchaseOrder?: { importFreight?: number; importDuty?: number; importClearing?: number };
+  expenses?: ExpenseBill[];
+  dynamicReceipts?: ReceiptEntry[];
+};
+
+type TradeShipmentApiResponse = Omit<TradeShipmentFormData, "clearingAgent"> & {
+  clearingAgent?: ClearingAgentInfo | string;
+};
+
+type ExpenseForm = {
+  expenseType: "freight" | "duty" | "clearing";
+  amount: number;
+  vendorId: string;
+  billNumber: string;
+  billDate: string;
+  dueDate: string;
+  notes: string;
+};
+
+type Employee = {
+  _id: string;
+  name?: string;
+  id?: string;
+  employeeId?: string;
+};
+
+type Vendor = {
+  _id: string;
+  name?: string;
+  code?: string;
+};
+
+function getApiErrorMessage(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof (error as { response?: unknown }).response === "object" &&
+    (error as { response: { data?: unknown } }).response?.data &&
+    typeof (error as { response: { data?: { message?: unknown } } }).response?.data?.message === "string"
+  ) {
+    return (error as { response: { data: { message: string } } }).response.data.message;
+  }
+
+  if (error instanceof Error) return error.message;
+  return undefined;
+}
+
 export default function GlobalTradeDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -35,11 +136,11 @@ export default function GlobalTradeDetail() {
   const { formatDate } = useEthiopianDateDisplay();
   const qc = useQueryClient();
 
-  const [formData, setFormData] = useState<any>(null);
+  const [formData, setFormData] = useState<TradeShipmentFormData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const [expenseForm, setExpenseForm] = useState({
-    expenseType: "duty" as "freight" | "duty" | "clearing",
+  const [expenseForm, setExpenseForm] = useState<ExpenseForm>({
+    expenseType: "duty",
     amount: 0,
     vendorId: "",
     billNumber: "",
@@ -49,18 +150,18 @@ export default function GlobalTradeDetail() {
   });
   const [isExpenseDialogOpen, setIsExpenseDialogOpen] = useState(false);
 
-  const { data: shipment, isLoading } = useQuery({
+  const { data: shipment, isLoading } = useQuery<TradeShipmentApiResponse>({
     queryKey: ["trade-shipment", id],
     queryFn: () => tradeApi.getOne(id!),
     enabled: !!id,
   });
 
-  const { data: employees } = useQuery({
+  const { data: employees } = useQuery<Employee[]>({
     queryKey: ["hr-employees"],
     queryFn: () => hrEmployeesApi.list(),
   });
 
-  const { data: vendorsData } = useQuery({
+  const { data: vendorsData } = useQuery<Vendor[]>({
     queryKey: ["ap-vendors"],
     queryFn: () => apApi.listVendors(),
   });
@@ -71,24 +172,29 @@ export default function GlobalTradeDetail() {
         ...shipment,
         etd: shipment.etd ? shipment.etd.split('T')[0] : '',
         eta: shipment.eta ? shipment.eta.split('T')[0] : '',
-        clearingAgent: shipment.clearingAgent?._id || shipment.clearingAgent || '',
+        clearingAgent:
+          typeof shipment.clearingAgent === "object" && shipment.clearingAgent !== null
+            ? shipment.clearingAgent._id || ''
+            : typeof shipment.clearingAgent === "string"
+            ? shipment.clearingAgent
+            : '',
       });
     }
   }, [shipment]);
 
   const updateMut = useMutation({
-    mutationFn: (data: any) => tradeApi.update(id!, data),
+    mutationFn: (data: Partial<TradeShipmentFormData>) => tradeApi.update(id!, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["trade-shipment", id] });
       qc.invalidateQueries({ queryKey: ["trade-shipments"] });
       toast.success("Shipment updated successfully");
       setIsEditing(false);
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message || "Failed to update"),
+    onError: (error: unknown) => toast.error(getApiErrorMessage(error) || "Failed to update"),
   });
 
   const logExpenseMut = useMutation({
-    mutationFn: (data: typeof expenseForm) => tradeApi.logExpense(id!, data),
+    mutationFn: (data: ExpenseForm) => tradeApi.logExpense(id!, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["trade-shipment", id] });
       toast.success("Expense logged and Vendor Bill created successfully");
@@ -103,7 +209,7 @@ export default function GlobalTradeDetail() {
         notes: "",
       });
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message || "Failed to log expense"),
+    onError: (error: unknown) => toast.error(getApiErrorMessage(error) || "Failed to log expense"),
   });
 
   if (isLoading || !formData) {
@@ -123,33 +229,58 @@ export default function GlobalTradeDetail() {
   };
 
   const handleAddContainer = () => {
-    setFormData((prev: any) => ({
-      ...prev,
-      containerDetails: [...(prev.containerDetails || []), { containerNumber: "", sealNumber: "", type: "20ft" }],
-    }));
+    setFormData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        containerDetails: [...(prev.containerDetails ?? []), { containerNumber: "", sealNumber: "", type: "20ft" }],
+      };
+    });
   };
 
   const handleRemoveContainer = (index: number) => {
-    setFormData((prev: any) => {
-      const updated = [...prev.containerDetails];
+    setFormData((prev) => {
+      if (!prev) return prev;
+      const updated = [...(prev.containerDetails ?? [])];
       updated.splice(index, 1);
       return { ...prev, containerDetails: updated };
     });
   };
 
-  const handleContainerChange = (index: number, field: string, value: string) => {
-    setFormData((prev: any) => {
-      const updated = [...prev.containerDetails];
-      updated[index][field] = value;
+  const handleContainerChange = (index: number, field: keyof ContainerDetail, value: string) => {
+    setFormData((prev) => {
+      if (!prev) return prev;
+      const updated = [...(prev.containerDetails ?? [])];
+      if (!updated[index]) return prev;
+      updated[index] = { ...updated[index], [field]: value } as ContainerDetail;
       return { ...prev, containerDetails: updated };
     });
   };
 
   const handleDocumentChange = (docName: string, value: boolean) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      documents: { ...prev.documents, [docName]: value },
-    }));
+    setFormData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        documents: { ...(prev.documents ?? {}), [docName]: value },
+      };
+    });
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    if (!shipment) return;
+    setFormData({
+      ...shipment,
+      etd: shipment.etd ? shipment.etd.split('T')[0] : '',
+      eta: shipment.eta ? shipment.eta.split('T')[0] : '',
+      clearingAgent:
+        typeof shipment.clearingAgent === "object" && shipment.clearingAgent !== null
+          ? shipment.clearingAgent._id || ''
+          : typeof shipment.clearingAgent === "string"
+          ? shipment.clearingAgent
+          : '',
+    });
   };
 
   return (
@@ -175,7 +306,7 @@ export default function GlobalTradeDetail() {
         <div className="flex gap-2">
           {isEditing ? (
             <>
-              <Button variant="outline" onClick={() => { setIsEditing(false); setFormData(shipment); }} className="rounded-full px-6">
+              <Button variant="outline" onClick={handleCancel} className="rounded-full px-6">
                 Cancel
               </Button>
               <Button onClick={handleSave} disabled={updateMut.isPending} className="rounded-full px-6 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-indigo-500/20 text-white">
@@ -203,7 +334,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-2">
               <Label>Vessel / Flight Name</Label>
               {isEditing ? (
-                <Input className="rounded-xl" value={formData.vesselOrFlight} onChange={(e) => setFormData({ ...formData, vesselOrFlight: e.target.value })} />
+                <Input className="rounded-xl" value={formData.vesselOrFlight || ""} onChange={(e) => setFormData({ ...formData, vesselOrFlight: e.target.value })} />
               ) : (
                 <p className="font-semibold text-foreground">{formData.vesselOrFlight || "—"}</p>
               )}
@@ -212,7 +343,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-2">
               <Label>Reference Number (B/L or AWB)</Label>
               {isEditing ? (
-                <Input className="rounded-xl" value={formData.referenceNumber} onChange={(e) => setFormData({ ...formData, referenceNumber: e.target.value })} />
+                <Input className="rounded-xl" value={formData.referenceNumber || ""} onChange={(e) => setFormData({ ...formData, referenceNumber: e.target.value })} />
               ) : (
                 <p className="font-semibold text-foreground">{formData.referenceNumber}</p>
               )}
@@ -221,7 +352,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-2">
               <Label>Port of Loading</Label>
               {isEditing ? (
-                <Input className="rounded-xl" value={formData.portOfLoading} onChange={(e) => setFormData({ ...formData, portOfLoading: e.target.value })} />
+                <Input className="rounded-xl" value={formData.portOfLoading || ""} onChange={(e) => setFormData({ ...formData, portOfLoading: e.target.value })} />
               ) : (
                 <p className="font-medium text-foreground">{formData.portOfLoading || "—"}</p>
               )}
@@ -230,7 +361,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-2">
               <Label>Port of Discharge</Label>
               {isEditing ? (
-                <Input className="rounded-xl" value={formData.portOfDischarge} onChange={(e) => setFormData({ ...formData, portOfDischarge: e.target.value })} />
+                <Input className="rounded-xl" value={formData.portOfDischarge || ""} onChange={(e) => setFormData({ ...formData, portOfDischarge: e.target.value })} />
               ) : (
                 <p className="font-medium text-foreground">{formData.portOfDischarge || "—"}</p>
               )}
@@ -239,7 +370,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-2">
               <Label>Estimated Time of Departure (ETD)</Label>
               {isEditing ? (
-                <Input type="date" className="rounded-xl" value={formData.etd} onChange={(e) => setFormData({ ...formData, etd: e.target.value })} />
+                <Input type="date" className="rounded-xl" value={formData.etd || ""} onChange={(e) => setFormData({ ...formData, etd: e.target.value })} />
               ) : (
                 <p className="font-medium text-foreground">{formData.etd ? formatDate(formData.etd) : "—"}</p>
               )}
@@ -248,7 +379,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-2">
               <Label>Estimated Time of Arrival (ETA)</Label>
               {isEditing ? (
-                <Input type="date" className="rounded-xl" value={formData.eta} onChange={(e) => setFormData({ ...formData, eta: e.target.value })} />
+                <Input type="date" className="rounded-xl" value={formData.eta || ""} onChange={(e) => setFormData({ ...formData, eta: e.target.value })} />
               ) : (
                 <p className="font-medium text-foreground">{formData.eta ? formatDate(formData.eta) : "—"}</p>
               )}
@@ -268,7 +399,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-3">
               <Label>Shipment Status</Label>
               {isEditing ? (
-                <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+                <Select value={formData.status || ""} onValueChange={(v) => setFormData({ ...formData, status: v })}>
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pre_shipment">Pre-shipment</SelectItem>
@@ -279,14 +410,14 @@ export default function GlobalTradeDetail() {
                   </SelectContent>
                 </Select>
               ) : (
-                <div className="mt-1"><Badge className="uppercase tracking-wider px-3 py-1 rounded-full">{formData.status.replace('_', ' ')}</Badge></div>
+                <div className="mt-1"><Badge className="uppercase tracking-wider px-3 py-1 rounded-full">{formData.status?.replace('_', ' ')}</Badge></div>
               )}
             </div>
 
             <div className="space-y-3">
               <Label>Customs Status</Label>
               {isEditing ? (
-                <Select value={formData.customsStatus} onValueChange={(v) => setFormData({ ...formData, customsStatus: v })}>
+                <Select value={formData.customsStatus || ""} onValueChange={(v) => setFormData({ ...formData, customsStatus: v })}>
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
@@ -313,7 +444,7 @@ export default function GlobalTradeDetail() {
             <div className="space-y-3">
               <Label>Incoterm</Label>
               {isEditing ? (
-                <Select value={formData.incoterm} onValueChange={(v) => setFormData({ ...formData, incoterm: v })}>
+                <Select value={formData.incoterm || ""} onValueChange={(v) => setFormData({ ...formData, incoterm: v })}>
                   <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="EXW">EXW</SelectItem>
@@ -358,7 +489,7 @@ export default function GlobalTradeDetail() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {formData.containerDetails.map((c: any, i: number) => (
+                  {formData.containerDetails?.map((c, i) => (
                     <TableRow key={i} className="border-b-border/40">
                       <TableCell className="pl-6">
                         {isEditing ? <Input className="h-8 rounded-lg" value={c.containerNumber} onChange={e => handleContainerChange(i, 'containerNumber', e.target.value)} /> : c.containerNumber}
@@ -421,7 +552,7 @@ export default function GlobalTradeDetail() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Unassigned</SelectItem>
-                    {employees?.map((emp: any) => (
+                    {employees?.map((emp) => (
                       <SelectItem key={emp._id} value={emp._id}>{emp.name} ({emp.id || emp.employeeId})</SelectItem>
                     ))}
                   </SelectContent>
@@ -433,10 +564,12 @@ export default function GlobalTradeDetail() {
                   </div>
                   <div>
                     <p className="font-semibold text-foreground">
-                      {shipment.clearingAgent?.name || "Unassigned"}
+                      {typeof shipment?.clearingAgent === "object" && shipment?.clearingAgent !== null
+                        ? shipment.clearingAgent.name
+                        : "Unassigned"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {shipment.clearingAgent?.employeeId ? `ID: ${shipment.clearingAgent.employeeId}` : "No agent assigned"}
+                      {typeof shipment?.clearingAgent === "object" && shipment?.clearingAgent?.employeeId ? `ID: ${shipment.clearingAgent.employeeId}` : "No agent assigned"}
                     </p>
                   </div>
                 </div>
@@ -557,7 +690,7 @@ export default function GlobalTradeDetail() {
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
                         <Label>Expense Type</Label>
-                        <Select value={expenseForm.expenseType} onValueChange={(v: any) => setExpenseForm({ ...expenseForm, expenseType: v })}>
+                        <Select value={expenseForm.expenseType} onValueChange={(v) => setExpenseForm({ ...expenseForm, expenseType: v as ExpenseForm["expenseType"] })}>
                           <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="freight">Ocean/Air Freight</SelectItem>
@@ -572,7 +705,7 @@ export default function GlobalTradeDetail() {
                         <Select value={expenseForm.vendorId} onValueChange={(v) => setExpenseForm({ ...expenseForm, vendorId: v })}>
                           <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select Vendor" /></SelectTrigger>
                           <SelectContent>
-                            {vendorsData?.map((v: any) => (
+                            {vendorsData?.map((v) => (
                               <SelectItem key={v._id} value={v._id}>{v.name} ({v.code})</SelectItem>
                             ))}
                           </SelectContent>
@@ -628,7 +761,7 @@ export default function GlobalTradeDetail() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {formData.expenses.map((bill: any) => (
+                      {formData.expenses?.map((bill) => (
                         <TableRow key={bill._id}>
                           <TableCell className="font-semibold text-foreground">{bill.billNumber}</TableCell>
                           <TableCell>{bill.vendor?.name || "—"}</TableCell>
@@ -666,7 +799,7 @@ export default function GlobalTradeDetail() {
           <CardContent className="p-0 flex-1 flex flex-col justify-center">
             {formData.dynamicReceipts?.length > 0 ? (
               <div className="divide-y divide-border/40 max-h-[380px] overflow-y-auto w-full">
-                {formData.dynamicReceipts.map((rcpt: any) => (
+                {formData.dynamicReceipts?.map((rcpt) => (
                   <div key={rcpt._id} className="p-4 flex flex-col gap-1 hover:bg-muted/5">
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-foreground text-sm">{rcpt.product?.name || "Product"}</span>

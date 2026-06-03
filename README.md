@@ -47,6 +47,15 @@ MongoDB **replica set** is optional: on a standalone dev instance, production co
 
 **URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
 
+## CI/CD
+
+GitHub Actions validates frontend lint, tests, build output, and the backend Jest
+suite on pull requests and pushes to `main`. A separate production workflow can
+trigger hosting-provider deploy hooks after CI succeeds.
+
+See [`docs/CI_CD.md`](docs/CI_CD.md) for GitHub branch protection, deployment
+secrets, and hosting environment variables.
+
 ## How can I edit this code?
 
 There are several ways of editing your application.

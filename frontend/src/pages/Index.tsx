@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { KpiCards } from "@/components/KpiCards";
 import { DashboardCharts } from "@/components/DashboardCharts";
@@ -17,13 +17,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import {
   Activity,
   AlertTriangle,
-  ArrowRight,
   ArrowUpRight,
   Ban,
   BarChart3,
   CalendarClock,
   CheckCircle2,
-  ChevronRight,
   DollarSign,
   Factory,
   Gauge,
@@ -58,6 +56,7 @@ function dashboardMfgEnabled(
 
 const Index = () => {
   const { t } = useLocale();
+  const navigate = useNavigate();
   const { user, can } = useAuth();
 
   function subscriptionStatusLabel(status?: string): string {
@@ -81,12 +80,22 @@ const Index = () => {
     queryKey: ["manufacturing-downtime"],
     queryFn: () => manufacturingApi.listDowntime({ limit: 200 }),
     enabled: mfgDash,
+    refetchInterval: 60_000,
   });
 
-  const hasOpenDowntime = useMemo(
-    () => (downtime as { endedAt?: string | null }[]).some((d) => !d.endedAt),
-    [downtime]
-  );
+  const { data: assets = [] } = useQuery({
+    queryKey: ["manufacturing-assets"],
+    queryFn: manufacturingApi.listAssets,
+    enabled: mfgDash,
+  });
+
+  type DowntimeRow = { endedAt?: string | null; asset?: { code: string; name: string } };
+  const typedDowntime = downtime as DowntimeRow[];
+  const openDowntimes = useMemo(() => typedDowntime.filter((d) => !d.endedAt), [typedDowntime]);
+  const hasOpenDowntime = openDowntimes.length > 0;
+  const openCount = openDowntimes.length;
+  const firstOpenAsset = openDowntimes[0]?.asset ?? null;
+  const assetCount = (assets as unknown[]).length;
 
   const tenantSubscription = user?.tenantSubscription;
   const trialDate = tenantSubscription?.trialEndDate ? new Date(tenantSubscription.trialEndDate) : null;
@@ -264,46 +273,70 @@ const Index = () => {
       {
         label: isSuperAdmin ? "Platform status" : "System health",
         value: isSuperAdmin
-          ? hasOpenDowntime ? "Open maintenance signal" : "No active blockers"
+          ? hasOpenDowntime
+            ? `${openCount} open event${openCount !== 1 ? "s" : ""}`
+            : "All clear"
           : systemHealthLabel,
         detail: isSuperAdmin
-          ? hasOpenDowntime ? "Operations has an active downtime signal." : "Platform services are stable."
+          ? hasOpenDowntime
+            ? firstOpenAsset
+              ? `${firstOpenAsset.code} — ${firstOpenAsset.name} is currently down`
+              : `${openCount} asset${openCount !== 1 ? "s" : ""} need attention`
+            : "No active downtime events"
           : mfgDash ? "Manufacturing signal — 30 days" : "Role-based access and tenant status",
         icon: isSuperAdmin ? (hasOpenDowntime ? AlertTriangle : CheckCircle2) : CheckCircle2,
-        tone: (isSuperAdmin ? hasOpenDowntime : hasOpenDowntime)
+        tone: hasOpenDowntime
           ? "text-amber-600 dark:text-amber-400"
           : "text-emerald-600 dark:text-emerald-400",
-        bg: (isSuperAdmin ? hasOpenDowntime : hasOpenDowntime)
-          ? "bg-amber-500/10"
-          : "bg-emerald-500/10",
-        accent: (isSuperAdmin ? hasOpenDowntime : hasOpenDowntime)
+        bg: hasOpenDowntime ? "bg-amber-500/10" : "bg-emerald-500/10",
+        accent: hasOpenDowntime
           ? "border-amber-200/60 dark:border-amber-800/40"
           : "border-emerald-200/60 dark:border-emerald-800/40",
+        href: hasOpenDowntime && isSuperAdmin ? "/maintenance" : undefined,
       },
       {
-        label: isSuperAdmin ? "Platform scope" : "Module access",
-        value: isSuperAdmin ? "Team-based view" : `${enabledModuleCount}/6`,
+        label: isSuperAdmin ? "Assets tracked" : "Module access",
+        value: isSuperAdmin
+          ? assetCount > 0 ? `${assetCount} asset${assetCount !== 1 ? "s" : ""}` : "No assets"
+          : `${enabledModuleCount}/6`,
         detail: isSuperAdmin
-          ? "Role-specific controls loaded."
+          ? openCount > 0
+            ? `${openCount} downtime event${openCount !== 1 ? "s" : ""} currently open`
+            : "All assets operational"
           : disabledModules.length === 0 ? "All core modules enabled" : `${disabledModules.length} restricted`,
         icon: isSuperAdmin ? LayoutDashboard : Factory,
-        tone: "text-primary",
-        bg: "bg-primary/10",
+        tone: isSuperAdmin && openCount > 0 ? "text-amber-600 dark:text-amber-400" : "text-primary",
+        bg: isSuperAdmin && openCount > 0 ? "bg-amber-500/10" : "bg-primary/10",
         accent: "border-blue-200/60 dark:border-blue-800/40",
+        href: isSuperAdmin ? "/maintenance" : undefined,
       },
       {
-        label: isSuperAdmin ? "Live activity" : "OEE proxy",
-        value: isSuperAdmin ? (hasOpenDowntime ? "Downtime active" : "Monitoring") : oeeProxyLabel,
-        detail: isSuperAdmin ? "Changes and alerts surfaced first." : "30-day manufacturing signal",
-        icon: isSuperAdmin ? Activity : BarChart3,
-        tone: isSuperAdmin ? "text-primary" : "text-amber-600 dark:text-amber-400",
-        bg: isSuperAdmin ? "bg-primary/10" : "bg-amber-500/10",
-        accent: isSuperAdmin
-          ? "border-blue-200/60 dark:border-blue-800/40"
-          : "border-amber-200/60 dark:border-amber-800/40",
+        label: isSuperAdmin ? "Downtime" : "OEE proxy",
+        value: isSuperAdmin
+          ? hasOpenDowntime ? `${openCount} active` : "None active"
+          : oeeProxyLabel,
+        detail: isSuperAdmin
+          ? hasOpenDowntime
+            ? openDowntimes
+                .slice(0, 2)
+                .map((d) => d.asset?.code ?? "Unknown")
+                .join(", ") + (openCount > 2 ? ` +${openCount - 2} more` : "")
+            : "No unplanned stoppages"
+          : "30-day manufacturing signal",
+        icon: isSuperAdmin ? (hasOpenDowntime ? AlertTriangle : Activity) : BarChart3,
+        tone: isSuperAdmin && hasOpenDowntime
+          ? "text-amber-600 dark:text-amber-400"
+          : isSuperAdmin
+          ? "text-emerald-600 dark:text-emerald-400"
+          : "text-amber-600 dark:text-amber-400",
+        bg: isSuperAdmin && hasOpenDowntime ? "bg-amber-500/10" : isSuperAdmin ? "bg-emerald-500/10" : "bg-amber-500/10",
+        accent: isSuperAdmin && hasOpenDowntime
+          ? "border-amber-200/60 dark:border-amber-800/40"
+          : "border-blue-200/60 dark:border-blue-800/40",
+        href: isSuperAdmin ? "/maintenance" : undefined,
       },
     ];
-  }, [disabledModules.length, enabledModuleCount, hasOpenDowntime, isSuperAdmin, mfgDash, oeeProxyLabel, systemHealthLabel]);
+  }, [assetCount, disabledModules.length, enabledModuleCount, firstOpenAsset, hasOpenDowntime, isSuperAdmin, mfgDash, openCount, openDowntimes, oeeProxyLabel, systemHealthLabel]);
 
   const quickLinks = useMemo(
     () => [
@@ -464,7 +497,8 @@ const Index = () => {
           {summaryCards.map((item) => (
             <Card
               key={item.label}
-              className={`group overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${item.accent}`}
+              className={`group overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${item.accent} ${item.href ? "cursor-pointer" : ""}`}
+              onClick={item.href ? () => navigate(item.href!) : undefined}
             >
               <CardContent className="flex items-start justify-between gap-3 p-5">
                 <div className="min-w-0 space-y-1">

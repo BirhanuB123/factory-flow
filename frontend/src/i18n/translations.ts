@@ -57,6 +57,11 @@ const STRINGS = pack({
     am: "መርሐግብር",
     om: "Scheduling",
   },
+  "nav.maintenance": {
+    en: "Maintenance",
+    am: "ጥገና",
+    om: "Suphaa",
+  },
   "nav.quality": {
     en: "Quality Control",
     am: "የጥራት ቁጥጥር",

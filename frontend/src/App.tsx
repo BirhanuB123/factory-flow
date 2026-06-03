@@ -44,6 +44,7 @@ const ProductionKiosk = React.lazy(() => import("./pages/kiosk/ProductionKiosk.t
 const ReceivingKiosk = React.lazy(() => import("./pages/kiosk/ReceivingKiosk.tsx"));
 const Crm = React.lazy(() => import("./pages/Crm.tsx"));
 const Scheduling = React.lazy(() => import("./pages/Scheduling.tsx"));
+const Maintenance = React.lazy(() => import("./pages/Maintenance.tsx"));
 const Analytics = React.lazy(() => import("./pages/Analytics.tsx"));
 const DocumentTemplates = React.lazy(() => import("./pages/DocumentTemplates.tsx"));
 const QualitySettings = React.lazy(() => import("./pages/QualitySettings.tsx"));
@@ -272,6 +273,7 @@ const App = () => {
                             <Route path="/production-jobs" element={<ProductionJobs />} />
                             <Route path="/scheduling" element={<Scheduling />} />
                             <Route path="/boms" element={<Boms />} />
+                            <Route path="/maintenance" element={<Maintenance />} />
                           </Route>
                         </Route>
                         <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>

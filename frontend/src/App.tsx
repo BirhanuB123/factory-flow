@@ -264,8 +264,10 @@ const App = () => {
                       <Route element={<Layout />}>
                         <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_VIEW]} />}>
                           <Route path="/" element={<Index />} />
-                          <Route path="/analytics" element={<Analytics />} />
-                          <Route path="/reports" element={<Reports />} />
+                          <Route element={<TenantModuleRoute moduleKey="analytics" moduleLabel="Analytics & reports" />}>
+                            <Route path="/analytics" element={<Analytics />} />
+                            <Route path="/reports" element={<Reports />} />
+                          </Route>
                         </Route>
                         <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_MFG]} />}>
                           <Route element={<TenantModuleRoute moduleKey="manufacturing" moduleLabel="Manufacturing & production" />}>
@@ -277,13 +279,19 @@ const App = () => {
                           </Route>
                         </Route>
                         <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
-                          <Route element={<ProtectedRoute requiredPermissions={[PERMS.POS_VIEW]} />}>
-                            <Route path="/pos" element={<Pos />} />
-                          </Route>
                           <Route element={<ProtectedRoute allowedRoles={["Admin", "finance_head", "finance_viewer", "hr_head", "purchasing_head", "warehouse_head"]} />}>
                             <Route path="/orders" element={<Orders />} />
-                            <Route path="/crm" element={<Crm />} />
                             <Route path="/clients" element={<Clients />} />
+                          </Route>
+                        </Route>
+                        <Route element={<TenantModuleRoute moduleKey="crm" moduleLabel="CRM" />}>
+                          <Route element={<ProtectedRoute requiredPermissions={[PERMS.DASHBOARD_VIEW]} />}>
+                            <Route path="/crm" element={<Crm />} />
+                          </Route>
+                        </Route>
+                        <Route element={<TenantModuleRoute moduleKey="pos" moduleLabel="Point of Sale" />}>
+                          <Route element={<ProtectedRoute requiredPermissions={[PERMS.POS_VIEW]} />}>
+                            <Route path="/pos" element={<Pos />} />
                           </Route>
                         </Route>
                         <Route element={<TenantModuleRoute moduleKey="inventory" moduleLabel="Inventory & stock" />}>
@@ -309,7 +317,7 @@ const App = () => {
                             <Route path="/finance" element={<Finance />} />
                           </Route>
                         </Route>
-                        <Route element={<TenantModuleRoute moduleKey="sales" moduleLabel="Sales & orders" />}>
+                        <Route element={<TenantModuleRoute moduleKey="global_trade" moduleLabel="Global Trade & Shipping" />}>
                           <Route element={<ProtectedRoute requiredPermissions={[PERMS.SHIPMENTS_VIEW]} />}>
                             <Route path="/shipments" element={<Shipments />} />
                             <Route path="/global-trade" element={<GlobalTrade />} />

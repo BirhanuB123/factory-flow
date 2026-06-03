@@ -1,15 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const tradeController = require('../controllers/tradeShipment.controller');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, authorizePerm, P } = require('../middleware/authMiddleware');
 
-router.use(protect);
+router.use(protect, authorizePerm(P.SHIPMENTS_VIEW));
 
-router.post('/', tradeController.createTradeShipment);
 router.get('/', tradeController.getTradeShipments);
 router.get('/:id', tradeController.getTradeShipmentById);
-router.put('/:id', tradeController.updateTradeShipment);
-router.delete('/:id', tradeController.deleteTradeShipment);
-router.post('/:id/expenses', tradeController.logExpense);
+router.post('/', authorizePerm(P.SHIPMENTS_MANAGE), tradeController.createTradeShipment);
+router.put('/:id', authorizePerm(P.SHIPMENTS_MANAGE), tradeController.updateTradeShipment);
+router.delete('/:id', authorizePerm(P.SHIPMENTS_MANAGE), tradeController.deleteTradeShipment);
+router.post('/:id/expenses', authorizePerm(P.SHIPMENTS_MANAGE), tradeController.logExpense);
 
 module.exports = router;

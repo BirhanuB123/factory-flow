@@ -9,6 +9,7 @@ const MOVEMENT_TYPES = [
   'production_output',
   'production_issue',
   'production_return',
+  'sale_return',
   'transfer_out',
   'transfer_in',
 ];

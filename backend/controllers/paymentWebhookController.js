@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const PosSession = require('../models/PosSession');
 const { applyMovement } = require('../services/stockService');
+const { createPosSaleJournal } = require('../services/posJournalService');
+const { createPosInvoice } = require('../services/posInvoiceService');
 const { verifyTimestampedHmac } = require('../utils/webhookSecurity');
 const { consumeWebhookEvent } = require('../utils/webhookIdempotency');
 const { markTenantPaidByTxRef } = require('./chapaBillingController');
@@ -107,6 +109,12 @@ async function handlePosSalePayment(txRef) {
         note: `POS Sale (Chapa): ${order._id}`
       });
     }
+
+    // Post GL journal entry
+    await createPosSaleJournal({ tenantId: order.tenantId, order, mongoSession: session });
+
+    // Create formal invoice
+    await createPosInvoice({ tenantId: order.tenantId, order, mongoSession: session });
 
     await session.commitTransaction();
     session.endSession();

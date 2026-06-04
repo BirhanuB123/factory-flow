@@ -22,7 +22,7 @@ const journalEntrySchema = new mongoose.Schema(
     memo: { type: String, default: '' },
     source: {
       type: String,
-      enum: ['payroll', 'manual'],
+      enum: ['payroll', 'manual', 'pos'],
       default: 'manual',
       index: true,
     },

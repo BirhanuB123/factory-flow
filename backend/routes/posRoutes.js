@@ -5,7 +5,11 @@ const {
   getActiveSession,
   closeSession,
   processSale,
-  getPosProducts
+  getPosProducts,
+  getSales,
+  voidSale,
+  getDailyReport,
+  getSessionReport,
 } = require('../controllers/posController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -15,6 +19,10 @@ router.post('/session/open', openSession);
 router.get('/session/active', getActiveSession);
 router.post('/session/close', closeSession);
 router.post('/sale', processSale);
+router.get('/sales', getSales);
+router.post('/sale/:id/void', voidSale);
+router.get('/reports/daily', getDailyReport);
+router.get('/reports/session/:id', getSessionReport);
 router.get('/products', getPosProducts);
 
 module.exports = router;

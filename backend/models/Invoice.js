@@ -10,7 +10,8 @@ const InvoiceSchema = new mongoose.Schema({
   client: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',
-    required: [true, 'Please add a client']
+    required: false,
+    default: null,
   },
   invoiceId: {
     type: String,
@@ -31,7 +32,7 @@ const InvoiceSchema = new mongoose.Schema({
   buyerTinSnapshot: { type: String, default: '' },
   status: {
     type: String,
-    enum: ['Paid', 'Pending', 'Overdue'],
+    enum: ['Paid', 'Pending', 'Overdue', 'Void'],
     default: 'Pending'
   },
   dueDate: {

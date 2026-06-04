@@ -22,6 +22,8 @@ import {
   ReceiptText,
   ScanLine,
   Sparkles,
+  BarChart2,
+  CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +83,22 @@ export default function Pos() {
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [completedOrder, setCompletedOrder] = useState<any>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [salesHistory, setSalesHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [showVoidConfirm, setShowVoidConfirm] = useState(false);
+  const [voidingId, setVoidingId] = useState<string | null>(null);
+  const [voidReason, setVoidReason] = useState("");
+  const [isSplitPayment, setIsSplitPayment] = useState(false);
+  const [splitEntries, setSplitEntries] = useState<Array<{ method: 'cash' | 'card' | 'mobile'; amount: string }>>([
+    { method: 'cash', amount: '' },
+    { method: 'card', amount: '' },
+  ]);
+  const [showReports, setShowReports] = useState(false);
+  const [reportTab, setReportTab] = useState<"daily" | "session">("daily");
+  const [dailyReport, setDailyReport] = useState<Record<string, unknown> | null>(null);
+  const [sessionReport, setSessionReport] = useState<Record<string, unknown> | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -267,6 +285,15 @@ export default function Pos() {
   const total = subtotal - discountAmount;
   const change = Number(amountTendered) > total ? Number(amountTendered) - total : 0;
 
+  const splitTotal = splitEntries.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const splitRemaining = Math.max(0, total - splitTotal);
+  const splitCashChange = (() => {
+    const cashEntry = splitEntries.find((e) => e.method === 'cash');
+    const cashAmt = Number(cashEntry?.amount) || 0;
+    const nonCash = splitEntries.filter((e) => e.method !== 'cash').reduce((s, e) => s + (Number(e.amount) || 0), 0);
+    return Math.max(0, cashAmt + nonCash - total);
+  })();
+
   const handleCheckout = async () => {
     if (cart.length === 0) return;
     setLoading(true);
@@ -280,11 +307,12 @@ export default function Pos() {
         totalAmount: total,
         clientId: selectedClient === "walk-in" ? null : selectedClient,
         discountPercent: discountPercent,
-        paymentDetails: {
-          method: paymentMethod,
-          amountTendered: Number(amountTendered) || total,
-          change: change
-        }
+        paymentDetails: isSplitPayment
+          ? { method: 'split', amountTendered: splitTotal, change: splitCashChange }
+          : { method: paymentMethod, amountTendered: Number(amountTendered) || total, change },
+        payments: isSplitPayment
+          ? splitEntries.filter(e => Number(e.amount) > 0).map(e => ({ method: e.method, amount: Number(e.amount) }))
+          : [],
       });
 
       if (res.data.success) {
@@ -294,13 +322,18 @@ export default function Pos() {
           return;
         }
 
-        setCompletedOrder(res.data.data);
+        setCompletedOrder({
+          ...res.data.data,
+          invoiceId: res.data.invoice?.invoiceId,
+        });
         setShowSuccessDialog(true);
         setCart([]);
         setShowCheckout(false);
         setAmountTendered("");
         setDiscountPercent(0);
         setSelectedClient("walk-in");
+        setIsSplitPayment(false);
+        setSplitEntries([{ method: 'cash', amount: '' }, { method: 'card', amount: '' }]);
         fetchProducts(search);
         fetchActiveSession();
       }
@@ -308,6 +341,50 @@ export default function Pos() {
       toast.error(error.response?.data?.message || "Sale failed");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReports = async () => {
+    setReportLoading(true);
+    try {
+      const [dailyRes, sessionRes] = await Promise.all([
+        api.get('/pos/reports/daily'),
+        session?._id ? api.get(`/pos/reports/session/${session._id}`) : Promise.resolve(null),
+      ]);
+      setDailyReport(dailyRes.data.data);
+      if (sessionRes) setSessionReport(sessionRes.data.data);
+    } catch {
+      toast.error('Failed to load reports');
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  const fetchSalesHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await api.get('/pos/sales');
+      setSalesHistory(res.data.data || []);
+    } catch {
+      toast.error('Failed to load sales history');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleVoidSale = async () => {
+    if (!voidingId) return;
+    try {
+      await api.post(`/pos/sale/${voidingId}/void`, { reason: voidReason });
+      toast.success('Sale voided successfully');
+      setShowVoidConfirm(false);
+      setVoidingId(null);
+      setVoidReason('');
+      fetchSalesHistory();
+      fetchProducts(search);
+      fetchActiveSession();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to void sale');
     }
   };
 
@@ -383,8 +460,13 @@ export default function Pos() {
           >
             <Store className="h-5 w-5" />
           </Button>
-          <Button variant="outline" size="icon" className="h-12 w-12 rounded-[12px] border-border/70 shadow-sm">
+          <Button variant="outline" size="icon" className="h-12 w-12 rounded-[12px] border-border/70 shadow-sm"
+            onClick={() => { setShowHistory(true); fetchSalesHistory(); }}>
             <History className="h-5 w-5" />
+          </Button>
+          <Button variant="outline" size="icon" className="h-12 w-12 rounded-[12px] border-border/70 shadow-sm"
+            onClick={() => { setShowReports(true); fetchReports(); }}>
+            <BarChart2 className="h-5 w-5" />
           </Button>
         </div>
 
@@ -543,78 +625,194 @@ export default function Pos() {
 
       {/* Checkout Dialog */}
       <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
-        <DialogContent className="sm:max-w-[425px] rounded-[22px]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black">{t("pos.pay")}</DialogTitle>
+        <DialogContent className="sm:max-w-[500px] rounded-2xl shadow-2xl">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="text-3xl font-black tracking-tight">{t("pos.pay")}</DialogTitle>
           </DialogHeader>
           <div className="py-6 space-y-6">
-            <div className="text-center space-y-1">
-              <p className="text-muted-foreground text-sm uppercase font-semibold tracking-wider">{t("pos.total")}</p>
-              <p className="text-4xl font-black text-primary">ETB {total.toLocaleString()}</p>
+            {/* Total Amount Display */}
+            <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-2xl p-6 text-center border border-primary/20 shadow-sm">
+              <p className="text-muted-foreground text-xs uppercase font-bold tracking-widest mb-2">{t("pos.total")}</p>
+              <p className="text-5xl font-black text-primary">ETB {total.toLocaleString()}</p>
+              <div className="text-xs text-muted-foreground mt-2">{cart.length} item{cart.length !== 1 ? 's' : ''}</div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-                className="h-20 flex flex-col gap-2 rounded-[16px]"
-                onClick={() => setPaymentMethod('cash')}
+            {/* Split toggle */}
+            <div className="flex gap-2 bg-muted/50 rounded-xl p-1.5 border border-border/50">
+              <Button 
+                size="sm" 
+                variant={!isSplitPayment ? "default" : "ghost"} 
+                className="flex-1 rounded-lg h-9 text-sm font-semibold transition-all"
+                onClick={() => setIsSplitPayment(false)}
               >
-                <Banknote className="h-6 w-6" />
-                <span className="text-xs">{t("pos.cash")}</span>
+                Single
               </Button>
-              <Button
-                variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                className="h-20 flex flex-col gap-2 rounded-[16px]"
-                onClick={() => setPaymentMethod('card')}
+              <Button 
+                size="sm" 
+                variant={isSplitPayment ? "default" : "ghost"} 
+                className="flex-1 rounded-lg h-9 text-sm font-semibold transition-all"
+                onClick={() => setIsSplitPayment(true)}
               >
-                <CreditCard className="h-6 w-6" />
-                <span className="text-xs">{t("pos.card")}</span>
-              </Button>
-              <Button
-                variant={paymentMethod === 'mobile' ? 'default' : 'outline'}
-                className="h-20 flex flex-col gap-2 rounded-[16px]"
-                onClick={() => setPaymentMethod('mobile')}
-              >
-                <Smartphone className="h-6 w-6" />
-                <span className="text-xs">{t("pos.mobile")}</span>
-              </Button>
-              <Button
-                variant={paymentMethod === 'chapa' ? 'default' : 'outline'}
-                className="h-20 flex flex-col gap-2 rounded-[16px] border-primary/20 hover:border-primary/50"
-                onClick={() => setPaymentMethod('chapa')}
-              >
-                <div className="relative">
-                  <Smartphone className="h-6 w-6 text-primary" />
-                  <Badge className="absolute -top-2 -right-4 h-4 px-1 text-[8px] bg-primary text-primary-foreground">CHAPA</Badge>
-                </div>
-                <span className="text-xs font-bold text-primary">Chapa</span>
+                Split
               </Button>
             </div>
 
-            {paymentMethod === 'cash' && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">{t("pos.tendered")}</label>
-                  <Input
-                    type="number"
-                    className="h-14 rounded-[14px] text-center text-2xl font-bold"
-                    value={amountTendered}
-                    onChange={(e) => setAmountTendered(e.target.value)}
-                    placeholder={total.toString()}
-                  />
+            {!isSplitPayment ? (
+              <div className="space-y-5">
+                {/* Payment Method Selection */}
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 block">
+                    Payment Method
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(['cash', 'card', 'mobile', 'chapa'] as const).map((m) => (
+                      <Button 
+                        key={m} 
+                        variant={paymentMethod === m ? 'default' : 'outline'}
+                        className={`h-24 flex flex-col gap-3 rounded-xl transition-all duration-200 ${
+                          paymentMethod === m 
+                            ? 'shadow-lg shadow-primary/30 ring-2 ring-primary' 
+                            : 'hover:border-primary/50 hover:shadow-md'
+                        }`}
+                        onClick={() => setPaymentMethod(m)}
+                      >
+                        <div className="relative">
+                          {m === 'cash' && <Banknote className="h-7 w-7" />}
+                          {m === 'card' && <CreditCard className="h-7 w-7" />}
+                          {m === 'mobile' && <Smartphone className="h-7 w-7" />}
+                          {m === 'chapa' && (
+                            <>
+                              <Smartphone className="h-7 w-7" />
+                              <Badge className="absolute -top-2 -right-3 h-5 px-1.5 text-[9px] font-bold bg-gradient-to-r from-primary to-primary/80 text-white">
+                                CHAPA
+                              </Badge>
+                            </>
+                          )}
+                        </div>
+                        <span className="text-xs font-bold leading-tight">
+                          {m === 'cash' ? t("pos.cash") : m === 'card' ? t("pos.card") : m === 'mobile' ? t("pos.mobile") : 'Chapa'}
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-                {Number(amountTendered) > total && (
-                  <div className="flex items-center justify-between rounded-[14px] bg-primary/10 p-4">
-                    <span className="font-medium text-primary">{t("pos.change")}</span>
-                    <span className="text-2xl font-black text-primary">ETB {change.toLocaleString()}</span>
+
+                {/* Cash Input Section */}
+                {paymentMethod === 'cash' && (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        {t("pos.tendered")} Amount
+                      </label>
+                      <Input 
+                        type="number" 
+                        className="h-16 rounded-xl text-center text-3xl font-black border-2 border-primary/20 focus:border-primary/50 transition-colors" 
+                        value={amountTendered} 
+                        onChange={(e) => setAmountTendered(e.target.value)} 
+                        placeholder={total.toString()} 
+                      />
+                    </div>
+                    {Number(amountTendered) > total && (
+                      <div className="flex items-center justify-between rounded-xl bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 p-4 border border-emerald-500/20">
+                        <span className="font-bold text-emerald-700 dark:text-emerald-400">{t("pos.change")}</span>
+                        <span className="text-2xl font-black text-emerald-600 dark:text-emerald-300">
+                          ETB {change.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Non-cash payment info */}
+                {paymentMethod !== 'cash' && (
+                  <div className="rounded-xl bg-blue-50 dark:bg-blue-950/30 p-4 border border-blue-200 dark:border-blue-900 text-center">
+                    <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                      {paymentMethod === 'card' && 'Please process the card payment'}
+                      {paymentMethod === 'mobile' && 'Mobile money payment will be processed'}
+                      {paymentMethod === 'chapa' && 'Chapa payment gateway will be used'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                  Split Payment Details
+                </div>
+                {splitEntries.map((entry, idx) => (
+                  <div key={idx} className="flex items-center gap-2 animate-in fade-in">
+                    <Select value={entry.method} onValueChange={(v) => setSplitEntries(prev => prev.map((e, i) => i === idx ? { ...e, method: v as typeof e.method } : e))}>
+                      <SelectTrigger className="w-28 h-11 rounded-lg border-border/70 bg-muted/50 shrink-0 font-semibold text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="card">Card</SelectItem>
+                        <SelectItem value="mobile">Mobile</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input 
+                      type="number" 
+                      placeholder="Amount" 
+                      className="h-11 rounded-lg text-right font-bold border-border/70 bg-muted/50"
+                      value={entry.amount}
+                      onChange={(e) => setSplitEntries(prev => prev.map((en, i) => i === idx ? { ...en, amount: e.target.value } : en))} 
+                    />
+                    {splitEntries.length > 2 && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-11 w-11 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        onClick={() => setSplitEntries(prev => prev.filter((_, i) => i !== idx))}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full rounded-lg h-10 text-sm gap-2 border-dashed"
+                  onClick={() => setSplitEntries(prev => [...prev, { method: 'cash', amount: '' }])}
+                >
+                  <Plus className="h-4 w-4" /> Add Method
+                </Button>
+
+                <div className={`flex items-center justify-between rounded-xl p-4 text-sm font-bold transition-all ${
+                  splitRemaining > 0.01 
+                    ? 'bg-destructive/10 text-destructive border border-destructive/20' 
+                    : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+                }`}>
+                  <span>{splitRemaining > 0.01 ? 'Remaining to Pay' : '✓ Fully Covered'}</span>
+                  <span className="text-lg font-black">ETB {(splitRemaining > 0.01 ? splitRemaining : splitTotal).toLocaleString()}</span>
+                </div>
+
+                {splitCashChange > 0 && (
+                  <div className="flex items-center justify-between rounded-xl bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 p-4 border border-emerald-500/20">
+                    <span className="font-bold">{t("pos.change")}</span>
+                    <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                      ETB {splitCashChange.toLocaleString()}
+                    </span>
                   </div>
                 )}
               </div>
             )}
           </div>
-          <DialogFooter className="gap-3 sm:gap-0">
-            <Button variant="outline" className="h-12 flex-1 rounded-[14px]" onClick={() => setShowCheckout(false)}>{t("common.close")}</Button>
-            <Button className="h-12 flex-1 rounded-[14px] font-black" onClick={handleCheckout} disabled={loading}>
+          <DialogFooter className="gap-2 sm:gap-3 border-t pt-4">
+            <Button 
+              variant="outline" 
+              className="h-12 flex-1 rounded-lg font-semibold text-sm" 
+              onClick={() => setShowCheckout(false)}
+            >
+              {t("common.close")}
+            </Button>
+            <Button 
+              className="h-12 flex-1 rounded-lg font-black text-sm shadow-lg shadow-primary/30" 
+              onClick={handleCheckout}
+              disabled={loading || (isSplitPayment && splitRemaining > 0.01)}
+            >
               {loading ? t("common.loading") : t("pos.pay")}
             </Button>
           </DialogFooter>
@@ -723,12 +921,16 @@ export default function Pos() {
             <DialogTitle className="text-2xl font-bold text-center">{t("pos.newSale")}</DialogTitle>
           </DialogHeader>
           <div className="py-6 flex flex-col items-center gap-6">
-            <div className="h-20 w-20 bg-green-100 rounded-full flex items-center justify-center">
-              <Plus className="h-10 w-10 text-green-600 rotate-45" />
+            <div className="h-24 w-24 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-full flex items-center justify-center shadow-lg">
+              <CheckCircle className="h-12 w-12 text-emerald-600" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-xl font-bold">Sale Completed!</h3>
-              <p className="text-muted-foreground text-sm">Order #{completedOrder?._id?.slice(-8).toUpperCase()} has been processed successfully.</p>
+              <h3 className="text-2xl font-black text-emerald-700">Sale Completed!</h3>
+              <p className="text-muted-foreground text-sm">
+                {completedOrder?.invoiceId
+                  ? `Invoice ${completedOrder.invoiceId} has been processed successfully.`
+                  : `Order #${completedOrder?._id?.slice(-8).toUpperCase()} has been processed successfully.`}
+              </p>
             </div>
             
             <div className="w-full space-y-3">
@@ -744,12 +946,234 @@ export default function Pos() {
         </DialogContent>
       </Dialog>
 
-      {/* Receipt Area (Hidden from screen, visible in print via PosReceipt's internal styles) */}
-      <div className="hidden print:block print-container">
-        {completedOrder && (
-          <PosReceipt ref={receiptRef} order={completedOrder} products={products} />
-        )}
-      </div>
+      {/* Reports Dialog */}
+      <Dialog open={showReports} onOpenChange={setShowReports}>
+        <DialogContent className="sm:max-w-[600px] rounded-3xl no-print">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">POS Reports</DialogTitle>
+          </DialogHeader>
+
+          {/* Tab toggle */}
+          <div className="flex rounded-xl border border-border/60 bg-muted/30 p-1 gap-1">
+            <Button
+              size="sm"
+              variant={reportTab === "daily" ? "default" : "ghost"}
+              className="flex-1 rounded-lg h-9 text-xs font-semibold"
+              onClick={() => setReportTab("daily")}
+            >
+              Today's Summary
+            </Button>
+            <Button
+              size="sm"
+              variant={reportTab === "session" ? "default" : "ghost"}
+              className="flex-1 rounded-lg h-9 text-xs font-semibold"
+              onClick={() => setReportTab("session")}
+            >
+              Session Reconciliation
+            </Button>
+          </div>
+
+          <ScrollArea className="max-h-[480px] pr-1">
+            {reportLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : reportTab === "daily" ? (
+              dailyReport ? (
+                <div className="space-y-4 py-1">
+                  {/* KPI row */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { label: "Transactions", value: String(dailyReport.transactionCount as number) },
+                      { label: "Total Revenue", value: `ETB ${(dailyReport.totalRevenue as number).toLocaleString()}` },
+                      { label: "Discounts Given", value: `ETB ${(dailyReport.discountTotal as number).toLocaleString()}` },
+                      { label: "Voided Sales", value: `${dailyReport.voidCount} (ETB ${(dailyReport.voidedAmount as number).toLocaleString()})` },
+                    ].map((kpi) => (
+                      <div key={kpi.label} className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
+                        <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{kpi.label}</p>
+                        <p className="mt-1 text-base font-bold">{kpi.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Payment breakdown */}
+                  <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payment Breakdown</p>
+                    {[
+                      { label: "Cash", value: dailyReport.cashSales as number },
+                      { label: "Card", value: dailyReport.cardSales as number },
+                      { label: "Mobile / Chapa", value: dailyReport.mobileSales as number },
+                    ].map((row) => (
+                      <div key={row.label} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{row.label}</span>
+                        <span className="font-semibold">ETB {row.value.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Top products */}
+                  {(dailyReport.topProducts as unknown[]).length > 0 && (
+                    <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Top Products</p>
+                      {(dailyReport.topProducts as Array<{ name: string; sku: string; quantity: number; revenue: number }>).map((p, i) => (
+                        <div key={i} className="flex justify-between text-sm">
+                          <span className="text-muted-foreground truncate max-w-[60%]">{p.name}</span>
+                          <span className="font-semibold">{p.quantity} units · ETB {p.revenue.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-10">No data available.</p>
+              )
+            ) : (
+              sessionReport ? (
+                <div className="space-y-3 py-1">
+                  <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 space-y-2 text-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Session Info</p>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Cashier</span>
+                      <span className="font-semibold">{(sessionReport.user as Record<string, unknown>)?.name as string || "—"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Status</span>
+                      <span className={`font-semibold capitalize ${sessionReport.status === "open" ? "text-green-600" : "text-muted-foreground"}`}>
+                        {sessionReport.status as string}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Started</span>
+                      <span className="font-semibold">{new Date(sessionReport.startTime as string).toLocaleTimeString()}</span>
+                    </div>
+                    {sessionReport.endTime && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Closed</span>
+                        <span className="font-semibold">{new Date(sessionReport.endTime as string).toLocaleTimeString()}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 space-y-2 text-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cash Reconciliation</p>
+                    {[
+                      { label: "Opening Balance", value: sessionReport.openingBalance as number },
+                      { label: "Cash Sales", value: (sessionReport.summary as Record<string, number>)?.cashSales },
+                      { label: "Expected Closing", value: sessionReport.closingBalance as number ?? ((sessionReport.openingBalance as number) + ((sessionReport.summary as Record<string, number>)?.cashSales ?? 0)) },
+                      { label: "Actual (Counted)", value: sessionReport.actualClosingBalance as number },
+                      { label: "Difference", value: sessionReport.difference as number },
+                    ].map((row) => (
+                      row.value != null && (
+                        <div key={row.label} className="flex justify-between">
+                          <span className={`text-muted-foreground ${row.label === "Difference" ? "font-semibold" : ""}`}>{row.label}</span>
+                          <span className={`font-semibold ${row.label === "Difference" && (row.value as number) < 0 ? "text-destructive" : row.label === "Difference" && (row.value as number) > 0 ? "text-green-600" : ""}`}>
+                            ETB {(row.value as number).toLocaleString()}
+                          </span>
+                        </div>
+                      )
+                    ))}
+                  </div>
+
+                  <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 space-y-2 text-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sales Summary</p>
+                    {[
+                      { label: "Total Sales", value: (sessionReport.summary as Record<string, number>)?.totalSales },
+                      { label: "Card Sales", value: (sessionReport.summary as Record<string, number>)?.cardSales },
+                      { label: "Mobile / Chapa", value: (sessionReport.summary as Record<string, number>)?.mobileSales },
+                      { label: "Discounts", value: (sessionReport.summary as Record<string, number>)?.discountTotal },
+                      { label: "Voided", value: sessionReport.voidedAmount as number },
+                    ].map((row) => (
+                      <div key={row.label} className="flex justify-between">
+                        <span className="text-muted-foreground">{row.label}</span>
+                        <span className="font-semibold">ETB {(row.value ?? 0).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-10">No active session data.</p>
+              )
+            )}
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button variant="outline" className="rounded-xl w-full" onClick={() => setShowReports(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sales History Dialog */}
+      <Dialog open={showHistory} onOpenChange={setShowHistory}>
+        <DialogContent className="sm:max-w-[560px] rounded-3xl no-print">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Today's Sales</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[480px] pr-2">
+            {historyLoading ? (
+              <div className="flex justify-center py-10">
+                <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : salesHistory.length === 0 ? (
+              <p className="text-center text-muted-foreground py-10">No sales recorded today.</p>
+            ) : (
+              <div className="space-y-2">
+                {salesHistory.map((sale: any) => (
+                  <div key={sale._id} className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm">
+                    <div className="space-y-0.5">
+                      <p className="font-semibold">{sale.invoiceId || `#${sale._id.slice(-8).toUpperCase()}`}</p>
+                      <p className="text-muted-foreground capitalize">
+                        {sale.paymentDetails?.method} · ETB {sale.totalAmount?.toLocaleString()}
+                        {(sale.discountPercent || 0) > 0 && ` · ${sale.discountPercent}% off`}
+                      </p>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="rounded-lg text-xs h-8"
+                      onClick={() => { setVoidingId(sale._id); setShowVoidConfirm(true); }}
+                    >
+                      Void
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" className="rounded-xl w-full" onClick={() => setShowHistory(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Void Confirmation Dialog */}
+      <Dialog open={showVoidConfirm} onOpenChange={(open) => { setShowVoidConfirm(open); if (!open) { setVoidingId(null); setVoidReason(''); } }}>
+        <DialogContent className="sm:max-w-[380px] rounded-3xl no-print">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-destructive">Void Sale?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">This will reverse stock movements, reverse the journal entry, and mark the invoice void. This cannot be undone.</p>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Reason (optional)</label>
+              <Input
+                className="rounded-xl"
+                placeholder="e.g. Customer returned item"
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-xl flex-1" onClick={() => { setShowVoidConfirm(false); setVoidingId(null); setVoidReason(''); }}>Cancel</Button>
+            <Button variant="destructive" className="rounded-xl flex-1 font-bold" onClick={handleVoidSale}>Confirm Void</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt — off-screen in DOM, printed via visibility CSS in PosReceipt */}
+      {completedOrder && (
+        <PosReceipt ref={receiptRef} order={completedOrder} products={products} />
+      )}
     </div>
   );
 }

@@ -97,13 +97,19 @@ const OrderSchema = new mongoose.Schema({
     default: 'none'
   },
   paymentDetails: {
-    method: { type: String, enum: ['cash', 'card', 'mobile', 'chapa', 'other'], default: 'cash' },
+    method: { type: String, enum: ['cash', 'card', 'mobile', 'chapa', 'other', 'split'], default: 'cash' },
     amountTendered: { type: Number, default: 0 },
     change: { type: Number, default: 0 },
     txRef: { type: String, default: null },
     chapaId: { type: String, default: null },
-    paymentStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' }
+    paymentStatus: { type: String, enum: ['pending', 'completed', 'failed', 'refunded'], default: 'pending' }
   },
+  payments: [
+    {
+      method: { type: String, enum: ['cash', 'card', 'mobile', 'other'], required: true },
+      amount: { type: Number, required: true, min: 0 },
+    },
+  ],
   orderDate: {
     type: Date,
     default: Date.now

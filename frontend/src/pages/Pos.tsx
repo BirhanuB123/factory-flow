@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/select";
 import { User as UserIcon, Tag } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import { AxiosError } from "axios";
 
 interface Product {
   _id: string;
@@ -60,15 +61,56 @@ interface CartItem extends Product {
   quantity: number;
 }
 
+interface Client {
+  _id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  [key: string]: unknown;
+}
+
+interface Session {
+  _id: string;
+  openingBalance: number;
+  closingBalance?: number;
+  note?: string;
+  status: string;
+  summary?: {
+    totalSales?: number;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+interface CompletedOrder {
+  _id: string;
+  invoiceId?: string;
+  items: Array<{ product: string; quantity: number; price: number; [key: string]: unknown }>;
+  totalAmount: number;
+  [key: string]: unknown;
+}
+
+interface SaleHistoryItem {
+  _id: string;
+  invoiceId?: string;
+  paymentDetails?: {
+    method?: string;
+    [key: string]: unknown;
+  };
+  totalAmount?: number;
+  discountPercent?: number;
+  [key: string]: unknown;
+}
+
 export default function Pos() {
   const { t } = useLocale();
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<string>("walk-in");
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [loading, setLoading] = useState(false);
@@ -82,9 +124,9 @@ export default function Pos() {
   const [amountTendered, setAmountTendered] = useState<string>("");
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [completedOrder, setCompletedOrder] = useState<any>(null);
+  const [completedOrder, setCompletedOrder] = useState<CompletedOrder | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [salesHistory, setSalesHistory] = useState<any[]>([]);
+  const [salesHistory, setSalesHistory] = useState<SaleHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [showVoidConfirm, setShowVoidConfirm] = useState(false);
   const [voidingId, setVoidingId] = useState<string | null>(null);
@@ -139,7 +181,8 @@ export default function Pos() {
     try {
       const res = await api.get(`/pos/products?search=${code}`);
       if (res.data.success && res.data.data.length > 0) {
-        const product = res.data.data.find((p: any) => p.barcode === code || p.sku === code);
+        const products = res.data.data as Product[];
+        const product = products.find((p) => p.barcode === code || p.sku === code);
         if (product) {
           addToCart(product);
           toast.success(`Added ${product.name}`);
@@ -219,8 +262,13 @@ export default function Pos() {
         setShowOpenSession(false);
         toast.success("POS Session opened");
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to open session");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: unknown } } };
+      const message =
+        typeof err.response?.data?.message === "string"
+          ? err.response.data.message
+          : "Failed to open session";
+      toast.error(message);
     }
   };
 
@@ -236,8 +284,13 @@ export default function Pos() {
         setShowOpenSession(true);
         toast.success("POS Session closed");
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to close session");
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: unknown } } };
+      const message =
+        typeof err.response?.data?.message === "string"
+          ? err.response.data.message
+          : "Failed to close session";
+      toast.error(message);
     }
   };
 
@@ -337,8 +390,11 @@ export default function Pos() {
         fetchProducts(search);
         fetchActiveSession();
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Sale failed");
+    } catch (error: unknown) {
+      const axiosError = error as AxiosError<{ message?: string }>;
+      const errorMessage = axiosError?.response?.data?.message
+        ?? (error instanceof Error ? error.message : 'Sale failed');
+      toast.error(errorMessage || "Sale failed");
     } finally {
       setLoading(false);
     }
@@ -383,8 +439,11 @@ export default function Pos() {
       fetchSalesHistory();
       fetchProducts(search);
       fetchActiveSession();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to void sale');
+    } catch (error: unknown) {
+      const message = error instanceof AxiosError
+        ? error.response?.data?.message
+        : undefined;
+      toast.error(message || 'Failed to void sale');
     }
   };
 
@@ -1117,7 +1176,7 @@ export default function Pos() {
               <p className="text-center text-muted-foreground py-10">No sales recorded today.</p>
             ) : (
               <div className="space-y-2">
-                {salesHistory.map((sale: any) => (
+                {salesHistory.map((sale: SaleHistoryItem) => (
                   <div key={sale._id} className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/30 px-4 py-3 text-sm">
                     <div className="space-y-0.5">
                       <p className="font-semibold">{sale.invoiceId || `#${sale._id.slice(-8).toUpperCase()}`}</p>

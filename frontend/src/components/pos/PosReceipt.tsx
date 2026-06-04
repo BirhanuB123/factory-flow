@@ -2,21 +2,37 @@ import React from "react";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 
+interface OrderItem {
+  product: string;
+  name?: string;
+  price: number;
+  quantity: number;
+}
+
+interface Product {
+  _id: string;
+  name: string;
+}
+
+interface PaymentDetails {
+  method: string;
+  amountTendered: number;
+  change: number;
+}
+
+interface Order {
+  _id: string;
+  invoiceId?: string;
+  items: OrderItem[];
+  totalAmount: number;
+  discountPercent?: number;
+  paymentDetails?: PaymentDetails;
+  createdAt?: string;
+}
+
 interface PosReceiptProps {
-  order: {
-    _id: string;
-    invoiceId?: string;
-    items: any[];
-    totalAmount: number;
-    discountPercent?: number;
-    paymentDetails?: {
-      method: string;
-      amountTendered: number;
-      change: number;
-    };
-    createdAt?: string;
-  };
-  products: any[];
+  order: Order;
+  products: Product[];
 }
 
 export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>(
@@ -34,10 +50,7 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>(
     const discountAmount = (subtotal * (order.discountPercent || 0)) / 100;
 
     return (
-      /*
-       * Off-screen with position:fixed so it is never display:none.
-       * That lets the @media print visibility trick work at any DOM depth.
-       */
+     
       <div
         ref={ref}
         style={{ position: "fixed", left: "-9999px", top: 0, width: "80mm" }}
@@ -116,7 +129,7 @@ export const PosReceipt = React.forwardRef<HTMLDivElement, PosReceiptProps>(
               <span style={{ width: "25%", textAlign: "right" }}>QTY</span>
               <span style={{ width: "25%", textAlign: "right" }}>TOTAL</span>
             </div>
-            {order.items.map((item: any, i: number) => (
+            {order.items.map((item: OrderItem, i: number) => (
               <div
                 key={i}
                 style={{

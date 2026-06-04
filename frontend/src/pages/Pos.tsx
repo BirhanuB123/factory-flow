@@ -175,7 +175,7 @@ export default function Pos() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  });
 
   const handleBarcode = async (code: string) => {
     try {

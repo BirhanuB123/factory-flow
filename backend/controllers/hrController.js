@@ -9,6 +9,7 @@ const Notification = require('../models/Notification');
 const AttendanceCorrectionRequest = require('../models/AttendanceCorrectionRequest');
 const Tenant = require('../models/Tenant');
 const { byTenant } = require('../utils/tenantQuery');
+const { can, P } = require('../config/permissions');
 const { assertPayrollMonthEditable } = require('../utils/payrollMonthGuard');
 const { generateInviteRawToken, hashInviteToken } = require('../utils/inviteToken');
 const { sendTenantAdminInvite } = require('../services/inviteEmailService');
@@ -278,7 +279,7 @@ const updateEmployee = asyncHandler(async (req, res) => {
   if (role !== undefined && !APP_ROLES.includes(role) && !accessRole) {
     set.jobTitle = role;
   }
-  if ((req.user.role === 'Admin' || req.user.platformRole === 'super_admin') && accessRole && APP_ROLES.includes(accessRole)) {
+  if ((can(req.user.role, P.SETTINGS_MANAGE) || req.user.platformRole === 'super_admin') && accessRole && APP_ROLES.includes(accessRole)) {
     set.role = accessRole;
   }
   if (tinNumber !== undefined) set.tinNumber = String(tinNumber).trim();
@@ -407,10 +408,6 @@ const reviewAttendanceOvertime = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error('status must be approved or rejected');
   }
-  if (!req.user || !['Admin', 'hr_head'].includes(req.user.role)) {
-    res.status(403);
-    throw new Error('Only Admin or HR Head can review overtime');
-  }
   const attendance = await Attendance.findOne(byTenant(req, { _id: req.params.id }));
   if (!attendance) {
     res.status(404);
@@ -501,10 +498,6 @@ const reviewLeave = asyncHandler(async (req, res) => {
   if (!['approved', 'rejected', 'cancelled'].includes(next)) {
     res.status(400);
     throw new Error('Invalid review status');
-  }
-  if (!req.user || !['Admin', 'hr_head'].includes(req.user.role)) {
-    res.status(403);
-    throw new Error('Only Admin or HR Head can review leave');
   }
   const row = await LeaveRequest.findOne(byTenant(req, { _id: req.params.id }));
   if (!row) {
@@ -611,11 +604,6 @@ const reviewAttendanceCorrection = asyncHandler(async (req, res) => {
   if (!['approved', 'rejected', 'cancelled'].includes(next)) {
     const err = new Error('Invalid review status');
     err.statusCode = 400;
-    throw err;
-  }
-  if (!req.user || !['Admin', 'hr_head'].includes(req.user.role)) {
-    const err = new Error('Only Admin or HR Head can review correction requests');
-    err.statusCode = 403;
     throw err;
   }
   const row = await AttendanceCorrectionRequest.findOne(byTenant(req, { _id: req.params.id }));

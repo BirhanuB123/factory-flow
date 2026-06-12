@@ -20,6 +20,24 @@ const P = {
   SHIPMENTS_VIEW: 'shipments:view',
   SHIPMENTS_MANAGE: 'shipments:manage',
   POS_VIEW: 'pos:view',
+  /** Read orders, clients, and reservations. */
+  ORDERS_VIEW: 'orders:view',
+  /** Create / edit / delete orders, clients, and reservations. */
+  ORDERS_MANAGE: 'orders:manage',
+  /** Read CRM leads and quotes. */
+  CRM_VIEW: 'crm:view',
+  /** Create / edit / delete leads, quotes, and conversions. */
+  CRM_MANAGE: 'crm:manage',
+  /** Read products, BOMs, and inventory movements / locations. */
+  PRODUCT_VIEW: 'product:view',
+  /** Create / edit / delete products and BOMs. */
+  PRODUCT_MANAGE: 'product:manage',
+  /** Create / update production jobs, operations, materials, and manufacturing master data. */
+  MFG_OPS: 'mfg:ops',
+  /** Update company info, document templates, and tenant settings. */
+  SETTINGS_MANAGE: 'settings:manage',
+  /** Create and update vendor records (purchasing staff need this without full finance access). */
+  VENDOR_MANAGE: 'vendor:manage',
 };
 
 /** role → permission keys */
@@ -37,6 +55,10 @@ const MATRIX = {
     P.INVENTORY_POST,
     P.SHIPMENTS_VIEW,
     P.POS_VIEW,
+    P.ORDERS_VIEW,
+    P.CRM_VIEW,
+    P.PRODUCT_VIEW,
+    P.VENDOR_MANAGE,
   ],
   warehouse_head: [
     P.DASHBOARD_VIEW,
@@ -48,6 +70,10 @@ const MATRIX = {
     P.SHIPMENTS_VIEW,
     P.SHIPMENTS_MANAGE,
     P.POS_VIEW,
+    P.ORDERS_VIEW,
+    P.ORDERS_MANAGE,
+    P.PRODUCT_VIEW,
+    P.MFG_OPS,
   ],
   finance_head: [
     P.DASHBOARD_VIEW,
@@ -58,6 +84,9 @@ const MATRIX = {
     P.PO_VIEW,
     P.SHIPMENTS_VIEW,
     P.POS_VIEW,
+    P.ORDERS_VIEW,
+    P.CRM_VIEW,
+    P.PRODUCT_VIEW,
   ],
   /** Read-only finance / compliance (GET-only enforced in finance router). */
   finance_viewer: [
@@ -68,6 +97,8 @@ const MATRIX = {
     P.PO_VIEW,
     P.SHIPMENTS_VIEW,
     P.POS_VIEW,
+    P.ORDERS_VIEW,
+    P.PRODUCT_VIEW,
   ],
   hr_head: [
     P.DASHBOARD_VIEW,
@@ -119,17 +150,26 @@ function getMatrixDoc() {
     { key: P.DASHBOARD_VIEW, label: 'Dashboard (home)' },
     { key: P.DASHBOARD_MFG, label: 'Dashboard production / manufacturing visibility' },
     { key: P.DASHBOARD_INVENTORY, label: 'Dashboard inventory KPIs' },
-    { key: P.FINANCE_READ, label: 'Finance read (viewer)' },
+    { key: P.ORDERS_VIEW, label: 'View orders and clients' },
+    { key: P.ORDERS_MANAGE, label: 'Create / edit / delete orders and clients' },
+    { key: P.CRM_VIEW, label: 'View CRM leads and quotes' },
+    { key: P.CRM_MANAGE, label: 'Create / edit / delete leads, quotes, conversions' },
+    { key: P.PRODUCT_VIEW, label: 'View products, BOMs, inventory movements' },
+    { key: P.PRODUCT_MANAGE, label: 'Create / edit / delete products and BOMs' },
+    { key: P.MFG_OPS, label: 'Create / update production jobs and operations' },
+    { key: P.SETTINGS_MANAGE, label: 'Update company info and document templates' },
+    { key: P.VENDOR_MANAGE, label: 'Create and update vendor records' },
+    { key: P.PO_VIEW, label: 'View purchase orders' },
     { key: P.PO_CREATE, label: 'Create / edit draft PO' },
     { key: P.PO_APPROVE, label: 'Approve PO' },
     { key: P.PO_RECEIVE, label: 'Receive PO (stock in)' },
     { key: P.PO_CANCEL, label: 'Cancel unreceived PO' },
     { key: P.INVENTORY_POST, label: 'Manual stock movement (adjust/receipt/issue)' },
+    { key: P.FINANCE_READ, label: 'Finance read (viewer)' },
     { key: P.FINANCE_WRITE, label: 'Invoices, expenses, from-order invoice' },
     { key: P.HR_FULL, label: 'HR module' },
     { key: P.SHIPMENTS_VIEW, label: 'View shipments & delivery notes' },
     { key: P.SHIPMENTS_MANAGE, label: 'Create / update / ship deliveries' },
-    { key: P.PO_VIEW, label: 'View purchase orders' },
     { key: P.POS_VIEW, label: 'Access Point of Sale (POS)' },
   ];
   const rows = roles.map((role) => ({

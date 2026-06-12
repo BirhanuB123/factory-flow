@@ -273,6 +273,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/billing/webhook', billingWebhookRoutes);
 app.use('/api/payments', paymentRoutes);
 
+// Intentionally public — token in URL acts as the auth mechanism for kiosk/shop-floor access
 app.get('/api/production/traveler/:token.html', getTravelerHtml);
 
 app.get('/api/health', (req, res) => {
@@ -318,8 +319,8 @@ app.use('/api/pos', posRoutes);
 app.use('/api/finance', financeAccess);
 app.use('/api/hr', authorize('Admin', 'hr_head', 'finance_head'));
 
-app.get('/api/search', globalSearch);
-app.get('/api/inventory/movements', getMovements);
+app.get('/api/search', authorizePerm(P.DASHBOARD_VIEW), globalSearch);
+app.get('/api/inventory/movements', authorizePerm(P.PRODUCT_VIEW), getMovements);
 app.post(
   '/api/inventory/movements',
   authorizePerm(P.INVENTORY_POST),
@@ -328,25 +329,25 @@ app.post(
   createMovement
 );
 
-app.get('/api/inventory/locations', getLocations);
+app.get('/api/inventory/locations', authorizePerm(P.PRODUCT_VIEW), getLocations);
 app.post('/api/inventory/locations', authorizePerm(P.INVENTORY_POST), createLocation);
 app.put('/api/inventory/locations/:id', authorizePerm(P.INVENTORY_POST), updateLocation);
 app.delete('/api/inventory/locations/:id', authorizePerm(P.INVENTORY_POST), deleteLocation);
 
 // CRM Routes
-app.get('/api/crm/leads', getLeads);
-app.get('/api/crm/leads/:id', getLead);
-app.post('/api/crm/leads', createLead);
-app.put('/api/crm/leads/:id', updateLead);
-app.delete('/api/crm/leads/:id', deleteLead);
-app.post('/api/crm/leads/:id/convert', convertLeadToClient);
+app.get('/api/crm/leads', authorizePerm(P.CRM_VIEW), getLeads);
+app.get('/api/crm/leads/:id', authorizePerm(P.CRM_VIEW), getLead);
+app.post('/api/crm/leads', authorizePerm(P.CRM_MANAGE), createLead);
+app.put('/api/crm/leads/:id', authorizePerm(P.CRM_MANAGE), updateLead);
+app.delete('/api/crm/leads/:id', authorizePerm(P.CRM_MANAGE), deleteLead);
+app.post('/api/crm/leads/:id/convert', authorizePerm(P.CRM_MANAGE), convertLeadToClient);
 
-app.get('/api/crm/quotes', getQuotes);
-app.get('/api/crm/quotes/:id', getQuote);
-app.post('/api/crm/quotes', createQuote);
-app.put('/api/crm/quotes/:id', updateQuote);
-app.delete('/api/crm/quotes/:id', deleteQuote);
-app.post('/api/crm/quotes/:id/convert', convertQuoteToOrder);
+app.get('/api/crm/quotes', authorizePerm(P.CRM_VIEW), getQuotes);
+app.get('/api/crm/quotes/:id', authorizePerm(P.CRM_VIEW), getQuote);
+app.post('/api/crm/quotes', authorizePerm(P.CRM_MANAGE), createQuote);
+app.put('/api/crm/quotes/:id', authorizePerm(P.CRM_MANAGE), updateQuote);
+app.delete('/api/crm/quotes/:id', authorizePerm(P.CRM_MANAGE), deleteQuote);
+app.post('/api/crm/quotes/:id/convert', authorizePerm(P.CRM_MANAGE), convertQuoteToOrder);
 
 app.get('/api/purchase-orders', authorizePerm(P.PO_VIEW), listPurchaseOrders);
 app.post('/api/purchase-orders', authorizePerm(P.PO_CREATE), createPurchaseOrder);
@@ -361,90 +362,82 @@ app.patch(
 app.post('/api/purchase-orders/:id/approve', authorizePerm(P.PO_APPROVE), approvePurchaseOrder);
 app.post('/api/purchase-orders/:id/receive', authorizePerm(P.PO_RECEIVE), receivePurchaseOrder);
 app.post('/api/purchase-orders/:id/cancel', authorizePerm(P.PO_CANCEL), cancelPurchaseOrder);
-app.get(
-  '/api/inventory/valuation',
-  authorize('Admin', 'finance_head', 'finance_viewer', 'warehouse_head', 'purchasing_head'),
-  getValuation
-);
-app.get(
-  '/api/inventory/aging',
-  authorize('Admin', 'finance_head', 'finance_viewer', 'warehouse_head', 'purchasing_head'),
-  getInventoryAging
-);
-app.get('/api/inventory/alerts', getLowStockAlerts);
-app.get('/api/inventory/reservations', getReservations);
-app.delete('/api/inventory/reservations/:id', releaseReservation);
+app.get('/api/inventory/valuation', authorizePerm(P.PRODUCT_VIEW), getValuation);
+app.get('/api/inventory/aging', authorizePerm(P.PRODUCT_VIEW), getInventoryAging);
+app.get('/api/inventory/alerts', authorizePerm(P.PRODUCT_VIEW), getLowStockAlerts);
+app.get('/api/inventory/reservations', authorizePerm(P.ORDERS_VIEW), getReservations);
+app.delete('/api/inventory/reservations/:id', authorizePerm(P.ORDERS_MANAGE), releaseReservation);
 
-app.get('/api/mrp/suggestions', getMrpSuggestions);
-app.get('/api/mrp/explode/:productId', getMrpExplosion);
-app.get('/api/products', getProducts);
-app.get('/api/products/by-barcode/:barcode', getProductByBarcode);
-app.post('/api/products', createProduct);
-app.get('/api/products/:id', getProduct);
-app.put('/api/products/:id', updateProduct);
-app.delete('/api/products/:id', deleteProduct);
+app.get('/api/mrp/suggestions', authorizePerm(P.DASHBOARD_MFG), getMrpSuggestions);
+app.get('/api/mrp/explode/:productId', authorizePerm(P.DASHBOARD_MFG), getMrpExplosion);
+app.get('/api/products', authorizePerm(P.PRODUCT_VIEW), getProducts);
+app.get('/api/products/by-barcode/:barcode', authorizePerm(P.PRODUCT_VIEW), getProductByBarcode);
+app.post('/api/products', authorizePerm(P.PRODUCT_MANAGE), createProduct);
+app.get('/api/products/:id', authorizePerm(P.PRODUCT_VIEW), getProduct);
+app.put('/api/products/:id', authorizePerm(P.PRODUCT_MANAGE), updateProduct);
+app.delete('/api/products/:id', authorizePerm(P.PRODUCT_MANAGE), deleteProduct);
 
-app.get('/api/boms', getBoms);
-app.post('/api/boms', createBom);
-app.get('/api/boms/:id', getBom);
-app.put('/api/boms/:id', updateBom);
-app.delete('/api/boms/:id', deleteBom);
+app.get('/api/boms', authorizePerm(P.PRODUCT_VIEW), getBoms);
+app.post('/api/boms', authorizePerm(P.PRODUCT_MANAGE), createBom);
+app.get('/api/boms/:id', authorizePerm(P.PRODUCT_VIEW), getBom);
+app.put('/api/boms/:id', authorizePerm(P.PRODUCT_MANAGE), updateBom);
+app.delete('/api/boms/:id', authorizePerm(P.PRODUCT_MANAGE), deleteBom);
 
 app.get('/api/production', authorizePerm(P.DASHBOARD_MFG), getJobs);
-app.post('/api/production', createJob);
-app.post('/api/production/from-order', createJobFromOrder);
+app.post('/api/production', authorizePerm(P.MFG_OPS), createJob);
+app.post('/api/production/from-order', authorizePerm(P.MFG_OPS), createJobFromOrder);
 app.get(
   '/api/production/capacity/plan',
   authorizePerm(P.DASHBOARD_MFG),
   getCapacityPlan
 );
 app.get('/api/production/kpis', authorizePerm(P.DASHBOARD_MFG), getProductionKpis);
-app.post('/api/production/:id/reserve-materials', reserveJobMaterials);
+app.post('/api/production/:id/reserve-materials', authorizePerm(P.MFG_OPS), reserveJobMaterials);
 app.get('/api/production/job-by-token/:token', getJobByToken);
 app.get('/api/production/:id', authorizePerm(P.DASHBOARD_MFG), getJob);
-app.put('/api/production/:id', updateJob);
-app.delete('/api/production/:id', deleteJob);
-app.post('/api/production/:id/sync-operations', syncJobOperations);
-app.post('/api/production/:id/operations/:opIndex/start', startOperation);
-app.post('/api/production/:id/operations/:opIndex/complete', completeOperation);
-app.post('/api/production/:id/operations/:opIndex/time', logOperationTime);
-app.post('/api/production/:id/operations/:opIndex/scrap-rework', scrapReworkOperation);
-app.post('/api/production/:id/operations/:opIndex/wip', logOperationWip);
-app.post('/api/production/:id/operations/:opIndex/quality', recordOperationQuality);
-app.post('/api/production/:id/materials/issue', issueJobMaterial);
-app.post('/api/production/:id/materials/return', returnJobMaterial);
-app.patch('/api/production/:id/costing', updateJobCosting);
+app.put('/api/production/:id', authorizePerm(P.MFG_OPS), updateJob);
+app.delete('/api/production/:id', authorizePerm(P.MFG_OPS), deleteJob);
+app.post('/api/production/:id/sync-operations', authorizePerm(P.MFG_OPS), syncJobOperations);
+app.post('/api/production/:id/operations/:opIndex/start', authorizePerm(P.MFG_OPS), startOperation);
+app.post('/api/production/:id/operations/:opIndex/complete', authorizePerm(P.MFG_OPS), completeOperation);
+app.post('/api/production/:id/operations/:opIndex/time', authorizePerm(P.MFG_OPS), logOperationTime);
+app.post('/api/production/:id/operations/:opIndex/scrap-rework', authorizePerm(P.MFG_OPS), scrapReworkOperation);
+app.post('/api/production/:id/operations/:opIndex/wip', authorizePerm(P.MFG_OPS), logOperationWip);
+app.post('/api/production/:id/operations/:opIndex/quality', authorizePerm(P.MFG_OPS), recordOperationQuality);
+app.post('/api/production/:id/materials/issue', authorizePerm(P.MFG_OPS), issueJobMaterial);
+app.post('/api/production/:id/materials/return', authorizePerm(P.MFG_OPS), returnJobMaterial);
+app.patch('/api/production/:id/costing', authorizePerm(P.MFG_OPS), updateJobCosting);
 
 const mc = manufacturingController;
-app.get('/api/manufacturing/work-centers', mc.listWorkCenters);
-app.post('/api/manufacturing/work-centers', mc.createWorkCenter);
+app.get('/api/manufacturing/work-centers', authorizePerm(P.DASHBOARD_MFG), mc.listWorkCenters);
+app.post('/api/manufacturing/work-centers', authorizePerm(P.MFG_OPS), mc.createWorkCenter);
 app.get('/api/manufacturing/assets', authorizePerm(P.DASHBOARD_MFG), mc.listAssets);
-app.post('/api/manufacturing/assets', mc.createAsset);
-app.get('/api/manufacturing/pm-schedules', mc.listPmSchedules);
-app.post('/api/manufacturing/pm-schedules', mc.createPmSchedule);
-app.post('/api/manufacturing/pm-schedules/:id/complete', mc.completePm);
+app.post('/api/manufacturing/assets', authorizePerm(P.MFG_OPS), mc.createAsset);
+app.get('/api/manufacturing/pm-schedules', authorizePerm(P.DASHBOARD_MFG), mc.listPmSchedules);
+app.post('/api/manufacturing/pm-schedules', authorizePerm(P.MFG_OPS), mc.createPmSchedule);
+app.post('/api/manufacturing/pm-schedules/:id/complete', authorizePerm(P.MFG_OPS), mc.completePm);
 app.get('/api/manufacturing/downtime', authorizePerm(P.DASHBOARD_MFG), mc.listDowntime);
-app.post('/api/manufacturing/downtime', mc.createDowntime);
-app.post('/api/manufacturing/downtime/:id/end', mc.endDowntime);
-app.get('/api/manufacturing/inspections', mc.listInspections);
-app.post('/api/manufacturing/inspections', mc.createInspection);
-app.put('/api/manufacturing/inspections/:id', mc.updateInspection);
-app.get('/api/manufacturing/non-conformances', mc.listNonConformances);
-app.post('/api/manufacturing/non-conformances', mc.createNonConformance);
-app.put('/api/manufacturing/non-conformances/:id', mc.updateNonConformance);
+app.post('/api/manufacturing/downtime', authorizePerm(P.MFG_OPS), mc.createDowntime);
+app.post('/api/manufacturing/downtime/:id/end', authorizePerm(P.MFG_OPS), mc.endDowntime);
+app.get('/api/manufacturing/inspections', authorizePerm(P.DASHBOARD_MFG), mc.listInspections);
+app.post('/api/manufacturing/inspections', authorizePerm(P.MFG_OPS), mc.createInspection);
+app.put('/api/manufacturing/inspections/:id', authorizePerm(P.MFG_OPS), mc.updateInspection);
+app.get('/api/manufacturing/non-conformances', authorizePerm(P.DASHBOARD_MFG), mc.listNonConformances);
+app.post('/api/manufacturing/non-conformances', authorizePerm(P.MFG_OPS), mc.createNonConformance);
+app.put('/api/manufacturing/non-conformances/:id', authorizePerm(P.MFG_OPS), mc.updateNonConformance);
 
-app.get('/api/clients', getClients);
-app.post('/api/clients', createClient);
-app.get('/api/clients/:id', getClient);
-app.put('/api/clients/:id', updateClient);
-app.delete('/api/clients/:id', deleteClient);
+app.get('/api/clients', authorizePerm(P.ORDERS_VIEW), getClients);
+app.post('/api/clients', authorizePerm(P.ORDERS_MANAGE), createClient);
+app.get('/api/clients/:id', authorizePerm(P.ORDERS_VIEW), getClient);
+app.put('/api/clients/:id', authorizePerm(P.ORDERS_MANAGE), updateClient);
+app.delete('/api/clients/:id', authorizePerm(P.ORDERS_MANAGE), deleteClient);
 
-app.get('/api/orders', getOrders);
-app.post('/api/orders', createOrder);
-app.get('/api/orders/:id', getOrder);
-app.put('/api/orders/:id', updateOrder);
-app.delete('/api/orders/:id', deleteOrder);
-app.post('/api/orders/:orderId/reserve-line', reserveOrderLine);
+app.get('/api/orders', authorizePerm(P.ORDERS_VIEW), getOrders);
+app.post('/api/orders', authorizePerm(P.ORDERS_MANAGE), createOrder);
+app.get('/api/orders/:id', authorizePerm(P.ORDERS_VIEW), getOrder);
+app.put('/api/orders/:id', authorizePerm(P.ORDERS_MANAGE), updateOrder);
+app.delete('/api/orders/:id', authorizePerm(P.ORDERS_MANAGE), deleteOrder);
+app.post('/api/orders/:orderId/reserve-line', authorizePerm(P.ORDERS_MANAGE), reserveOrderLine);
 
 app.get('/api/shipments', authorizePerm(P.SHIPMENTS_VIEW), listShipments);
 app.get(
@@ -474,99 +467,47 @@ app.post(
   shipShipment
 );
 
-app.get('/api/saved-views', listSavedViews);
-app.post('/api/saved-views', createSavedView);
-app.delete('/api/saved-views/:id', removeSavedView);
+app.get('/api/saved-views', authorizePerm(P.DASHBOARD_VIEW), listSavedViews);
+app.post('/api/saved-views', authorizePerm(P.DASHBOARD_VIEW), createSavedView);
+app.delete('/api/saved-views/:id', authorizePerm(P.DASHBOARD_VIEW), removeSavedView);
 
-app.get(
-  '/api/reports/export/orders',
-  authorize('Admin', 'finance_head', 'finance_viewer', 'warehouse_head'),
-  exportOrders
-);
-app.get(
-  '/api/reports/export/inventory',
-  authorize('Admin', 'finance_head', 'finance_viewer', 'warehouse_head', 'purchasing_head'),
-  exportInventory
-);
-app.get(
-  '/api/reports/export/production',
-  authorize('Admin', 'finance_head', 'finance_viewer', 'warehouse_head'),
-  exportProduction
-);
-app.get(
-  '/api/reports/export/ar',
-  authorize('Admin', 'finance_head', 'finance_viewer'),
-  exportAR
-);
-app.get(
-  '/api/reports/export/ap',
-  authorize('Admin', 'finance_head', 'finance_viewer'),
-  exportAP
-);
-app.post(
-  '/api/reports/email-digest',
-  authorize('Admin', 'finance_head'),
-  postEmailDigest
-);
+app.get('/api/reports/export/orders', authorizePerm(P.ORDERS_VIEW), exportOrders);
+app.get('/api/reports/export/inventory', authorizePerm(P.PRODUCT_VIEW), exportInventory);
+app.get('/api/reports/export/production', authorizePerm(P.DASHBOARD_MFG), exportProduction);
+app.get('/api/reports/export/ar', authorizePerm(P.FINANCE_READ), exportAR);
+app.get('/api/reports/export/ap', authorizePerm(P.FINANCE_READ), exportAP);
+app.post('/api/reports/email-digest', authorizePerm(P.FINANCE_WRITE), postEmailDigest);
 app.get('/api/reports/summary', authorizePerm(P.DASHBOARD_VIEW), getReportsSummary);
 
-app.get(
-  '/api/approvals/pending',
-  authorize('Admin', 'finance_head', 'purchasing_head'),
-  listPending
-);
-app.post(
-  '/api/approvals/:id/approve',
-  authorize('Admin', 'finance_head'),
-  approveRequest
-);
-app.post(
-  '/api/approvals/:id/reject',
-  authorize('Admin', 'finance_head'),
-  rejectRequest
-);
+app.get('/api/approvals/pending', authorizePerm(P.PO_APPROVE, P.FINANCE_WRITE), listPending);
+app.post('/api/approvals/:id/approve', authorizePerm(P.FINANCE_WRITE), approveRequest);
+app.post('/api/approvals/:id/reject', authorizePerm(P.FINANCE_WRITE), rejectRequest);
 
-app.get(
-  '/api/audit-logs',
-  authorize('Admin', 'finance_head', 'finance_viewer'),
-  listAuditLogs
-);
+app.get('/api/audit-logs', authorizePerm(P.FINANCE_READ), listAuditLogs);
 
-app.get(
-  '/api/integrations/xero/invoices.csv',
-  authorize('Admin', 'finance_head'),
-  xeroInvoicesCsv
-);
-app.get(
-  '/api/integrations/qb/bills.csv',
-  authorize('Admin', 'finance_head'),
-  quickBooksBillsCsv
-);
-app.get(
-  '/api/integrations/qb/expenses.csv',
-  authorize('Admin', 'finance_head'),
-  qbExpensesCsv
-);
+app.get('/api/integrations/xero/invoices.csv', authorizePerm(P.FINANCE_READ), xeroInvoicesCsv);
+app.get('/api/integrations/qb/bills.csv', authorizePerm(P.FINANCE_READ), quickBooksBillsCsv);
+app.get('/api/integrations/qb/expenses.csv', authorizePerm(P.FINANCE_READ), qbExpensesCsv);
 
 app.get('/api/hr/employees', getEmployees);
-app.post('/api/hr/employees', createEmployee);
-app.put('/api/hr/employees/:id', updateEmployee);
-app.post('/api/hr/employees/:id/invite', inviteEmployee);
+app.post('/api/hr/employees', authorizePerm(P.HR_FULL), createEmployee);
+app.put('/api/hr/employees/:id', authorizePerm(P.HR_FULL), updateEmployee);
+app.post('/api/hr/employees/:id/invite', authorizePerm(P.HR_FULL), inviteEmployee);
 app.get('/api/hr/attendance', getAttendance);
-app.post('/api/hr/attendance', logAttendance);
-app.patch('/api/hr/attendance/:id/overtime', reviewAttendanceOvertime);
+app.post('/api/hr/attendance', authorizePerm(P.HR_FULL), logAttendance);
+app.patch('/api/hr/attendance/:id/overtime', authorizePerm(P.HR_FULL), reviewAttendanceOvertime);
 app.get('/api/hr/leaves', getLeaves);
-app.post('/api/hr/leaves', createLeave);
-app.patch('/api/hr/leaves/:id/review', reviewLeave);
+app.post('/api/hr/leaves', authorizePerm(P.HR_FULL), createLeave);
+app.patch('/api/hr/leaves/:id/review', authorizePerm(P.HR_FULL), reviewLeave);
 app.get('/api/hr/leaves/balance/:employeeId', getLeaveBalance);
 app.get('/api/hr/attendance-corrections', getAttendanceCorrections);
-app.patch('/api/hr/attendance-corrections/:id/review', reviewAttendanceCorrection);
+app.patch('/api/hr/attendance-corrections/:id/review', authorizePerm(P.HR_FULL), reviewAttendanceCorrection);
 app.get('/api/hr/departments', getDepartments);
-app.post('/api/hr/departments', createDepartment);
-app.put('/api/hr/departments/:id', updateDepartment);
+app.post('/api/hr/departments', authorizePerm(P.HR_FULL), createDepartment);
+app.put('/api/hr/departments/:id', authorizePerm(P.HR_FULL), updateDepartment);
 app.get('/api/hr/positions', getPositions);
-app.post('/api/hr/positions', createPosition);
-app.put('/api/hr/positions/:id', updatePosition);
+app.post('/api/hr/positions', authorizePerm(P.HR_FULL), createPosition);
+app.put('/api/hr/positions/:id', authorizePerm(P.HR_FULL), updatePosition);
 app.get('/api/hr/payroll/export/pension', exportPensionCsv);
 app.get('/api/hr/payroll/export/income-tax', exportIncomeTaxCsv);
 app.get('/api/hr/payroll/payslip/:id/html', getPayslipHtml);
@@ -592,6 +533,7 @@ app.post(
 app.get('/api/hr/payroll', getPayroll);
 app.post('/api/hr/payroll', createPayroll);
 
+app.use('/api/employee', authorize('employee'));
 app.get('/api/employee/attendance', getMyAttendance);
 app.get('/api/employee/attendance/today', getMyAttendanceToday);
 app.post('/api/employee/attendance', submitAttendance);
@@ -656,16 +598,16 @@ app.get('/api/analytics/profitability', authorizePerm(P.DASHBOARD_VIEW), analyti
 app.get('/api/analytics/inventory-turnover', authorizePerm(P.DASHBOARD_VIEW), analyticsController.getInventoryTurnover);
 
 // Quality Control
-app.get('/api/quality/checklists', protect, qualityController.listChecklists);
-app.post('/api/quality/checklists', protect, qualityController.createChecklist);
-app.patch('/api/quality/checklists/:id', protect, qualityController.updateChecklist);
-app.get('/api/quality/checklists/search', protect, qualityController.getChecklistForJob);
-app.post('/api/quality/inspections/submit', protect, qualityController.submitInspection);
+app.get('/api/quality/checklists', authorizePerm(P.DASHBOARD_MFG), qualityController.listChecklists);
+app.post('/api/quality/checklists', authorizePerm(P.MFG_OPS), qualityController.createChecklist);
+app.patch('/api/quality/checklists/:id', authorizePerm(P.MFG_OPS), qualityController.updateChecklist);
+app.get('/api/quality/checklists/search', authorizePerm(P.DASHBOARD_MFG), qualityController.getChecklistForJob);
+app.post('/api/quality/inspections/submit', authorizePerm(P.MFG_OPS), qualityController.submitInspection);
 
-// Tenant Settings
-app.get('/api/tenant/settings', protect, tenantController.getSettings);
-app.patch('/api/tenant/document-settings', protect, tenantController.updateDocumentSettings);
-app.patch('/api/tenant/info', protect, tenantController.updateTenantInfo);
+// Tenant Settings — reads allowed for all authenticated users; writes are Admin-only
+app.get('/api/tenant/settings', tenantController.getSettings);
+app.patch('/api/tenant/document-settings', authorizePerm(P.SETTINGS_MANAGE), tenantController.updateDocumentSettings);
+app.patch('/api/tenant/info', authorizePerm(P.SETTINGS_MANAGE), tenantController.updateTenantInfo);
 
 app.use('/api/notifications', notificationRoutes);
 

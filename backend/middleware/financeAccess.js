@@ -20,6 +20,11 @@ function financeAccess(req, res, next) {
     return next();
   }
 
+  // Allow purchasing staff to create / update vendors without full finance access
+  if (can(r, P.VENDOR_MANAGE) && (req.path === '/vendors' || req.path.startsWith('/vendors/'))) {
+    return next();
+  }
+
   const e = new Error('Not authorized for this finance action');
   e.statusCode = 403;
   return next(e);

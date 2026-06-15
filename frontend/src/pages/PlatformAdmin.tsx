@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+﻿import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { CreateTenantAdminDialog } from "@/components/CreateTenantAdminDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -44,11 +44,14 @@ import { PlatformStepUpDialog } from "@/components/PlatformStepUpDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocale } from "@/contexts/LocaleContext";
 import {
+  ModuleDashboardLayout,
   StickyModuleTabs,
   moduleTabsListClassName,
   moduleTabsTriggerClassName,
 } from "@/components/ModuleDashboardLayout";
 import {
+  AlertTriangle,
+  Bell,
   Building2,
   Loader2,
   Plus,
@@ -65,7 +68,6 @@ import {
   ArrowRightCircle,
   ArrowRight,
   Timer,
-  CloudCog,
   LayoutGrid,
   Trash2,
   Zap,
@@ -150,7 +152,7 @@ interface AuditRow {
 
 function AuditLogTable({ rows }: { rows: AuditRow[] }) {
   return (
-    <div className="mt-2 overflow-hidden rounded-[14px] border border-border/60 bg-background">
+    <div className="mt-2 overflow-x-auto rounded-[14px] border border-border/60 bg-background">
       <Table>
         <TableHeader className="bg-secondary/40 border-b border-border/20">
           <TableRow className="hover:bg-transparent">
@@ -355,10 +357,19 @@ function getApiError(e: unknown, fallback: string): string {
   return (e as { message?: string })?.message || fallback;
 }
 
+function tenantAvatarClass(status?: string): string {
+  if (status === "active") return "bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover/link:bg-blue-500 group-hover/link:text-white";
+  if (status === "trial") return "bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover/link:bg-amber-500 group-hover/link:text-white";
+  if (status === "suspended") return "bg-destructive/10 text-destructive group-hover/link:bg-destructive group-hover/link:text-white";
+  return "bg-muted text-muted-foreground group-hover/link:bg-muted-foreground group-hover/link:text-background";
+}
+
 export default function PlatformAdmin() {
   const { t } = useLocale();
   const [searchParams, setSearchParams] = useSearchParams();
   const { setActAsTenantId } = useAuth();
+
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [adminTenant, setAdminTenant] = useState<PlatformTenant | null>(null);
@@ -600,6 +611,11 @@ export default function PlatformAdmin() {
     (typeof (byStatus as Record<string, number>).Active === "number"
       ? (byStatus as Record<string, number>).Active
       : 0);
+  const trialTenantCount =
+    (typeof byStatus.trial === "number" ? byStatus.trial : undefined) ??
+    (typeof (byStatus as Record<string, number>).Trial === "number"
+      ? (byStatus as Record<string, number>).Trial
+      : 0);
   const filteredTenants = useMemo(() => {
     const allTenants = tenantsQ.data?.data ?? [];
     const q = tenantSearchQuery.trim().toLowerCase();
@@ -632,59 +648,23 @@ export default function PlatformAdmin() {
 
   return (
     <>
-      <div className="mx-auto max-w-[1600px] space-y-8 pb-8 animate-in fade-in duration-500">
-        <section className="relative overflow-hidden rounded-[20px] border border-white/60 bg-[linear-gradient(135deg,hsl(222_47%_12%),hsl(221_68%_25%)_52%,hsl(190_75%_34%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)] dark:border-white/10">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_14%,rgba(255,255,255,0.18),transparent_28%),radial-gradient(circle_at_85%_12%,rgba(16,185,129,0.24),transparent_32%)]" />
-          <div className="relative grid gap-6 p-6 lg:grid-cols-[1fr_360px] lg:p-7">
-            <div className="max-w-3xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white/80">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Platform control center
-              </div>
-              <h1 className="text-4xl font-black tracking-tight sm:text-5xl">{t("pages.platform.title")}</h1>
-              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-white/65">{t("pages.platform.subtitle")}</p>
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                {[
-                  { label: "Companies", value: metrics?.tenants.total ?? 0, tone: "text-sky-200" },
-                  { label: "Active", value: activeTenantCount, tone: "text-emerald-200" },
-                  { label: "Employees", value: metrics?.employees ?? 0, tone: "text-amber-200" },
-                ].map((item) => (
-                  <div key={item.label} className="rounded-[14px] border border-white/15 bg-white/10 px-4 py-3 backdrop-blur">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-white/50">{item.label}</p>
-                    <p className={`mt-1 text-xl font-black tracking-tight ${item.tone}`}>{item.value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[18px] border border-white/15 bg-white/10 p-4 backdrop-blur">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-white/55">Platform health</p>
-                  <p className={`mt-2 text-3xl font-black tracking-tight ${metricsQ.isError ? "text-red-300" : ""}`}>
-                    {metricsQ.isLoading ? "Checking..." : metricsQ.isError ? "Degraded" : "Healthy"}
-                  </p>
-                  <p className="mt-1 text-xs font-semibold leading-5 text-white/55">
-                    {metricsQ.isError ? "Could not reach metrics API." : "Tenant operations and platform audit visibility are available."}
-                  </p>
-                </div>
-                <div className={`flex h-12 w-12 items-center justify-center rounded-[14px] ${metricsQ.isError ? "bg-red-400/15 text-red-200" : "bg-emerald-400/15 text-emerald-200"}`}>
-                  <CloudCog className="h-6 w-6" />
-                </div>
-              </div>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="rounded-[12px] border border-white/10 bg-white/10 p-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-white/45">Audit events</p>
-                  <p className="mt-1 text-xl font-black">{auditTotal}</p>
-                </div>
-                <div className="rounded-[12px] border border-white/10 bg-white/10 p-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-white/45">API status</p>
-                  <p className="mt-1 text-xl font-black">{metricsQ.isError ? "Offline" : "Online"}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+      <div className="mx-auto max-w-[1600px] pb-8">
+        <ModuleDashboardLayout
+          title={t("pages.platform.title")}
+          description={t("pages.platform.subtitle")}
+          icon={ShieldCheck}
+          healthStats={[
+            { label: "Companies", value: String(metrics?.tenants.total ?? 0), accent: "text-blue-500" },
+            { label: "Active", value: String(activeTenantCount), accent: "text-emerald-500" },
+            { label: "Trials", value: String(trialTenantCount), accent: "text-amber-500" },
+            { label: "Employees", value: String(metrics?.employees ?? 0), accent: "text-primary" },
+            {
+              label: "API",
+              value: metricsQ.isLoading ? "—" : metricsQ.isError ? "Offline" : "Online",
+              accent: metricsQ.isError ? "text-destructive" : "text-emerald-500",
+            },
+          ]}
+        >
 
         <Tabs defaultValue="overview" className="space-y-6">
           <StickyModuleTabs>
@@ -716,7 +696,7 @@ export default function PlatformAdmin() {
               </div>
             ) : (
               <>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                   <Card className="group relative overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
                     <div className="h-1 bg-gradient-to-r from-blue-500 via-sky-500 to-emerald-500" />
                     <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 px-6 pt-6">
@@ -726,7 +706,7 @@ export default function PlatformAdmin() {
                       </div>
                     </CardHeader>
                     <CardContent className="px-6 pb-6 pt-2">
-                      <div className="text-4xl font-bold tracking-tight text-foreground mb-4">{metrics?.tenants.total ?? 0}</div>
+                      <div className="text-4xl font-black tracking-tight text-foreground mb-4">{metrics?.tenants.total ?? 0}</div>
                       <div className="flex flex-wrap gap-2">
                         {Object.entries(metrics?.tenants.byStatus ?? {}).map(([k, v]) => (
                           <Badge
@@ -750,10 +730,27 @@ export default function PlatformAdmin() {
                       </div>
                     </CardHeader>
                     <CardContent className="px-6 pb-6 pt-2">
-                      <div className="text-4xl font-bold tracking-tight text-foreground mb-4">{metrics?.employees ?? 0}</div>
+                      <div className="text-4xl font-black tracking-tight text-foreground mb-4">{metrics?.employees ?? 0}</div>
                       <p className="text-[10px] font-medium text-muted-foreground/60 flex items-center gap-2">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         Active across all companies
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="group relative overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+                    <div className="h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500" />
+                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 px-6 pt-6">
+                      <CardTitle className="text-xs font-bold tracking-wider text-amber-500 uppercase">On Trial</CardTitle>
+                      <div className="flex h-9 w-9 items-center justify-center rounded-[12px] border border-amber-500/20 bg-amber-500/10 text-amber-500">
+                        <Timer className="h-4 w-4" />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-6 pb-6 pt-2">
+                      <div className="text-4xl font-black tracking-tight text-foreground mb-4">{trialTenantCount}</div>
+                      <p className="text-[10px] font-medium text-muted-foreground/60 flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        Companies in trial period
                       </p>
                     </CardContent>
                   </Card>
@@ -767,8 +764,8 @@ export default function PlatformAdmin() {
                       </div>
                     </CardHeader>
                     <CardContent className="px-6 pb-6 pt-2">
-                      <div className={`text-3xl font-bold tracking-tight mb-4 ${metricsQ.isError ? "text-destructive" : "text-foreground"}`}>
-                        {metricsQ.isLoading ? "Checking..." : metricsQ.isError ? "Degraded" : "Healthy"}
+                      <div className={`text-3xl font-black tracking-tight mb-4 ${metricsQ.isError ? "text-destructive" : "text-foreground"}`}>
+                        {metricsQ.isLoading ? "Checking…" : metricsQ.isError ? "Degraded" : "Healthy"}
                       </div>
                       <p className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1.5">
                         <span className={`h-1.5 w-1.5 rounded-full ${metricsQ.isError ? "bg-destructive" : "bg-emerald-500 animate-pulse"}`} />
@@ -778,13 +775,55 @@ export default function PlatformAdmin() {
                   </Card>
                 </div>
 
+                {(() => {
+                  const alertTenants = (tenantsQ.data?.data ?? []).filter(
+                    (t) =>
+                      t.health?.zeroAdmins ||
+                      (t.status === "trial" && t.health?.trialDaysLeft != null && t.health.trialDaysLeft <= 7)
+                  );
+                  if (alertTenants.length === 0) return null;
+                  return (
+                    <Card className="overflow-hidden rounded-[18px] border border-amber-200/60 dark:border-amber-800/40 bg-amber-50/40 dark:bg-amber-950/20 shadow-sm">
+                      <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-red-400" />
+                      <CardHeader className="px-8 pb-3 pt-6">
+                        <CardTitle className="flex items-center gap-2 text-base font-black tracking-tight text-amber-700 dark:text-amber-400">
+                          <AlertTriangle className="h-5 w-5" />
+                          Needs attention — {alertTenants.length} {alertTenants.length === 1 ? "company" : "companies"}
+                        </CardTitle>
+                        <CardDescription className="text-xs text-amber-600/80 dark:text-amber-500/80">
+                          Companies with no admins or trials expiring within 7 days
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="px-8 pb-6">
+                        <div className="flex flex-wrap gap-2">
+                          {alertTenants.map((t) => (
+                            <Link key={t._id} to={`/platform/tenants/${t._id}`} className="group">
+                              <div className="flex items-center gap-2 rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-background px-3 py-2 shadow-sm transition-all hover:border-amber-400/60 hover:shadow-md">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40 text-[10px] font-black text-amber-700 dark:text-amber-400">
+                                  {t.key.substring(0, 2).toUpperCase()}
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-bold text-foreground/80 group-hover:text-primary transition-colors">{t.displayName || t.key}</span>
+                                  <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600/70 dark:text-amber-500/70">
+                                    {t.health?.zeroAdmins ? "No admins" : t.health?.trialExpired ? "Trial expired" : `${t.health?.trialDaysLeft ?? "?"}d left`}
+                                  </span>
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
                 <Card className="overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
                   <div className="h-1 bg-gradient-to-r from-blue-500 via-sky-500 to-emerald-500" />
                   <CardHeader className="p-8 pb-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-[12px] border border-primary/20 bg-primary/10 text-primary">
-                          <Activity className="h-5 w-5" />
+                          <Bell className="h-5 w-5" />
                         </div>
                         <div className="space-y-0.5">
                           <CardTitle className="text-lg font-black tracking-tight text-foreground">Global announcement</CardTitle>
@@ -1048,23 +1087,23 @@ export default function PlatformAdmin() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-0 px-8 pb-8">
-                  <div className="overflow-hidden rounded-[14px] border border-border/60 bg-background">
+                <CardContent className="p-4 sm:p-6 lg:p-8 lg:pt-0">
+                  <div className="overflow-x-auto rounded-[14px] border border-border/60 bg-background">
                     <Table>
                       <TableHeader className="bg-secondary/40 border-b border-border/20">
                         <TableRow className="hover:bg-transparent">
-                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4 px-6">Domain Identifier</TableHead>
+                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4 px-6">Company</TableHead>
                           <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4">Company Name</TableHead>
-                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4">Quick Status</TableHead>
-                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4">Current State</TableHead>
-                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4">Created & Logs</TableHead>
+                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4">Status</TableHead>
+                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4">Health</TableHead>
+                          <TableHead className="font-bold text-[11px] uppercase tracking-wider py-4">Created</TableHead>
                           <TableHead className="text-right font-bold text-[11px] uppercase tracking-wider py-4 px-6">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredTenants.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="h-48 text-center">
+                            <TableCell colSpan={5} className="h-48 text-center">
                               <p className="text-sm font-medium text-muted-foreground/30 italic">No companies matching search</p>
                             </TableCell>
                           </TableRow>
@@ -1076,7 +1115,7 @@ export default function PlatformAdmin() {
                                   to={`/platform/tenants/${t._id}`}
                                   className="group/link inline-flex items-center gap-3"
                                 >
-                                  <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-muted font-bold text-xs shadow-sm transition-all group-hover/link:bg-primary group-hover/link:text-primary-foreground">
+                                  <div className={`flex h-10 w-10 items-center justify-center rounded-[12px] font-bold text-xs shadow-sm transition-all ${tenantAvatarClass(t.status)}`}>
                                     {t.key.substring(0, 2).toUpperCase()}
                                   </div>
                                   <div className="flex flex-col">
@@ -1128,9 +1167,26 @@ export default function PlatformAdmin() {
                                 </Select>
                               </TableCell>
                               <TableCell>
-                                <Badge variant={statusBadgeVariant(t.status)} className="px-2 py-0.5 font-bold uppercase text-[9px] tracking-wider rounded-md border-none bg-muted/20">
-                                  {t.status}
-                                </Badge>
+                                <div className="flex flex-col gap-1 min-w-[120px]">
+                                  <div className="flex items-center gap-1.5">
+                                    <div className={`h-1.5 w-1.5 shrink-0 rounded-full ${(t.health?.lastApiActivityAt || t.lastApiActivityAt) ? "bg-emerald-500" : "bg-muted-foreground/20"}`} />
+                                    <span className="text-[10px] font-bold text-muted-foreground/60 truncate">
+                                      {t.health?.lastApiActivityAt || t.lastApiActivityAt
+                                        ? formatRelativeOrDash(t.health?.lastApiActivityAt ?? t.lastApiActivityAt)
+                                        : "No activity"}
+                                    </span>
+                                  </div>
+                                  {t.health?.zeroAdmins && (
+                                    <Badge variant="destructive" className="w-fit px-1.5 py-0 text-[9px] font-bold uppercase tracking-wide">
+                                      No admins
+                                    </Badge>
+                                  )}
+                                  {t.status === "trial" && t.health?.trialDaysLeft != null && (
+                                    <span className={`text-[9px] font-black uppercase tracking-wider ${t.health.trialExpired ? "text-destructive" : t.health.trialDaysLeft <= 7 ? "text-amber-500" : "text-muted-foreground/40"}`}>
+                                      {t.health.trialExpired ? "Trial expired" : `${t.health.trialDaysLeft}d remaining`}
+                                    </span>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-2">
@@ -1198,6 +1254,18 @@ export default function PlatformAdmin() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
+                                    title="Act as this tenant"
+                                    className="h-9 w-9 rounded-lg hover:bg-sky-500/10 hover:text-sky-500 transition-all"
+                                    onClick={() => {
+                                      setActAsTenantId(t._id);
+                                      navigate("/");
+                                    }}
+                                  >
+                                    <ArrowRightCircle className="h-4 w-4 text-sky-500/70" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
                                     title="View details"
                                     className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary transition-all"
                                     asChild
@@ -1229,57 +1297,44 @@ export default function PlatformAdmin() {
           </TabsContent>
 
           <TabsContent value="audit" className="space-y-8">
-            <div className="mb-6 flex flex-col gap-6 rounded-[18px] border border-border/70 bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-emerald-500 p-3.5 shadow-sm">
-                  <ClipboardList className="h-6 w-6 stroke-[2.5] text-white" />
-                </div>
-                <div className="space-y-0.5">
-                  <h2 className="text-xl font-black tracking-tight text-foreground">Audit stream</h2>
-                  <p className="text-xs font-medium text-muted-foreground">Global activity monitoring</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-6 rounded-[14px] border border-border/60 bg-muted/25 px-6 py-3">
-                <div className="flex flex-col items-end">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Total Events</span>
-                  <span className="text-xl font-bold text-foreground">{auditTotal}</span>
-                </div>
-                <div className="h-8 w-px bg-border/20" />
-                <div className="flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/80">Active</span>
-                </div>
-              </div>
-            </div>
-
             <Card className="overflow-hidden rounded-[18px] border border-border/70 bg-card shadow-sm">
               <div className="h-1 bg-gradient-to-r from-emerald-500 via-primary to-sky-500" />
-              <CardHeader className="border-b border-border/50 bg-muted/25 px-8 pb-4 pt-8">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="flex items-center gap-2 text-lg font-black tracking-tight text-foreground">
-                      <ShieldCheck className="h-5 w-5 text-primary" />
-                      Activity log
-                    </CardTitle>
-                    <CardDescription className="text-xs font-medium opacity-60">Persistent record of administrative actions</CardDescription>
+              <CardHeader className="border-b border-border/50 bg-muted/25 px-4 pb-4 pt-6 sm:px-8 sm:pt-8">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
+                      <ClipboardList className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <CardTitle className="text-xl font-black tracking-tight text-foreground">Audit stream</CardTitle>
+                      <CardDescription className="text-xs font-medium">
+                        Global activity monitoring · <span className="font-bold text-foreground/70">{auditTotal}</span> total events
+                      </CardDescription>
+                    </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="h-10 px-4 rounded-xl bg-background/50 border border-border/10 font-bold text-[11px] uppercase tracking-wider hover:bg-background transition-all group"
-                    disabled={auditExporting}
-                    onClick={() => void handleAuditExportCsv()}
-                  >
-                    {auditExporting ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-2 text-primary" />
-                    ) : (
-                      <Download className="h-3.5 w-3.5 mr-2 text-primary group-hover:scale-110 transition-transform" />
-                    )}
-                    Export CSV
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 rounded-[10px] border border-border/60 bg-muted/25 px-3 py-1.5">
+                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/80">Live</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="h-10 px-4 rounded-xl bg-background/50 border border-border/10 font-bold text-[11px] uppercase tracking-wider hover:bg-background transition-all group"
+                      disabled={auditExporting}
+                      onClick={() => void handleAuditExportCsv()}
+                    >
+                      {auditExporting ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-2 text-primary" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5 mr-2 text-primary group-hover:scale-110 transition-transform" />
+                      )}
+                      Export CSV
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6 px-8 pb-8">
+              <CardContent className="space-y-6 px-4 pb-6 pt-6 sm:px-8 sm:pb-8">
                 <div className="grid gap-6 rounded-[14px] border border-border/60 bg-muted/20 p-6 lg:grid-cols-3">
                   <div className="space-y-2">
                     <Label className="text-[11px] font-bold text-muted-foreground/60 ml-1">Event Type</Label>
@@ -1358,6 +1413,7 @@ export default function PlatformAdmin() {
             </Card>
           </TabsContent>
         </Tabs>
+        </ModuleDashboardLayout>
       </div>
       <PlatformStepUpDialog
         open={stepUpOpen}

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Activity, ArrowRight, Building2, CheckCircle2, Eye, EyeOff, Factory, LockKeyhole, Mail, Shield, Sparkles } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, Shield, Sparkles } from "lucide-react";
 import { LoadingLogo } from "@/components/ui/LoadingLogo";
 import { getApiBaseUrl } from "@/lib/apiBase";
 
@@ -135,7 +135,7 @@ export default function Login() {
                         id="emailOrId"
                         name="username"
                         autoComplete="username"
-                        placeholder=""
+                        placeholder={t("auth.emailOrIdPlaceholder")}
                         value={emailOrId}
                         onChange={(e) => setEmailOrId(e.target.value)}
                         required
@@ -155,7 +155,7 @@ export default function Login() {
                         name="password"
                         type={showPassword ? "text" : "password"}
                         autoComplete="current-password"
-                        placeholder=""
+                        placeholder={t("auth.passwordPlaceholder")}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required

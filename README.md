@@ -1,109 +1,123 @@
-# Welcome to our ERP
+# Integra ERP
 
-## Phase 1 — Inventory ledger & production completion
+A modern inventory and manufacturing ERP prototype with a React/Vite frontend and an Express/MongoDB backend.
 
-- **Stock movements**: Every stock change writes a `StockMovement` row and updates `Product.stock` (opening balance, receipt, issue, adjustment, production consume/output).
-- **API**: `GET/POST /api/inventory/movements` (authenticated). Product create/edit adjusts stock via the ledger.
-- **BOMs** must define **`outputProduct`** (finished-good SKU) and optional **`effectiveFrom` / `effectiveTo`** before a job can be completed.
-- **Completing a job** (`status: Completed`): consumes BOM components × job quantity and adds **job quantity** to the output product. Runs once per job (`inventoryPosted`).
-- **Reseed DB** (adds FG SKUs + BOM output links + opening-balance movements):
+## Repository structure
+
+- `backend/` — Node.js + Express API server
+- `frontend/` — Vite React frontend application
+- `docs/` — deployment, backup, CI/CD, and workflow documentation
+
+## Current status
+
+- Backend supports inventory movements, BOM-based production, material reservations, purchase orders, invoice creation, AR aging, permissions, and optional audit logging.
+- Frontend is built with Vite, React, TypeScript, Tailwind CSS, React Query, and shadcn-ui primitives.
+- Environment configuration is separate for backend and frontend.
+- Backend tests use Jest; frontend tests use Vitest and Playwright.
+
+## Backend
+
+### Setup
+
+1. Copy `backend/env.example` to `backend/.env`
+2. Set `MONGODB_URI` to your MongoDB connection string
+3. Set `JWT_SECRET` to a secure value in production (minimum 32 characters)
+
+### Useful scripts
 
 ```bash
-cd backend && node seeder.js
+cd backend
+npm install
+npm run dev
+npm test
+npm run test:watch
+npm run test:integration
 ```
 
-MongoDB **replica set** is optional: on a standalone dev instance, production completion uses a sequential path with rollback on failure.
+### Key dependencies
 
-## Phase 2 — Demand → supply
+- `express`
+- `mongoose`
+- `jsonwebtoken`
+- `express-rate-limit`
+- `helmet`
+- `express-validator`
+- `pino`
 
-- **`GET /api/mrp/suggestions`** — Open orders (pending/processing) × BOM lines: ATP, reserved FG per line, job coverage, **suggested make** qty.
-- **`POST /api/orders/:orderId/reserve-line`** — Reserve finished good from stock for a line (caps at line qty & available ATP).
-- **`POST /api/production/from-order`** — Create a job linked to `order.items[lineIndex].productionJob`; BOM output must match the line SKU.
-- **`POST /api/production/:id/reserve-materials`** — Reserve BOM components × job qty (ATP for raw drops for other users).
-- **`GET /api/inventory/alerts`** — SKUs where **ATP** (on hand − active reservations) ≤ **reorderPoint** (critical / high / low).
-- **`GET/DELETE /api/inventory/reservations`** — List or release a single reservation.
-- Delivering or **cancelling** an order **releases** all FG reservations for that order. Cancelling/deleting a job **releases** material reservations.
+### Important backend notes
 
-## Phase 3 — Procurement, finance, access control
+- Default backend port is `5000`.
+- `backend/.env.example` includes optional rate-limit and billing webhook config.
+- Enable audit logging with `AUDIT_LOG_ENABLED=true`.
+- Production requires a strong `JWT_SECRET`.
 
-- **Purchase orders**: `draft` → **approve** → **receive** (partial OK). Receiving posts **`receipt`** movements tied to `PurchaseOrder` and updates `unitCost` / `lastReceived` when line has unit cost.
-- **API**: `GET/POST /api/purchase-orders`, `PUT :id`, `POST :id/approve`, `POST :id/receive`, `POST :id/cancel`.
-- **Invoice from order**: `POST /api/finance/invoices/from-order` `{ orderId, dueDate? }` — links `Invoice.order`; one invoice per order.
-- **AR aging**: `GET /api/finance/ar-aging` — buckets (not due, 1–30, …, 90+), marks past-due **Pending** as **Overdue**.
-- **Permissions** (`backend/config/permissions.js`): **purchasing_head** (PO create/approve/receive/cancel), **warehouse_head** (receive PO, manual inventory post), **finance_head** (unchanged finance routes). **employee**: view PO only; **manual stock movement** = Admin + warehouse only.
-- **Auth**: login/`GET /me` return `permissions[]`; `GET /api/auth/permissions` returns matrix doc for **Settings → Access**.
-- Reseed adds **buyer@integracnc.com** & **warehouse@integracnc.com** (password123).
+## Frontend
 
-## Phase 4 — Hardening, ops, tests, docs
+### Setup
 
-- **Frontend API URL**: `VITE_API_BASE_URL` (see `frontend/.env.example`). Defaults to `http://localhost:5000/api`.
-- **Backend env**: copy `backend/env.example` → `.env`. In **production**, `JWT_SECRET` must be ≥32 chars or the server exits. Structured logs (**pino**), **Helmet**, **rate limits** (login + API), JSON body cap.
-- **Validation**: login + manual stock movements use **express-validator**.
-- **Audit** (optional): `AUDIT_LOG_ENABLED=true` logs product/BOM changes and manual stock movements to `auditlogs`.
-- **Tests** (needs MongoDB): `cd backend && npm test` — uses DB `factory_flow_test` or `MONGODB_TEST_URI`. Covers receipt → stock and **job completion → BOM consume / FG output**.
-- **Docs**: `docs/DEPLOYMENT.md` (HTTPS/proxy), `docs/BACKUPS_AND_RESTORE.md`, `docs/ORDER_TO_SHIP_USER_GUIDE.md`.
+1. Copy `frontend/.env.example` to `frontend/.env` if needed
+2. Set `VITE_API_BASE_URL` to your backend API URL
 
-## Project info
+### Useful scripts
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+```bash
+cd frontend
+npm install
+npm run dev
+npm run build
+npm run lint
+npm run test
+npm run e2e
+```
 
-## CI/CD
+### Important frontend notes
 
-GitHub Actions validates frontend lint, tests, build output, and the backend Jest
-suite on pull requests and pushes to `main`. A separate production workflow can
-trigger hosting-provider deploy hooks after CI succeeds.
+- Default API URL is `http://localhost:5000/api`
+- Production frontend config is in `frontend/.env.production`
 
-See [`docs/CI_CD.md`](docs/CI_CD.md) for GitHub branch protection, deployment
-secrets, and hosting environment variables.
+## Running locally
 
-## How can I edit this code?
+Open two terminals:
 
-There are several ways of editing your application.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+cd backend
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Then open the Vite development URL shown in the frontend terminal.
 
-**Use GitHub Codespaces**
+## Testing
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- Backend: `cd backend && npm test`
+- Frontend unit tests: `cd frontend && npm run test`
+- Frontend E2E tests: `cd frontend && npm run e2e`
+- Lint: `cd frontend && npm run lint`
 
-## What technologies are used for this project?
+## Documentation
 
-This project is built with:
+- `docs/DEPLOYMENT.md` — deployment and HTTPS/proxy guidance
+- `docs/BACKUPS_AND_RESTORE.md` — backup and restore instructions
+- `docs/CI_CD.md` — CI/CD workflows and deployment secrets
+- `docs/ERP_WORKFLOW_GUIDE.md` — ERP workflow guidance
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Technology stack
+
+- Backend: Node.js, Express, MongoDB, Mongoose, JWT, Pino
+- Frontend: Vite, React, TypeScript, Tailwind CSS, shadcn-ui, React Query
+
+## Notes
+
+- There is no repository-level `package.json`; install dependencies in `backend/` and `frontend/` separately.
+- Backend dev server uses `nodemon` via `npm run dev`.
+- Frontend dev server uses Vite.
+
+---
+
+This README describes the current repository structure, platform status, and available setup commands.

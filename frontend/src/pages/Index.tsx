@@ -9,7 +9,7 @@ import { HrDashboardSummary } from "@/components/dashboards/HrDashboardSummary";
 import { EmployeeDashboardSummary } from "@/components/dashboards/EmployeeDashboardSummary";
 import { ProcurementDashboardSummary } from "@/components/dashboards/ProcurementDashboardSummary";
 import { useAuth } from "@/contexts/AuthContext";
-import { manufacturingApi, productionApi } from "@/lib/api";
+import { manufacturingApi, productionApi, TENANT_MODULE_KEYS } from "@/lib/api";
 import type { TenantModuleFlags } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -113,10 +113,14 @@ const Index = () => {
       { key: "procurement" as const, labelKey: "dashboard.moduleProc" as const },
       { key: "finance" as const, labelKey: "dashboard.moduleFin" as const },
       { key: "hr" as const, labelKey: "dashboard.moduleHr" as const },
+      { key: "crm" as const, labelKey: "dashboard.moduleCrm" as const },
+      { key: "pos" as const, labelKey: "dashboard.modulePos" as const },
+      { key: "global_trade" as const, labelKey: "dashboard.moduleGlobalTrade" as const },
+      { key: "analytics" as const, labelKey: "dashboard.moduleAnalytics" as const },
     ] as const
   ).filter((m) => moduleFlags?.[m.key as keyof TenantModuleFlags] === false);
   const isSuperAdmin = user?.platformRole === "super_admin";
-  const enabledModuleCount = 6 - disabledModules.length;
+  const enabledModuleCount = TENANT_MODULE_KEYS.length - disabledModules.length;
   const displayName = user?.name?.split(" ")?.[0] || "there";
   const todayLabel = new Date().toLocaleDateString(undefined, {
     weekday: "long",
@@ -298,7 +302,7 @@ const Index = () => {
         label: isSuperAdmin ? "Assets tracked" : "Module access",
         value: isSuperAdmin
           ? assetCount > 0 ? `${assetCount} asset${assetCount !== 1 ? "s" : ""}` : "No assets"
-          : `${enabledModuleCount}/6`,
+          : `${enabledModuleCount}/${TENANT_MODULE_KEYS.length}`,
         detail: isSuperAdmin
           ? openCount > 0
             ? `${openCount} downtime event${openCount !== 1 ? "s" : ""} currently open`
@@ -465,7 +469,7 @@ const Index = () => {
                   </div>
                   <div className="flex items-center justify-between rounded-xl bg-muted/25 px-3.5 py-2.5">
                     <span className="font-medium text-muted-foreground">Modules enabled</span>
-                    <span className="font-bold">{enabledModuleCount}/6</span>
+                    <span className="font-bold">{enabledModuleCount}/{TENANT_MODULE_KEYS.length}</span>
                   </div>
                 </div>
 

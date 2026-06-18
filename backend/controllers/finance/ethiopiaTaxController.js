@@ -1,0 +1,504 @@
+const asyncHandler = require('../../middleware/asyncHandler');
+const Invoice = require('../../models/Invoice');
+const VendorBill = require('../../models/VendorBill');
+const WithholdingCertificate = require('../../models/WithholdingCertificate');
+const Tenant = require('../../models/Tenant');
+const { byTenant } = require('../../utils/tenantQuery');
+const { record: auditRecord } = require('../../services/auditService');
+const {
+  getTaxSettings,
+  sanitizeInvoicePrefix,
+} = require('../../services/ethiopiaTaxService');
+const { formatEthiopianLong, formatEthiopianNumeric } = require('../../utils/ethiopianDate');
+
+exports.getEthiopiaTaxSettings = asyncHandler(async (req, res) => {
+  const data = await getTaxSettings(req.tenantId);
+  res.json({ success: true, data });
+});
+
+exports.updateEthiopiaTaxSettings = asyncHandler(async (req, res) => {
+  const allowed = [
+    'companyLegalName',
+    'companyTIN',
+    'companyAddress',
+    'companyPhone',
+    'currency',
+    'defaultVatRatePercent',
+    'salesWithholdingRatePercent',
+    'salesWhtBase',
+    'purchaseWithholdingRatePercent',
+    'salesPriceBasis',
+    'sellerVatRegistered',
+    'whtCategoryRates',
+    'eInvoicingNotes',
+    'invoiceSeriesPrefix',
+    'nextInvoiceSequence',
+  ];
+  const s = await getTaxSettings(req.tenantId);
+  const before = s.toObject ? s.toObject() : { ...s };
+
+  for (const k of allowed) {
+    if (req.body[k] === undefined) continue;
+    if (k === 'invoiceSeriesPrefix') {
+      s.invoiceSeriesPrefix = sanitizeInvoicePrefix(req.body[k]);
+    } else if (k === 'nextInvoiceSequence') {
+      const n = Number(req.body[k]);
+      if (!Number.isFinite(n) || n < 0 || Math.floor(n) !== n) {
+        return res.status(400).json({
+          success: false,
+          message: 'nextInvoiceSequence must be a non-negative integer (last used index; next invoice increments from here)',
+        });
+      }
+      s.nextInvoiceSequence = n;
+    } else {
+      s[k] = req.body[k];
+    }
+  }
+  await s.save();
+  const after = s.toObject ? s.toObject() : { ...s };
+  const changedFields = [];
+  for (const k of allowed) {
+    if (req.body[k] === undefined) continue;
+    if (JSON.stringify(before[k]) !== JSON.stringify(after[k])) changedFields.push(k);
+  }
+  await auditRecord({
+    req,
+    action: 'tax_settings.update',
+    entityType: 'TaxSettings',
+    entityId: String(s._id),
+    summary: {
+      changedFields,
+      sensitiveFieldsUpdated: ['companyTIN', 'companyPhone'].filter((f) => changedFields.includes(f)),
+    },
+  });
+  res.json({ success: true, data: s });
+});
+
+function esc(x) {
+  return String(x ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Printable tax invoice (browser print). */
+exports.getTaxInvoiceHtml = asyncHandler(async (req, res) => {
+  const inv = await Invoice.findOne(byTenant(req, { _id: req.params.id })).populate('client');
+  if (!inv) {
+    res.status(404).setHeader('Content-Type', 'text/plain');
+    return res.send('Invoice not found');
+  }
+  const tenant = await Tenant.findById(req.tenantId).select('documentSettings legalName').lean();
+  const ds = tenant?.documentSettings || {};
+  const primaryColor = ds.primaryColor || '#4f46e5';
+
+  const settings = await getTaxSettings(req.tenantId);
+  const c = inv.client;
+  const cur = settings.currency || 'ETB';
+  const taxable = inv.amountTaxable != null ? inv.amountTaxable : inv.amount;
+  const vat = inv.vatAmount != null ? inv.vatAmount : 0;
+  const wht = inv.salesWhtAmount != null ? inv.salesWhtAmount : 0;
+  const gross = inv.grossBeforeWht != null ? inv.grossBeforeWht : taxable + vat;
+  const net = inv.amount;
+
+  const idate = new Date(inv.invoiceDate);
+  const ethInv = formatEthiopianLong(idate);
+  const ethInvN = formatEthiopianNumeric(idate);
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Tax Invoice ${esc(inv.invoiceId)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  body{font-family:system-ui,sans-serif;max-width:720px;margin:24px auto;padding:16px;color:#111}
+  h1{font-size:1.25rem;margin:0 0 8px}
+  .am{font-family:'Noto Sans Ethiopic',sans-serif;font-size:14px}
+  .muted{color:#555;font-size:12px}
+  table{width:100%;border-collapse:collapse;margin-top:16px}
+  th,td{border:1px solid #ccc;padding:8px;text-align:left}
+  th{background:#f5f5f5;font-size:11px;text-transform:uppercase;border-top:2px solid ${primaryColor}}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .header-table{width:100%;border:none;margin-bottom:20px}
+  .header-table td{border:none;padding:0;vertical-align:top}
+  .logo{max-height:60px;margin-bottom:10px}
+  .total{font-weight:700;color:${primaryColor}}
+  @media print{.no-print{display:none}}
+</style></head><body>
+  <p class="no-print"><a href="#" onclick="window.print()">Print</a></p>
+  
+  <table class="header-table">
+    <tr>
+      <td>
+        ${ds.logoUrl ? `<img src="${esc(ds.logoUrl)}" class="logo" />` : `<h1>${esc(settings.companyLegalName || 'Integra ERP')}</h1>`}
+      </td>
+      <td style="text-align:right">
+        <h1 style="color:${primaryColor}">${esc(ds.invoiceHeader || 'TAX INVOICE')} <span class="am">/ ግብር ደረሰኝ</span></h1>
+        <p class="muted"># ${esc(inv.invoiceId)}</p>
+      </td>
+    </tr>
+  </table>
+
+  <p><strong>${esc(settings.companyLegalName || 'Company')}</strong><br/>
+  <span class="am">የግብር ከፋይ ቁጥር (TIN)</span>: ${esc(settings.companyTIN || '—')}<br/>
+  ${esc(settings.companyAddress || '')}<br/>
+  ${esc(settings.companyPhone || '')}</p>
+  <hr/>
+  <p><strong>Invoice / ደረሰኝ:</strong> ${esc(inv.invoiceId)}<br/>
+  <strong>Date / ቀን (G.C.):</strong> ${idate.toLocaleDateString('en-GB')} &nbsp;
+  <strong>Ethiopian / ኢ.ሣ:</strong> ${esc(ethInv)} <span class="muted">(${esc(ethInvN)})</span><br/>
+  <strong>Due / ክፍያ መክፈያ:</strong> ${new Date(inv.dueDate).toLocaleDateString('en-GB')}</p>
+  <p><strong>Bill to / ለ</strong><br/>
+  ${esc(c?.name)}<br/>
+  TIN: ${esc(inv.buyerTinSnapshot || c?.tin || '—')}<br/>
+  ${esc(c?.address || '')}</p>
+  <table>
+    <tr><th>Description<br/><span class="am">መግለጫ</span></th><th class="num">Taxable (${cur})</th><th class="num">VAT ${inv.vatRate != null ? inv.vatRate + '%' : ''}</th><th class="num">WHT</th></tr>
+    <tr>
+      <td>${esc(inv.description || 'Supply of goods/services')}</td>
+      <td class="num">${taxable.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+      <td class="num">${vat.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+      <td class="num">${wht.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+    </tr>
+  </table>
+  <table style="margin-top:8px;max-width:400px;margin-left:auto">
+    <tr><td>Subtotal (taxable)</td><td class="num">${taxable.toFixed(2)}</td></tr>
+    <tr><td>Output VAT</td><td class="num">${vat.toFixed(2)}</td></tr>
+    <tr><td>Total before WHT</td><td class="num">${gross.toFixed(2)}</td></tr>
+    <tr><td>Sales withholding</td><td class="num">(${wht.toFixed(2)})</td></tr>
+    <tr class="total"><td>Net receivable</td><td class="num">${net.toFixed(2)} ${cur}</td></tr>
+  </table>
+  <p class="muted" style="margin-top:24px">${esc(settings.eInvoicingNotes || '')}</p>
+  ${ds.footerText ? `<div style="margin-top:40px;padding-top:10px;border-top:1px solid #eee;font-size:10px;color:#888">${esc(ds.footerText)}</div>` : ''}
+</body></html>`;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+});
+
+exports.issueSalesWithholdingCertificate = asyncHandler(async (req, res) => {
+  const inv = await Invoice.findOne(byTenant(req, { _id: req.params.id })).populate('client');
+  if (!inv) {
+    return res.status(404).json({ success: false, message: 'Invoice not found' });
+  }
+  const wht = Number(inv.salesWhtAmount) || 0;
+  if (wht <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invoice has no sales withholding amount; check tax settings and re-issue invoice from order if needed.',
+    });
+  }
+  const settings = await getTaxSettings(req.tenantId);
+  const period = `${new Date(inv.invoiceDate).getFullYear()}-${String(new Date(inv.invoiceDate).getMonth() + 1).padStart(2, '0')}`;
+  const prefix = `WHT-S-${period}-`;
+  const n = await WithholdingCertificate.countDocuments(
+    byTenant(req, {
+      certificateNumber: new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
+    })
+  );
+  const certNo = `${prefix}${String(n + 1).padStart(4, '0')}`;
+  const base =
+    inv.amountTaxable != null
+      ? inv.amountTaxable
+      : (inv.grossBeforeWht != null ? inv.grossBeforeWht - (inv.vatAmount || 0) : inv.amount);
+  const cert = await WithholdingCertificate.create({
+    tenantId: req.tenantId,
+    certificateNumber: certNo,
+    type: 'on_sales',
+    taxPeriod: period,
+    payerTIN: inv.buyerTinSnapshot || inv.client?.tin || '',
+    payerName: inv.client?.name || '',
+    payeeTIN: settings.companyTIN || '',
+    payeeName: settings.companyLegalName || '',
+    baseAmount: base,
+    ratePercent: inv.salesWhtRate || settings.salesWithholdingRatePercent,
+    withheldAmount: wht,
+    invoice: inv._id,
+    recordedBy: req.user._id,
+    notes: req.body.notes || '',
+  });
+  await auditRecord({
+    req,
+    action: 'withholding_certificate.issue',
+    entityType: 'WithholdingCertificate',
+    entityId: String(cert._id),
+    summary: {
+      type: 'on_sales',
+      certificateNumber: certNo,
+      invoiceId: inv.invoiceId,
+      invoice: String(inv._id),
+      withheldAmount: wht,
+    },
+  });
+  res.status(201).json({ success: true, data: cert });
+});
+
+exports.issuePurchaseWithholdingCertificate = asyncHandler(async (req, res) => {
+  const bill = await VendorBill.findOne(byTenant(req, { _id: req.params.id })).populate('vendor');
+  if (!bill) {
+    return res.status(404).json({ success: false, message: 'Vendor bill not found' });
+  }
+  const wht = Number(bill.purchaseWhtAmount) || 0;
+  if (wht <= 0) {
+    return res.status(400).json({
+      success: false,
+      message:
+        'Vendor bill has no purchase withholding amount; verify tax settings and bill tax profile.',
+    });
+  }
+  const existing = await WithholdingCertificate.findOne(
+    byTenant(req, { vendorBill: bill._id, type: 'on_purchase' })
+  );
+  if (existing) {
+    return res.status(400).json({
+      success: false,
+      message: 'Withholding certificate already exists for this vendor bill.',
+      data: existing,
+    });
+  }
+  const settings = await getTaxSettings(req.tenantId);
+  const d = new Date(bill.billDate || Date.now());
+  const period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const prefix = `WHT-P-${period}-`;
+  const n = await WithholdingCertificate.countDocuments(
+    byTenant(req, {
+      certificateNumber: new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
+    })
+  );
+  const certNo = `${prefix}${String(n + 1).padStart(4, '0')}`;
+  const base = bill.taxableAmount != null ? bill.taxableAmount : bill.amount;
+  const cert = await WithholdingCertificate.create({
+    tenantId: req.tenantId,
+    certificateNumber: certNo,
+    type: 'on_purchase',
+    taxPeriod: period,
+    payerTIN: settings.companyTIN || '',
+    payerName: settings.companyLegalName || '',
+    payeeTIN: bill.vendor?.tin || '',
+    payeeName: bill.vendor?.name || '',
+    baseAmount: base,
+    ratePercent: bill.purchaseWhtRate || settings.purchaseWithholdingRatePercent,
+    withheldAmount: wht,
+    vendorBill: bill._id,
+    recordedBy: req.user._id,
+    notes: req.body.notes || '',
+  });
+  await auditRecord({
+    req,
+    action: 'withholding_certificate.issue',
+    entityType: 'WithholdingCertificate',
+    entityId: String(cert._id),
+    summary: {
+      type: 'on_purchase',
+      certificateNumber: certNo,
+      vendorBill: String(bill._id),
+      billNumber: bill.billNumber || '',
+      withheldAmount: wht,
+    },
+  });
+  res.status(201).json({ success: true, data: cert });
+});
+
+/** Printable withholding certificate (sales or purchase). */
+exports.getWithholdingCertificateHtml = asyncHandler(async (req, res) => {
+  const cert = await WithholdingCertificate.findOne(byTenant(req, { _id: req.params.id }))
+    .populate('invoice', 'invoiceId')
+    .populate('vendorBill', 'billNumber');
+  if (!cert) {
+    res.status(404).setHeader('Content-Type', 'text/plain');
+    return res.send('Withholding certificate not found');
+  }
+  const settings = await getTaxSettings(req.tenantId);
+  const issueDate = cert.issueDate ? new Date(cert.issueDate) : new Date();
+  const issueDateEth = formatEthiopianLong(issueDate);
+  const periodLabel = cert.taxPeriod || issueDate.toISOString().slice(0, 7);
+  const refNumber =
+    cert.type === 'on_sales'
+      ? cert.invoice?.invoiceId || '—'
+      : cert.vendorBill?.billNumber || '—';
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Withholding Certificate ${esc(cert.certificateNumber)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  body{font-family:system-ui,sans-serif;max-width:760px;margin:24px auto;padding:16px;color:#111}
+  h1{font-size:1.25rem;margin:0 0 8px}
+  .am{font-family:'Noto Sans Ethiopic',sans-serif;font-size:14px}
+  .muted{color:#555;font-size:12px}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{border:1px solid #ccc;padding:8px;text-align:left}
+  th{background:#f5f5f5;font-size:11px;text-transform:uppercase}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  @media print{.no-print{display:none}}
+</style></head><body>
+  <p class="no-print"><a href="#" onclick="window.print()">Print</a></p>
+  <h1>WITHHOLDING CERTIFICATE <span class="am">/ የተቀናሽ ግብር ማረጋገጫ</span></h1>
+  <p class="muted">Ethiopia-oriented template. Verify with current tax authority requirements.</p>
+  <p><strong>${esc(settings.companyLegalName || 'Company')}</strong><br/>
+  TIN: ${esc(settings.companyTIN || '—')}<br/>
+  ${esc(settings.companyAddress || '')}</p>
+  <hr/>
+  <p><strong>Certificate #:</strong> ${esc(cert.certificateNumber)}<br/>
+  <strong>Type:</strong> ${cert.type === 'on_sales' ? 'Sales withholding' : 'Purchase withholding'}<br/>
+  <strong>Tax period:</strong> ${esc(periodLabel)}<br/>
+  <strong>Issue date (G.C.):</strong> ${issueDate.toLocaleDateString('en-GB')}<br/>
+  <strong>Issue date (E.C.):</strong> ${esc(issueDateEth)}<br/>
+  <strong>Reference:</strong> ${esc(refNumber)}</p>
+  <table>
+    <tr><th>Payer name</th><td>${esc(cert.payerName || '—')}</td></tr>
+    <tr><th>Payer TIN</th><td>${esc(cert.payerTIN || '—')}</td></tr>
+    <tr><th>Payee name</th><td>${esc(cert.payeeName || '—')}</td></tr>
+    <tr><th>Payee TIN</th><td>${esc(cert.payeeTIN || '—')}</td></tr>
+    <tr><th>Withholding base (ETB)</th><td class="num">${Number(cert.baseAmount || 0).toFixed(2)}</td></tr>
+    <tr><th>Rate (%)</th><td class="num">${Number(cert.ratePercent || 0).toFixed(2)}</td></tr>
+    <tr><th>Withheld amount (ETB)</th><td class="num">${Number(cert.withheldAmount || 0).toFixed(2)}</td></tr>
+  </table>
+  <p class="muted" style="margin-top:18px">Notes: ${esc(cert.notes || '—')}</p>
+</body></html>`;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+});
+
+function csvEscape(s) {
+  if (s == null) return '';
+  const t = String(s);
+  if (/[",\n\r]/.test(t)) return `"${t.replace(/"/g, '""')}"`;
+  return t;
+}
+
+function sendCsv(res, filename, rows) {
+  if (!rows.length) {
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    return res.send('\uFEFF');
+  }
+  const keys = Object.keys(rows[0]);
+  const lines = [keys.join(','), ...rows.map((r) => keys.map((k) => csvEscape(r[k])).join(','))];
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send('\uFEFF' + lines.join('\r\n'));
+}
+
+/** Output VAT / sales register — field names for accountant mapping. */
+exports.reportVatSalesCsv = asyncHandler(async (req, res) => {
+  const from = req.query.from ? new Date(req.query.from) : new Date(0);
+  const to = req.query.to ? new Date(req.query.to) : new Date();
+  to.setHours(23, 59, 59, 999);
+  const list = await Invoice.find(
+    byTenant(req, {
+      invoiceDate: { $gte: from, $lte: to },
+    })
+  )
+    .populate('client', 'name tin')
+    .sort({ invoiceDate: 1 })
+    .lean();
+  const rows = list.map((inv) => ({
+    invoiceId: inv.invoiceId,
+    invoiceDate: inv.invoiceDate ? new Date(inv.invoiceDate).toISOString().slice(0, 10) : '',
+    invoiceDate_ethiopian: inv.invoiceDate ? formatEthiopianNumeric(inv.invoiceDate) : '',
+    dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().slice(0, 10) : '',
+    buyerName: inv.client?.name || '',
+    buyerTIN: inv.buyerTinSnapshot || inv.client?.tin || '',
+    taxableAmount_ETB: inv.amountTaxable != null ? inv.amountTaxable : inv.amount,
+    vatRate_pct: inv.vatRate ?? '',
+    outputVat_ETB: inv.vatAmount ?? 0,
+    salesWithholding_ETB: inv.salesWhtAmount ?? 0,
+    grossBeforeWht_ETB: inv.grossBeforeWht ?? '',
+    netReceivable_ETB: inv.amount,
+    status: inv.status,
+    mapTo_vat_return: 'Output VAT column → outputVat_ETB; Taxable sales → taxableAmount_ETB',
+  }));
+  sendCsv(res, `vat-sales-register-${from.toISOString().slice(0, 10)}.csv`, rows);
+});
+
+exports.reportVatPurchasesCsv = asyncHandler(async (req, res) => {
+  const from = req.query.from ? new Date(req.query.from) : new Date(0);
+  const to = req.query.to ? new Date(req.query.to) : new Date();
+  to.setHours(23, 59, 59, 999);
+  const list = await VendorBill.find(
+    byTenant(req, {
+      billDate: { $gte: from, $lte: to },
+    })
+  )
+    .populate('vendor', 'name tin code')
+    .sort({ billDate: 1 })
+    .lean();
+  const rows = list.map((b) => ({
+    billNumber: b.billNumber,
+    billDate: b.billDate ? new Date(b.billDate).toISOString().slice(0, 10) : '',
+    billDate_ethiopian: b.billDate ? formatEthiopianNumeric(b.billDate) : '',
+    vendorName: b.vendor?.name || '',
+    vendorTIN: b.vendor?.tin || '',
+    supplyType: b.supplyType || '',
+    taxableAmount_ETB: b.taxableAmount != null ? b.taxableAmount : b.amount,
+    vatRate_pct: b.vatRate ?? '',
+    inputVat_ETB: b.vatAmount ?? 0,
+    vatRecoverable_YN: b.vatRecoverable !== false ? 'Y' : 'N',
+    grossPayable_ETB: b.amount,
+    purchaseWithholding_ETB: b.purchaseWhtAmount ?? 0,
+    mapTo_vat_return: 'inputVat_ETB if vatRecoverable; import/local per supplyType',
+  }));
+  sendCsv(res, `vat-purchases-register-${from.toISOString().slice(0, 10)}.csv`, rows);
+});
+
+exports.reportWithholdingSalesCsv = asyncHandler(async (req, res) => {
+  const from = req.query.from ? new Date(req.query.from) : new Date(0);
+  const to = req.query.to ? new Date(req.query.to) : new Date();
+  to.setHours(23, 59, 59, 999);
+  const list = await Invoice.find(
+    byTenant(req, {
+      invoiceDate: { $gte: from, $lte: to },
+      salesWhtAmount: { $gt: 0 },
+    })
+  )
+    .populate('client', 'name tin')
+    .sort({ invoiceDate: 1 })
+    .lean();
+  const settings = await getTaxSettings(req.tenantId);
+  const rows = list.map((inv) => ({
+    invoiceId: inv.invoiceId,
+    date: inv.invoiceDate ? new Date(inv.invoiceDate).toISOString().slice(0, 10) : '',
+    withheldFrom_party: inv.client?.name || '',
+    withheldFrom_TIN: inv.buyerTinSnapshot || inv.client?.tin || '',
+    supplier_party: settings.companyLegalName || '',
+    supplier_TIN: settings.companyTIN || '',
+    whtBase_ETB: inv.amountTaxable != null ? inv.amountTaxable : '',
+    rate_pct: inv.salesWhtRate || settings.salesWithholdingRatePercent,
+    withheldAmount_ETB: inv.salesWhtAmount,
+    note: 'Amount withheld by customer from payment to you',
+  }));
+  sendCsv(res, `withholding-sales-${from.toISOString().slice(0, 10)}.csv`, rows);
+});
+
+exports.reportWithholdingPurchasesCsv = asyncHandler(async (req, res) => {
+  const from = req.query.from ? new Date(req.query.from) : new Date(0);
+  const to = req.query.to ? new Date(req.query.to) : new Date();
+  to.setHours(23, 59, 59, 999);
+  const list = await VendorBill.find(
+    byTenant(req, {
+      billDate: { $gte: from, $lte: to },
+      purchaseWhtAmount: { $gt: 0 },
+    })
+  )
+    .populate('vendor', 'name tin')
+    .sort({ billDate: 1 })
+    .lean();
+  const settings = await getTaxSettings(req.tenantId);
+  const rows = list.map((b) => ({
+    billNumber: b.billNumber,
+    date: b.billDate ? new Date(b.billDate).toISOString().slice(0, 10) : '',
+    vendorName: b.vendor?.name || '',
+    vendorTIN: b.vendor?.tin || '',
+    payer_party: settings.companyLegalName || '',
+    payer_TIN: settings.companyTIN || '',
+    whtBase_ETB: b.taxableAmount != null ? b.taxableAmount : '',
+    rate_pct: b.purchaseWhtRate || settings.purchaseWithholdingRatePercent,
+    withheldAmount_ETB: b.purchaseWhtAmount,
+    note: 'Amount you withhold when paying vendor',
+  }));
+  sendCsv(res, `withholding-purchases-${from.toISOString().slice(0, 10)}.csv`, rows);
+});
+
+exports.listWithholdingCertificates = asyncHandler(async (req, res) => {
+  const list = await WithholdingCertificate.find(byTenant(req))
+    .sort({ issueDate: -1 })
+    .limit(200)
+    .populate('invoice', 'invoiceId')
+    .populate('vendorBill', 'billNumber')
+    .lean();
+  res.json({ success: true, data: list });
+});

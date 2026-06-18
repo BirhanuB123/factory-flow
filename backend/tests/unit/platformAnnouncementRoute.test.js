@@ -7,8 +7,7 @@ describe('Platform announcement routes', () => {
   let app;
 
   beforeAll(() => {
-    // eslint-disable-next-line global-require
-    app = require('../app');
+    app = require('../../app');
   });
 
   it('PATCH /api/platform/announcement is registered (not 404)', async () => {

@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 const BOM = require('../../models/BOM');
 const ProductionJob = require('../../models/ProductionJob');
 const Product = require('../../models/Product');
-const { applyMovement } = require('./stockService');
-const { consumeJobMaterialReservations } = require('./reservationService');
+const { applyMovement } = require('../stockService');
+const { consumeJobMaterialReservations } = require('../reservationService');
 
 function tid(tenantId) {
   return new mongoose.Types.ObjectId(tenantId);

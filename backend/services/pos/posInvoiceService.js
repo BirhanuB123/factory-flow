@@ -4,7 +4,7 @@ const {
   getTaxSettings,
   computeSalesInvoiceTax,
   allocateNextInvoiceNumber,
-} = require('./ethiopiaTaxService');
+} = require('../ethiopiaTaxService');
 
 /**
  * Creates a formal Invoice for a completed POS sale.

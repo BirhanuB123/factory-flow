@@ -1,0 +1,11 @@
+factory-flow-frontend.zip
+factory-flow-backend.zip
+
+.git/
+.sixth
+.vscode
+// docs
+// .github
+// .gitignore
+backend.zip
+frontend.zip

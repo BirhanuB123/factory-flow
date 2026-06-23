@@ -1,0 +1,55 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Trigger production deploy
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      BACKEND_DEPLOY_HOOK_URL: ${{ secrets.BACKEND_DEPLOY_HOOK_URL }}
+      FRONTEND_DEPLOY_HOOK_URL: ${{ secrets.FRONTEND_DEPLOY_HOOK_URL }}
+      PROD_HEALTHCHECK_URL: ${{ secrets.PROD_HEALTHCHECK_URL }}
+
+    steps:
+      - name: Validate deploy configuration
+        run: |
+          if [ -z "$BACKEND_DEPLOY_HOOK_URL" ] && [ -z "$FRONTEND_DEPLOY_HOOK_URL" ]; then
+            echo "Set BACKEND_DEPLOY_HOOK_URL or FRONTEND_DEPLOY_HOOK_URL in the production environment secrets."
+            exit 1
+          fi
+
+      - name: Trigger backend deployment
+        if: ${{ env.BACKEND_DEPLOY_HOOK_URL != '' }}
+        run: curl --fail --show-error --silent --retry 3 --request POST "$BACKEND_DEPLOY_HOOK_URL"
+
+      - name: Trigger frontend deployment
+        if: ${{ env.FRONTEND_DEPLOY_HOOK_URL != '' }}
+        run: curl --fail --show-error --silent --retry 3 --request POST "$FRONTEND_DEPLOY_HOOK_URL"
+
+      - name: Wait before health check
+        if: ${{ env.PROD_HEALTHCHECK_URL != '' }}
+        run: sleep 30
+
+      - name: Check production health
+        if: ${{ env.PROD_HEALTHCHECK_URL != '' }}
+        run: curl --fail --show-error --silent --retry 6 --retry-delay 10 "$PROD_HEALTHCHECK_URL"
+

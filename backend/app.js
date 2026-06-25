@@ -59,6 +59,7 @@ const {
   createEmployee,
   updateEmployee,
   inviteEmployee,
+  resetEmployeePassword,
   getAttendance,
   logAttendance,
   reviewAttendanceOvertime,
@@ -126,7 +127,7 @@ const {
   listShipments,
   listShipmentsForOrder,
   getShipment,
-  createShipment,
+  createShipment, 
   updateShipmentStatus,
   shipShipment,
   getDeliveryNoteHtml,
@@ -493,6 +494,7 @@ app.get('/api/hr/employees', getEmployees);
 app.post('/api/hr/employees', authorizePerm(P.HR_FULL), createEmployee);
 app.put('/api/hr/employees/:id', authorizePerm(P.HR_FULL), updateEmployee);
 app.post('/api/hr/employees/:id/invite', authorizePerm(P.HR_FULL), inviteEmployee);
+app.post('/api/hr/employees/:id/reset-password', authorizePerm(P.HR_FULL), resetEmployeePassword);
 app.get('/api/hr/attendance', getAttendance);
 app.post('/api/hr/attendance', authorizePerm(P.HR_FULL), logAttendance);
 app.patch('/api/hr/attendance/:id/overtime', authorizePerm(P.HR_FULL), reviewAttendanceOvertime);

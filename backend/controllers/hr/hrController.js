@@ -1,4 +1,5 @@
 const asyncHandler = require('express-async-handler');
+const crypto = require('crypto');
 const Employee = require('../../models/Employee');
 const Attendance = require('../../models/Attendance');
 const Payroll = require('../../models/Payroll');
@@ -925,11 +926,61 @@ const inviteEmployee = asyncHandler(async (req, res) => {
   });
 });
 
+// @desc    Admin resets an employee's password to a secure random temporary password
+// @route   POST /api/hr/employees/:id/reset-password
+// @access  Private (Admin or hr_head)
+const resetEmployeePassword = asyncHandler(async (req, res) => {
+  if (!can(req.user.role, P.HR_FULL)) {
+    res.status(403);
+    throw new Error('Not authorized to reset passwords');
+  }
+
+  const employee = await Employee.findOne(byTenant(req, { _id: req.params.id }));
+  if (!employee) {
+    res.status(404);
+    throw new Error('Employee not found');
+  }
+
+  // Prevent admins from resetting their own password via this endpoint
+  if (String(employee._id) === String(req.user._id)) {
+    res.status(400);
+    throw new Error('Use the change-password flow to update your own password');
+  }
+
+  // Only an Admin can reset another Admin's password
+  if (employee.role === 'Admin' && req.user.role !== 'Admin') {
+    res.status(403);
+    throw new Error('Only a company Admin can reset another Admin\'s password');
+  }
+
+  // Generate a secure 12-character temporary password: letters + digits + symbols
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!';
+  const bytes = crypto.randomBytes(12);
+  const tempPassword = Array.from(bytes)
+    .map((b) => chars[b % chars.length])
+    .join('');
+
+  employee.password = tempPassword;
+  employee.mustChangePassword = true;
+  employee.passwordResetTokenHash = '';
+  employee.passwordResetExpires = null;
+  await employee.save();
+
+  res.json({
+    success: true,
+    tempPassword,
+    employeeName: employee.name,
+    employeeId: employee.employeeId,
+    message: 'Password reset. Share this temporary password with the employee. They will be required to change it on next login.',
+  });
+});
+
 module.exports = {
   getEmployees,
   createEmployee,
   updateEmployee,
   inviteEmployee,
+  resetEmployeePassword,
   getAttendance,
   logAttendance,
   reviewAttendanceOvertime,

@@ -266,4 +266,17 @@ export const platformApi = {
     });
     return response.data;
   },
+  resetAdminAccess: async (
+    tenantId: string,
+    employeeId: string,
+    body?: { onboardingMode?: 'temp_password' | 'invite_link'; email?: string }
+  ) => {
+    const response = await api.post<{
+      success: boolean;
+      temporaryPassword?: string;
+      invite?: { url: string; emailed: boolean; expiresAt?: string };
+      data: { name: string; employeeId: string; role: string };
+    }>(`/platform/tenants/${tenantId}/admins/${employeeId}/reset-access`, body ?? { onboardingMode: 'temp_password' });
+    return response.data;
+  },
 };

@@ -20,6 +20,10 @@ import {
   Lock,
   Check,
   X,
+  KeyRound,
+  Copy,
+  CheckCheck,
+  ShieldAlert,
 } from "lucide-react";
 import { LoadingLogo } from "@/components/ui/LoadingLogo";
 import {
@@ -154,6 +158,13 @@ export default function Hr() {
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetTargetEmployee, setResetTargetEmployee] = useState<Employee | null>(null);
+  const [resetResultOpen, setResetResultOpen] = useState(false);
+  const [resetTempPassword, setResetTempPassword] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetCopied, setResetCopied] = useState(false);
 
   const [attendance, setAttendance] = useState<any[]>([]);
   const [attendanceCorrections, setAttendanceCorrections] = useState<
@@ -644,6 +655,35 @@ export default function Hr() {
         description: "An unexpected error occurred during update.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetTargetEmployee?._id || !token) return;
+    setResetLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/employees/${resetTargetEmployee._id}/reset-password`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      let data: Record<string, string> = {};
+      try { data = await response.json(); } catch { /* non-JSON body */ }
+      if (!response.ok) {
+        toast({
+          title: "Reset failed",
+          description: data.message || `Server error ${response.status}. Restart the backend if this just started.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      setResetConfirmOpen(false);
+      setResetTempPassword(data.tempPassword);
+      setResetCopied(false);
+      setResetResultOpen(true);
+    } catch {
+      toast({ title: "Reset failed", description: "Could not reach the server. Check that the backend is running.", variant: "destructive" });
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -1158,7 +1198,88 @@ export default function Hr() {
             </DialogContent>
       </Dialog>
 
-      <HrMetrics 
+      {/* Reset Password — Confirmation Dialog */}
+      <Dialog open={resetConfirmOpen} onOpenChange={(open) => { if (!resetLoading) setResetConfirmOpen(open); }}>
+        <DialogContent className="rounded-2xl border border-border/60 bg-card shadow-erp sm:max-w-sm">
+          <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-amber-400 via-orange-400 to-rose-500" />
+          <DialogHeader className="space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-2">
+              <ShieldAlert className="h-6 w-6 text-amber-500" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase italic tracking-tighter">Reset Password?</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              This will generate a new temporary password for{" "}
+              <span className="font-bold text-foreground">{resetTargetEmployee?.name}</span>{" "}
+              ({resetTargetEmployee?.id}). They will be required to change it on their next login.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 gap-3">
+            <Button
+              variant="ghost"
+              className="h-11 rounded-xl px-6 font-black uppercase italic text-xs tracking-widest"
+              onClick={() => setResetConfirmOpen(false)}
+              disabled={resetLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="h-11 rounded-xl px-8 font-black uppercase italic text-xs tracking-widest bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/25"
+              onClick={handleResetPassword}
+              disabled={resetLoading}
+            >
+              {resetLoading ? "Resetting…" : "Reset Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password — Temporary Password Result Dialog */}
+      <Dialog open={resetResultOpen} onOpenChange={setResetResultOpen}>
+        <DialogContent className="rounded-2xl border border-border/60 bg-card shadow-erp sm:max-w-sm">
+          <div className="absolute top-0 left-0 h-1 w-full bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-500" />
+          <DialogHeader className="space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-2">
+              <KeyRound className="h-6 w-6 text-emerald-500" />
+            </div>
+            <DialogTitle className="text-xl font-black uppercase italic tracking-tighter">Temporary Password</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              Share this password with{" "}
+              <span className="font-bold text-foreground">{resetTargetEmployee?.name}</span> verbally or on paper.
+              They must change it immediately after logging in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="my-4 flex items-center gap-2 rounded-xl border border-border/60 bg-muted/40 px-4 py-3">
+            <span className="flex-1 font-mono text-lg font-black tracking-widest text-foreground select-all">
+              {resetTempPassword}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-lg shrink-0 hover:bg-emerald-500/10 hover:text-emerald-500"
+              onClick={() => {
+                navigator.clipboard.writeText(resetTempPassword);
+                setResetCopied(true);
+                setTimeout(() => setResetCopied(false), 2000);
+              }}
+            >
+              {resetCopied ? <CheckCheck className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-amber-500/80 text-center">
+            This password will not be shown again
+          </p>
+          <DialogFooter className="mt-4">
+            <Button
+              className="w-full h-11 rounded-xl font-black uppercase italic text-xs tracking-widest"
+              onClick={() => setResetResultOpen(false)}
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <HrMetrics
         totalEmployees={employees.length}
         activeEmployees={activeCount}
         onLeaveEmployees={leaveCount}
@@ -1274,22 +1395,37 @@ export default function Hr() {
                           </Badge>
                         </TableCell>
                         <TableCell className="pr-6 py-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-10 w-10 rounded-[10px] border border-border/60 bg-card shadow-sm transition-all hover:bg-primary hover:text-primary-foreground group-hover/row:scale-105"
-                            onClick={() => {
-                              setEditingEmployee({
-                                ...e,
-                                phone: e.phone ?? "",
-                                tinNumber: e.tinNumber ?? "",
-                                pensionMemberId: e.pensionMemberId ?? "",
-                              });
-                              setIsEditDialogOpen(true);
-                            }}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Reset password"
+                              className="h-10 w-10 rounded-[10px] border border-border/60 bg-card shadow-sm transition-all hover:bg-amber-500 hover:text-white group-hover/row:scale-105"
+                              onClick={() => {
+                                setResetTargetEmployee(e);
+                                setResetConfirmOpen(true);
+                              }}
+                            >
+                              <KeyRound className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Edit employee"
+                              className="h-10 w-10 rounded-[10px] border border-border/60 bg-card shadow-sm transition-all hover:bg-primary hover:text-primary-foreground group-hover/row:scale-105"
+                              onClick={() => {
+                                setEditingEmployee({
+                                  ...e,
+                                  phone: e.phone ?? "",
+                                  tinNumber: e.tinNumber ?? "",
+                                  pensionMemberId: e.pensionMemberId ?? "",
+                                });
+                                setIsEditDialogOpen(true);
+                              }}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))

@@ -27,13 +27,14 @@ type TenantContextSelectProps = {
 export function TenantContextSelect({ variant = "header", className }: TenantContextSelectProps) {
   const { user, actAsTenantId, setActAsTenantId } = useAuth();
 
-  if (user?.platformRole !== "super_admin") return null;
-
   const { data, isLoading } = useQuery({
     queryKey: ["platform-tenants-header"],
     queryFn: () => platformApi.listTenants(),
     staleTime: 60_000,
+    enabled: user?.platformRole === "super_admin",
   });
+
+  if (user?.platformRole !== "super_admin") return null;
 
   const tenants = data?.data ?? [];
   const homeId = user.tenantId && isLikelyMongoObjectId(user.tenantId) ? user.tenantId : null;

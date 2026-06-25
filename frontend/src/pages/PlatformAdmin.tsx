@@ -44,7 +44,6 @@ import { PlatformStepUpDialog } from "@/components/PlatformStepUpDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocale } from "@/contexts/LocaleContext";
 import {
-  ModuleDashboardLayout,
   StickyModuleTabs,
   moduleTabsListClassName,
   moduleTabsTriggerClassName,
@@ -648,23 +647,46 @@ export default function PlatformAdmin() {
 
   return (
     <>
-      <div className="mx-auto max-w-[1600px] pb-8">
-        <ModuleDashboardLayout
-          title={t("pages.platform.title")}
-          description={t("pages.platform.subtitle")}
-          icon={ShieldCheck}
-          healthStats={[
-            { label: "Companies", value: String(metrics?.tenants.total ?? 0), accent: "text-blue-500" },
-            { label: "Active", value: String(activeTenantCount), accent: "text-emerald-500" },
-            { label: "Trials", value: String(trialTenantCount), accent: "text-amber-500" },
-            { label: "Employees", value: String(metrics?.employees ?? 0), accent: "text-primary" },
-            {
-              label: "API",
-              value: metricsQ.isLoading ? "—" : metricsQ.isError ? "Offline" : "Online",
-              accent: metricsQ.isError ? "text-destructive" : "text-emerald-500",
-            },
-          ]}
-        >
+      <div className="mx-auto max-w-[1600px] pb-8 space-y-8 animate-in fade-in duration-500">
+        {/* Platform hero banner */}
+        <div className="overflow-hidden rounded-[18px] border border-white/10 bg-[linear-gradient(135deg,hsl(238_60%_10%),hsl(252_68%_22%)_52%,hsl(210_65%_28%))] text-white shadow-[0_24px_60px_-32px_rgba(15,23,42,0.65)]">
+          <div className="p-5 sm:p-7">
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+              <div className="min-w-0">
+                <div className="mb-4 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.2em] text-white/55">
+                  <ShieldCheck className="h-4 w-4" />
+                  Super Administrator
+                </div>
+                <h1 className="text-4xl font-black tracking-tight sm:text-5xl">{t("pages.platform.title")}</h1>
+                <p className="mt-3 max-w-3xl text-base font-semibold leading-7 text-white/60 sm:text-lg">
+                  {t("pages.platform.subtitle")}
+                </p>
+                <div className="mt-6 grid gap-3 sm:grid-cols-4">
+                  {[
+                    { label: "Companies", value: metricsQ.isLoading ? "—" : String(metrics?.tenants.total ?? 0), tone: "text-sky-200" },
+                    { label: "Active", value: metricsQ.isLoading ? "—" : String(activeTenantCount), tone: "text-emerald-300" },
+                    { label: "On Trial", value: metricsQ.isLoading ? "—" : String(trialTenantCount), tone: "text-amber-300" },
+                    { label: "Employees", value: metricsQ.isLoading ? "—" : String(metrics?.employees ?? 0), tone: "text-violet-300" },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-[16px] border border-white/20 bg-white/[0.08] p-4 backdrop-blur">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">{item.label}</p>
+                      <p className={`mt-2 text-3xl font-black tracking-tight ${item.tone}`}>{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-[16px] border border-white/15 bg-white/10 p-4 text-right backdrop-blur shrink-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">Platform Status</p>
+                <p className="mt-2 text-3xl font-black tracking-tight text-white">
+                  {metricsQ.isLoading ? "Checking…" : metricsQ.isError ? "Degraded" : "Healthy"}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-white/55">
+                  {metricsQ.isError ? "API unavailable" : "All services operational"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
           <StickyModuleTabs>
@@ -1103,7 +1125,7 @@ export default function PlatformAdmin() {
                       <TableBody>
                         {filteredTenants.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={5} className="h-48 text-center">
+                            <TableCell colSpan={6} className="h-48 text-center">
                               <p className="text-sm font-medium text-muted-foreground/30 italic">No companies matching search</p>
                             </TableCell>
                           </TableRow>
@@ -1413,7 +1435,6 @@ export default function PlatformAdmin() {
             </Card>
           </TabsContent>
         </Tabs>
-        </ModuleDashboardLayout>
       </div>
       <PlatformStepUpDialog
         open={stepUpOpen}

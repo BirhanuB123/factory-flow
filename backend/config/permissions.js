@@ -73,6 +73,7 @@ const MATRIX = {
     P.ORDERS_VIEW,
     P.ORDERS_MANAGE,
     P.PRODUCT_VIEW,
+    P.PRODUCT_MANAGE,
     P.MFG_OPS,
   ],
   finance_head: [
@@ -106,6 +107,15 @@ const MATRIX = {
     P.DASHBOARD_INVENTORY,
     P.HR_FULL,
     P.PO_VIEW,
+  ],
+  production_manager: [
+    P.DASHBOARD_VIEW,
+    P.DASHBOARD_MFG,
+    P.DASHBOARD_INVENTORY,
+    P.MFG_OPS,
+    P.PRODUCT_VIEW,
+    P.INVENTORY_POST,
+    P.ORDERS_VIEW,
   ],
   employee: [P.DASHBOARD_VIEW],
 };

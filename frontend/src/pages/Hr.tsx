@@ -82,6 +82,7 @@ const APP_ACCESS_ROLES = [
   "finance_viewer",
   "purchasing_head",
   "warehouse_head",
+  "production_manager",
   "Admin",
 ] as const;
 

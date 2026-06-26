@@ -1623,6 +1623,7 @@ export default function Settings() {
                         <SelectItem value="finance_viewer">Finance Viewer</SelectItem>
                         <SelectItem value="purchasing_head">Purchasing Head</SelectItem>
                         <SelectItem value="warehouse_head">Warehouse Head</SelectItem>
+                        <SelectItem value="production_manager">Production Manager</SelectItem>
                         <SelectItem value="Admin">Company Admin</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1785,6 +1786,7 @@ export default function Settings() {
                           <SelectItem value="finance_viewer">Finance Viewer</SelectItem>
                           <SelectItem value="purchasing_head">Purchasing Head</SelectItem>
                           <SelectItem value="warehouse_head">Warehouse Head</SelectItem>
+                          <SelectItem value="production_manager">Production Manager</SelectItem>
                           <SelectItem value="Admin">Company Admin</SelectItem>
                         </SelectContent>
                       </Select>

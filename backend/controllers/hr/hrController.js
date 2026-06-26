@@ -94,6 +94,7 @@ const APP_ROLES = [
   'employee',
   'purchasing_head',
   'warehouse_head',
+  'production_manager',
 ];
 
 async function validateOrgRefs(req, payload, options = {}) {

@@ -289,6 +289,17 @@ const STRINGS = pack({
   "auth.successLogin": { en: "Logged in successfully", am: "በተሳካ ሁኔታ ገብተዋል", om: "Milkaa'inaan seenan" },
   "auth.errorInvalid": { en: "Invalid credentials", am: "የማይሰራ የመግቢያ መረጃ", om: "Odeeffannoo dogoggora" },
   "auth.errorNetwork": { en: "Failed to connect to server", am: "ከሰርቨር ጋር መገናኘት አልተሳካም", om: "Sarvaritti walqunnamuun hin milkoofne" },
+  "auth.signInTitle": { en: "Sign in to Integra", am: "ወደ ኢንተግራ ይግቡ", om: "Integraatti seeni" },
+  "auth.rememberMe": { en: "Remember me", am: "አስታውሰኝ", om: "Na yaadadhu" },
+  "auth.forgotPassword": { en: "Forgot password?", am: "የይለፍ ቃል ረሱ?", om: "Jecha icciitii dagatte?" },
+  "auth.heroFeature1Title": { en: "Production Management", am: "የምርት አስተዳደር", om: "Bulchiinsa oomishaa" },
+  "auth.heroFeature1Desc": { en: "Work orders, BOMs, and shop-floor tracking in real time", am: "የሥራ ትዕዛዞች፣ BOMs እና የምርት ክፍል ክትትል", om: "Ajajawwan hojii, BOMoota, fi hordoffii warshaa sa'aatii" },
+  "auth.heroFeature2Title": { en: "Inventory & Procurement", am: "ክምችት እና ግዥ", om: "Kuusaa fi bitaatii" },
+  "auth.heroFeature2Desc": { en: "Live stock levels, purchase orders, and supplier management", am: "ቀጥታ ክምችት፣ የግዥ ትዕዛዞች እና አቅራቢ አስተዳደር", om: "Sadarkaa kuusaa, ajajawwan bituu, fi bulchiinsa dhiyeessituu" },
+  "auth.heroFeature3Title": { en: "HR & Workforce", am: "ሰው ሃይል", om: "HR fi Hojjettootaa" },
+  "auth.heroFeature3Desc": { en: "Employee records, attendance, and role-based access control", am: "የሰራተኛ መዝገቦች፣ ክትትልና ሚና ተኮር ቁጥጥር", om: "Galmee hojjettootaa, argama, fi to'annoo gahee irratti hundaa'e" },
+  "auth.heroFeature4Title": { en: "Quality & Compliance", am: "ጥራት እና ተጠያቂነት", om: "Qulqullina fi haqa eeguu" },
+  "auth.heroFeature4Desc": { en: "Inspection workflows and production quality reporting", am: "የቁጥጥር ሂደቶች እና የምርት ጥራት ሪፖርት", om: "Hojii sakatta'iinsaa fi gabaasa qulqullina oomishaa" },
 
   // —— Dashboard (home) ——
   "dashboard.title": { en: "Dashboard", am: "ዳሽቦርድ", om: "Gabatee" },

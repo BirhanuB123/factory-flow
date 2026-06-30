@@ -220,18 +220,18 @@ export function DashboardHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex min-h-[4.25rem] min-w-0 shrink-0 items-center gap-2 border-b border-sidebar-border bg-sidebar px-3 py-2 lg:gap-4 lg:px-6 text-sidebar-foreground">
-      <SidebarTrigger className="shrink-0 text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground rounded-md" />
-      <div className="hidden md:block text-sidebar-muted [&_a]:text-sidebar-foreground/80 [&_a:hover]:!text-sidebar-foreground [&_span[role=link]]:!text-sidebar-foreground">
+    <header className="sticky top-0 z-50 flex min-h-[4.25rem] min-w-0 shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-2 lg:gap-4 lg:px-6 text-foreground">
+      <SidebarTrigger className="shrink-0 text-foreground/70 hover:bg-muted/50 hover:text-foreground rounded-md" />
+      <div className="hidden md:block">
         <DynamicBreadcrumbs />
       </div>
       <div className="relative flex min-w-0 flex-1 justify-center">
         <div className="relative w-full max-w-2xl flex items-center">
-          <div className="flex w-full items-center rounded-full bg-sidebar-accent/60 px-2 py-1.5 transition-shadow focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:bg-sidebar-accent shadow-sm border border-sidebar-border focus-within:border-blue-500/10">
+          <div className="flex w-full items-center rounded-full bg-muted/60 px-2 py-1.5 transition-shadow focus-within:ring-2 focus-within:ring-primary/20 focus-within:bg-muted shadow-sm border border-border focus-within:border-primary/20">
             <Input
               ref={searchInputRef}
               placeholder={t("header.searchPlaceholder")}
-              className="h-8 flex-1 border-0 bg-transparent px-3 text-sm shadow-none focus-visible:ring-0 text-sidebar-foreground placeholder:text-sidebar-muted/70"
+              className="h-8 flex-1 border-0 bg-transparent px-3 text-sm shadow-none focus-visible:ring-0 text-foreground placeholder:text-muted-foreground/70"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchQuery.trim().length > 1 && setShowSearch(true)}
@@ -241,7 +241,7 @@ export function DashboardHeader() {
             />
             <div className="flex items-center gap-2 pr-1">
               <span
-                className="hidden items-center gap-0.5 rounded border border-sidebar-border bg-sidebar-accent/80 px-1.5 py-0.5 text-[10px] font-medium text-sidebar-muted shadow-sm xl:inline-flex"
+                className="hidden items-center gap-0.5 rounded border border-border bg-muted/80 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm xl:inline-flex"
                 aria-hidden
               >
                 <kbd className="font-sans">Ctrl</kbd>
@@ -310,7 +310,7 @@ export function DashboardHeader() {
       <div className="flex shrink-0 items-center gap-2 ml-2">
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative h-9 w-9 text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 rounded-full">
+            <Button variant="ghost" size="icon" className="relative h-9 w-9 text-foreground/70 hover:text-foreground hover:bg-muted/50 rounded-full">
               <Bell className="h-4.5 w-4.5" />
               {unreadCount > 0 && (
                 <span className="absolute right-2.5 top-2 flex h-2 w-2">
@@ -374,22 +374,22 @@ export function DashboardHeader() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="flex h-10 items-center gap-3 rounded-full p-1 pl-3 text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground">
+            <Button variant="ghost" className="flex h-10 items-center gap-3 rounded-full p-1 pl-3 text-foreground hover:bg-muted/50 hover:text-foreground">
               <div className="hidden text-right md:flex md:flex-col">
-                <span className="text-sm font-semibold leading-none text-sidebar-foreground">{user?.name || settings.displayName}</span>
-                <span className="text-[11px] text-sidebar-muted mt-0.5">
+                <span className="text-sm font-semibold leading-none text-foreground">{user?.name || settings.displayName}</span>
+                <span className="text-[11px] text-muted-foreground mt-0.5">
                   {user?.platformRole === "super_admin" ? "Platform Super Admin" : (user?.role || settings.role)}
                 </span>
               </div>
               <span className="relative inline-flex">
-                <Avatar className="h-9 w-9 border border-sidebar-border shadow-sm">
+                <Avatar className="h-9 w-9 border border-border shadow-sm">
                   {avatarUrl && <AvatarImage src={avatarUrl} alt={user?.name || "User"} className="object-cover" />}
-                  <AvatarFallback className="bg-sidebar-accent text-[11px] font-bold text-sidebar-foreground">
+                  <AvatarFallback className="bg-muted text-[11px] font-bold text-foreground">
                     {getInitials(user?.name || settings.displayName || "User")}
                   </AvatarFallback>
                 </Avatar>
                 <span
-                  className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-sidebar"
+                  className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-card"
                   title={t("header.online")}
                   aria-hidden
                 />

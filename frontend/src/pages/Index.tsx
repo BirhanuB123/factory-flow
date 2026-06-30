@@ -13,7 +13,7 @@ import { manufacturingApi, productionApi, TENANT_MODULE_KEYS } from "@/lib/api";
 import type { TenantModuleFlags } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Activity,
   AlertTriangle,
@@ -24,11 +24,9 @@ import {
   CheckCircle2,
   DollarSign,
   Factory,
-  Gauge,
   LayoutDashboard,
   PackageCheck,
   ShieldCheck,
-  Sparkles,
   Truck,
   Users,
   Zap,
@@ -352,147 +350,86 @@ const Index = () => {
   );
 
   return (
-    <div className="relative min-h-full animate-in fade-in duration-500">
-      {/* Subtle ambient background */}
-      <div className="pointer-events-none absolute inset-0 -m-3 sm:-m-4 lg:-m-6">
-        <div className="absolute inset-x-0 top-0 h-[480px] bg-gradient-to-b from-primary/[0.04] via-primary/[0.02] to-transparent" />
-        <div className="absolute right-0 top-0 h-96 w-96 rounded-full bg-primary/[0.03] blur-3xl" />
-        <div className="absolute left-0 top-32 h-64 w-64 rounded-full bg-emerald-500/[0.03] blur-3xl" />
-      </div>
-
-      <div className="relative space-y-8 pb-8 lg:pb-10">
-        {/* ──────── Hero Section ──────── */}
-        <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-          {/* Main welcome card */}
-          <section className="relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white shadow-xl dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-            {/* Decorative mesh */}
-            <div className="pointer-events-none absolute inset-0">
-              <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-primary/20 blur-3xl" />
-              <div className="absolute -bottom-10 -left-10 h-60 w-60 rounded-full bg-emerald-500/15 blur-3xl" />
-              <div className="absolute right-1/4 top-1/3 h-32 w-32 rounded-full bg-cyan-400/10 blur-2xl" />
+    <div className="min-h-full animate-in fade-in duration-500">
+      <div className="space-y-5 pb-8">
+        {/* ──────── Welcome Header ──────── */}
+        <div className="flex flex-col gap-4 rounded-xl border border-border/50 bg-card px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">
+              Welcome back, {displayName} · {todayLabel}
+            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              {t("dashboard.title")}
+            </h1>
+            <p className="text-sm text-muted-foreground">{t("dashboard.subtitle")}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${attentionSummary.bg} ${attentionSummary.tone}`}>
+              <attentionSummary.icon className="h-3.5 w-3.5" />
+              {attentionSummary.value}
             </div>
-            <div className="relative p-6 sm:p-8">
-              <div className="max-w-3xl space-y-6">
-                {/* Top badges */}
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/80 backdrop-blur-sm">
-                    {isSuperAdmin ? <ShieldCheck className="h-3.5 w-3.5 text-blue-300" /> : <Gauge className="h-3.5 w-3.5 text-cyan-300" />}
-                    {isSuperAdmin ? "Platform command center" : "Operations command center"}
-                  </div>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-white/60">
-                    <Sparkles className="h-3 w-3" />
-                    {todayLabel}
-                  </span>
-                </div>
+            <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${changeSummary.bg} ${changeSummary.tone}`}>
+              <changeSummary.icon className="h-3.5 w-3.5" />
+              {changeSummary.value}
+            </div>
+            <Button asChild size="sm" className="h-8 rounded-full px-4 text-xs font-semibold">
+              <Link to={roleAction.href}>
+                {roleAction.label}
+                <ArrowUpRight className="ml-1.5 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </div>
+        </div>
 
-                {/* Greeting */}
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-cyan-200/80">Welcome back, {displayName}</p>
-                  <h1 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-[2.75rem] lg:leading-tight">
-                    {t("dashboard.title")}
-                  </h1>
-                  <p className="max-w-xl text-[15px] leading-relaxed text-white/50">
-                    {t("dashboard.subtitle")}
-                  </p>
-                </div>
-
-                {/* Status cards inside hero */}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {[attentionSummary, changeSummary].map((item) => (
-                    <div
-                      key={item.label}
-                      className="group rounded-xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur-sm transition-colors hover:bg-white/[0.09]"
+        {/* ──────── Role & Module Strip ──────── */}
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/50 bg-card px-4 py-3 text-xs shadow-sm">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+            </div>
+            <span className="font-semibold text-foreground">
+              {isSuperAdmin ? "Super Admin" : user?.role || "User"}
+            </span>
+            <span className="text-muted-foreground/60">·</span>
+            <span className="text-muted-foreground">
+              {isSuperAdmin ? "Platform access" : "Tenant workspace"}
+            </span>
+          </div>
+          <div className="ml-auto flex flex-wrap items-center gap-3">
+            <span className="text-muted-foreground">
+              Scope:{" "}
+              <span className="font-semibold text-foreground">
+                {isSuperAdmin ? "All tenants" : "Tenant scoped"}
+              </span>
+            </span>
+            <span className="h-3 w-px bg-border" />
+            <span className="text-muted-foreground">
+              Modules:{" "}
+              <span className="font-semibold text-foreground">
+                {enabledModuleCount}/{TENANT_MODULE_KEYS.length}
+              </span>
+            </span>
+            {quickLinks.filter((l) => l.enabled).length > 0 && (
+              <>
+                <span className="h-3 w-px bg-border" />
+                {quickLinks
+                  .filter((l) => l.enabled)
+                  .map((link) => (
+                    <Button
+                      key={link.label}
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 rounded-lg px-2.5 text-xs font-medium"
                     >
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-white/40">
-                        {item.label}
-                      </p>
-                      <div className="mt-2.5 flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-base font-bold tracking-tight text-white">{item.value}</p>
-                          <p className="mt-1 text-[13px] leading-relaxed text-white/50">{item.detail}</p>
-                        </div>
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/[0.08]">
-                          <item.icon className="h-[18px] w-[18px] text-white/70" />
-                        </div>
-                      </div>
-                    </div>
+                      <Link to={link.href}>
+                        <link.icon className="h-3.5 w-3.5 text-primary/70" />
+                        {link.label}
+                      </Link>
+                    </Button>
                   ))}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Sidebar card: role + quick links */}
-          <div className="flex flex-col gap-4">
-            <Card className="flex-1 rounded-2xl border-border/50 bg-card shadow-sm">
-              <CardHeader className="space-y-3 pb-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                      Current role
-                    </p>
-                    <CardTitle className="text-xl font-bold tracking-tight">
-                      {isSuperAdmin ? "Super Admin" : user?.role || "User"}
-                    </CardTitle>
-                    <CardDescription className="text-xs text-muted-foreground">
-                      {isSuperAdmin ? "Platform access" : "Tenant workspace"}
-                    </CardDescription>
-                  </div>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <ShieldCheck className="h-5 w-5" />
-                  </div>
-                </div>
-
-                {/* Next action */}
-                <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Next action
-                  </p>
-                  <p className="mt-1 text-sm font-medium leading-relaxed text-foreground">
-                    {roleAction.detail}
-                  </p>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4 pt-0">
-                <Button asChild className="h-10 w-full rounded-xl text-sm font-semibold">
-                  <Link to={roleAction.href}>
-                    {roleAction.label}
-                    <ArrowUpRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between rounded-xl bg-muted/25 px-3.5 py-2.5">
-                    <span className="font-medium text-muted-foreground">Operational scope</span>
-                    <span className="font-bold">{isSuperAdmin ? "All tenants" : "Tenant scoped"}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-xl bg-muted/25 px-3.5 py-2.5">
-                    <span className="font-medium text-muted-foreground">Modules enabled</span>
-                    <span className="font-bold">{enabledModuleCount}/{TENANT_MODULE_KEYS.length}</span>
-                  </div>
-                </div>
-
-                {/* Quick links */}
-                <div className="grid grid-cols-3 gap-2">
-                  {quickLinks
-                    .filter((item) => item.enabled)
-                    .map((item) => (
-                      <Button
-                        key={item.label}
-                        asChild
-                        variant="outline"
-                        className="h-auto flex-col gap-1.5 rounded-xl border-border/50 py-3 text-xs font-medium transition-colors hover:border-primary/30 hover:bg-primary/5"
-                      >
-                        <Link to={item.href}>
-                          <item.icon className="h-4 w-4 text-primary/70" />
-                          {item.label}
-                        </Link>
-                      </Button>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
+              </>
+            )}
           </div>
         </div>
 

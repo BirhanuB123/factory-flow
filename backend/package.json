@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "migrate:tenant": "node scripts/ensureDefaultTenant.js",
     "bootstrap:super-admin": "node scripts/bootstrapSuperAdmin.js",
+    "add:super-admin": "node scripts/addSuperAdmin.js",
     "test": "jest --forceExit",
     "test:integration": "jest --runInBand --forceExit tests/integration/twoTenantIsolation.integration.test.js",
     "test:billing": "jest --runInBand --forceExit tests/integration/chapaVerify.integration.test.js",

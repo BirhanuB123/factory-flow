@@ -260,6 +260,8 @@ const STRINGS = pack({
     om: "Milkaa'inaan ba'e",
   },
 
+
+  
   // —— Auth / login ——
   //"auth.heroKicker": { en: "Manufacturing ERP", am: "የማኑፋክቸሪንግ ERP", om: "ERP oomishaa" },
   "auth.heroTitle": { en: "Integra - ERP", am: "ኢንተግራ - ERP", om: "Integra - ERP" },

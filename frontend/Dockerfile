@@ -8,7 +8,7 @@ COPY . .
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN test -n "$VITE_API_BASE_URL"
-RUN npm run build
+RUN RUN npm install
 
 FROM nginx:1.27-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf

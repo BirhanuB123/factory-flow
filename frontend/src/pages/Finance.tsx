@@ -57,6 +57,7 @@ import { FinanceApTab } from "@/components/finance/FinanceApTab";
 import { FinancePayrollTab } from "@/components/finance/FinancePayrollTab";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocale } from "@/contexts/LocaleContext";
+import { getApiBaseUrl } from "@/lib/apiBase";
 import { downloadReportCsv, ethiopiaTaxApi, shipmentsApi } from "@/lib/api";
 import {
   DropdownMenu,
@@ -89,7 +90,7 @@ const statusVariant: Record<FinanceStatus, "success" | "warning" | "destructive"
   Posted: "success",
 };
 
-const API_BASE_URL = "http://localhost:5000/api/finance";
+const API_BASE_URL = `${getApiBaseUrl()}/finance`;
 
 function authHeaders(): HeadersInit {
   return {

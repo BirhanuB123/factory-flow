@@ -30,11 +30,10 @@ jobs:
       PROD_HEALTHCHECK_URL: ${{ secrets.PROD_HEALTHCHECK_URL }}
 
     steps:
-      - name: Validate deploy configuration
+      - name: Check deploy configuration
         run: |
           if [ -z "$BACKEND_DEPLOY_HOOK_URL" ] && [ -z "$FRONTEND_DEPLOY_HOOK_URL" ]; then
-            echo "Set BACKEND_DEPLOY_HOOK_URL or FRONTEND_DEPLOY_HOOK_URL in the production environment secrets."
-            exit 1
+            echo "No generic deploy hooks are configured; skipping. Coolify can deploy directly from GitHub."
           fi
 
       - name: Trigger backend deployment
@@ -46,10 +45,10 @@ jobs:
         run: curl --fail --show-error --silent --retry 3 --request POST "$FRONTEND_DEPLOY_HOOK_URL"
 
       - name: Wait before health check
-        if: ${{ env.PROD_HEALTHCHECK_URL != '' }}
+        if: ${{ env.PROD_HEALTHCHECK_URL != '' && (env.BACKEND_DEPLOY_HOOK_URL != '' || env.FRONTEND_DEPLOY_HOOK_URL != '') }}
         run: sleep 30
 
       - name: Check production health
-        if: ${{ env.PROD_HEALTHCHECK_URL != '' }}
+        if: ${{ env.PROD_HEALTHCHECK_URL != '' && (env.BACKEND_DEPLOY_HOOK_URL != '' || env.FRONTEND_DEPLOY_HOOK_URL != '') }}
         run: curl --fail --show-error --silent --retry 6 --retry-delay 10 "$PROD_HEALTHCHECK_URL"
 

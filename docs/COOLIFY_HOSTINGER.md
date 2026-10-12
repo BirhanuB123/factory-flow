@@ -92,9 +92,8 @@ Create a second application using the same GitHub repository:
 | --- | --- |
 | Branch | `main` |
 | Base directory | `/frontend` |
-| Build pack | `Nixpacks` |
-| Application type | Static SPA |
-| Publish directory | `/dist` |
+| Build pack | `Dockerfile` |
+| Dockerfile location | `/Dockerfile` |
 | Port | `80` |
 | Domain | `https://app.example.com` |
 | Watch paths | `/frontend/**` |
@@ -102,13 +101,12 @@ Create a second application using the same GitHub repository:
 Set these **build-time** variables, then deploy:
 
 ```dotenv
-NIXPACKS_NODE_VERSION=22
 VITE_API_BASE_URL=https://api.example.com/api
 ```
 
-`VITE_API_BASE_URL` is compiled into the Vite bundle. It must be set before every frontend build and must include `/api`. A runtime-only variable will not change an already-built frontend.
+`VITE_API_BASE_URL` is compiled into the Vite bundle. In Coolify, mark it as available during the Docker build (a build argument), not only at runtime. It must include `/api`; the frontend Dockerfile deliberately fails the build if it is missing. A runtime-only variable will not change an already-built frontend.
 
-Choose the SPA/static application option so unknown browser routes fall back to `index.html`; this app uses client-side routing.
+The frontend image includes Nginx SPA fallback, so direct links such as `/login` resolve to `index.html` instead of returning 404. Use `/healthz` for its Coolify health check.
 
 ## 5. Verify the complete deployment
 

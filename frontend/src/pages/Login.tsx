@@ -73,6 +73,14 @@ export default function Login() {
         try {
           data = JSON.parse(raw) as Record<string, unknown>;
         } catch {
+          if (!response.ok) {
+            toast.error(
+              response.status === 404
+                ? "API route not found (404). Check backend URL and /api prefix."
+                : `Server returned error (${response.status})`
+            );
+            return;
+          }
           toast.error(t("auth.errorBadApiResponse"));
           return;
         }

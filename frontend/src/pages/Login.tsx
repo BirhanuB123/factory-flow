@@ -175,7 +175,7 @@ export default function Login() {
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="emailOrId" className="text-sm font-bold">
-                      {t("auth.emailOrId")}
+                      {/* {t("auth.emailOrId")} */}
                     </Label>
                     <div className="relative">
                       <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -183,7 +183,7 @@ export default function Login() {
                         id="emailOrId"
                         name="username"
                         autoComplete="username"
-                        placeholder={t("auth.emailOrIdPlaceholder")}
+                        // placeholder={t("auth.emailOrIdPlaceholder")}
                         value={emailOrId}
                         onChange={(e) => setEmailOrId(e.target.value)}
                         required
@@ -194,7 +194,7 @@ export default function Login() {
 
                   <div className="space-y-2">
                     <Label htmlFor="password" className="text-sm font-bold">
-                      {t("auth.password")}
+                      {/* {t("auth.password")} */}
                     </Label>
                     <div className="relative">
                       <LockKeyhole className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -203,7 +203,7 @@ export default function Login() {
                         name="password"
                         type={showPassword ? "text" : "password"}
                         autoComplete="current-password"
-                        placeholder={t("auth.passwordPlaceholder")}
+                        // placeholder={t("auth.passwordPlaceholder")}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required

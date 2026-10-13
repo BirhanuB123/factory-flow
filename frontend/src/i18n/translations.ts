@@ -261,9 +261,9 @@ const STRINGS = pack({
   },
 
 
-  
+
   // —— Auth / login ——
-  //"auth.heroKicker": { en: "Manufacturing ERP", am: "የማኑፋክቸሪንግ ERP", om: "ERP oomishaa" },
+  "auth.heroKicker": { en: "Manufacturing ERP", am: "የማኑፋክቸሪንግ ERP", om: "ERP oomishaa" },
   "auth.heroTitle": { en: "Integra - ERP", am: "ኢንተግራ - ERP", om: "Integra - ERP" },
   "auth.heroSubtitle": {
     en: "Streamline manufacturing from the shop floor to the top floor—clearer operations, better productivity, and one place for your team to work.",
@@ -278,9 +278,9 @@ const STRINGS = pack({
     om: "Itti fufuuf email daldalaa ykn lakkoofsa hojjettaa fi jecha icciitii fayyadami.",
   },
   "auth.emailOrId": { en: "Email or employee ID", am: "ኢሜይል ወይም የሰራተኛ መለያ", om: "Imeelii ykn lakkoofsa hojjettaa" },
-  //"auth.emailOrIdPlaceholder": { en: "you@company.com or EMP-001", am: "you@company.com ወይም EMP-001", om: "you@company.com ykn EMP-001" },
+  "auth.emailOrIdPlaceholder": { en: "you@company.com or EMP-001", am: "you@company.com ወይም EMP-001", om: "you@company.com ykn EMP-001" },
   "auth.password": { en: "Password", am: "የይለፍ ቃል", om: "Jecha icciitii" },
-  //"auth.passwordPlaceholder": { en: "Enter your password", am: "የይለፍ ቃልዎን ያስገቡ", om: "Jecha icciitii kee galchi" },
+  "auth.passwordPlaceholder": { en: "Enter your password", am: "የይለፍ ቃልዎን ያስገቡ", om: "Jecha icciitii kee galchi" },
   "auth.signingIn": { en: "Signing in…", am: "በመግባት ላይ…", om: "Seenaa jira…" },
   "auth.sessionNote": {
     en: "Your session is protected with industry-standard security.",

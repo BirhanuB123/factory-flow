@@ -2,8 +2,6 @@
 
 ## Add additional superadmin
 
-node scripts/addSuperAdmin.js superadmin2@integracnc.com "MySecurePass123!" "Second SuperAdmin" "SA-002"
-
 A modern inventory and manufacturing ERP prototype with a React/Vite frontend and an Express/MongoDB backend.
 
 ## Repository structure
